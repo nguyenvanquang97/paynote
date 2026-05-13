@@ -38,12 +38,12 @@ jobs:
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug -PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }}
+          ./gradlew assembleRelease -PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }}
 
       - name: Rename APK file
         run: |
-          # Find the generated APK and move it to a unique name
-          find android/app/build/outputs/apk/debug -name "*.apk" -exec mv {} app-v1.0.${{ github.run_number }}.apk \;
+          # Find the generated Release APK and move it to a unique name
+          find android/app/build/outputs/apk/release -name "*.apk" -exec mv {} app-v1.0.${{ github.run_number }}.apk \;
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
