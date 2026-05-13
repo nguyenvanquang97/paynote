@@ -32,7 +32,7 @@ jobs:
           cache: 'gradle'
 
       - name: Install Dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Build Android Release APK (with auto-versioning)
         working-directory: android
@@ -42,7 +42,8 @@ jobs:
 
       - name: Rename APK file
         run: |
-          mv android/app/build/outputs/apk/debug/app-debug.apk app-v1.0.${{ github.run_number }}.apk
+          # Find the generated APK and move it to a unique name
+          find android/app/build/outputs/apk/debug -name "*.apk" -exec mv {} app-v1.0.${{ github.run_number }}.apk \;
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
