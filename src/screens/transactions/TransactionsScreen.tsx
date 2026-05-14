@@ -6,7 +6,6 @@ import {
   SectionList,
   TouchableOpacity,
   RefreshControl,
-  Alert,
   Dimensions,
   Pressable,
 } from 'react-native';
@@ -21,6 +20,7 @@ import AddTransactionModal from './AddTransactionModal';
 import SwipeableRow from '../../shared/components/SwipeableRow';
 import {theme} from '../../shared/theme';
 import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
+import {dialog} from '../../shared/components/Dialog';
 import {useRoute} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
@@ -69,20 +69,18 @@ const TransactionsScreen: React.FC = () => {
   }, []);
 
   const handleDelete = useCallback((tx: Transaction) => {
-    Alert.alert(
+    dialog.confirm(
       'Xóa giao dịch',
       `Bạn có chắc muốn xóa giao dịch ${formatCurrency(tx.amount)}?`,
-      [
-        {text: 'Hủy', style: 'cancel'},
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteTransaction(tx.id);
-            loadTransactions();
-          },
+      {
+        confirmText: 'Xóa',
+        cancelText: 'Hủy',
+        variant: 'danger',
+        onConfirm: async () => {
+          await deleteTransaction(tx.id);
+          loadTransactions();
         },
-      ],
+      },
     );
   }, [loadTransactions]);
 

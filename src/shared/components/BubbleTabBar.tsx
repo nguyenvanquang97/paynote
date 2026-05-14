@@ -1,18 +1,15 @@
 import React, {useRef, useEffect} from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Animated,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, {Path, Rect, Circle, Line, Polyline} from 'react-native-svg';
 import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
 import {theme} from '../theme';
-
-const {width} = Dimensions.get('window');
 
 const C = {
   bg: theme.colors.surface,
@@ -89,11 +86,12 @@ const ROUTE_LABELS: Record<string, string> = {
   Settings: 'Cài đặt',
 };
 
-const TAB_BAR_HEIGHT = 64;
+const TAB_BAR_HEIGHT = 70;
 const BUBBLE_PADDING_H = 14;
 const BUBBLE_PADDING_V = 8;
 
 export default function BubbleTabBar({state, descriptors, navigation}: BottomTabBarProps) {
+  const {width} = useWindowDimensions();
   const insets = useSafeAreaInsets();
   // On devices without hardware nav bar, insets.bottom = 0
   // On gesture nav devices, insets.bottom > 0
@@ -198,7 +196,8 @@ export default function BubbleTabBar({state, descriptors, navigation}: BottomTab
               </Animated.View>
               <Animated.Text
                 style={[styles.label, {color: labelColor, opacity: labelOpacity}]}
-                numberOfLines={1}>
+                numberOfLines={2}
+                ellipsizeMode="clip">
                 {options.tabBarLabel?.toString() || ROUTE_LABELS[route.name] || route.name}
               </Animated.Text>
             </Animated.View>
@@ -243,9 +242,13 @@ const styles = StyleSheet.create({
   tabContent: {
     alignItems: 'center',
     gap: 4,
+    width: '100%',
   },
   label: {
-    fontSize: 10,
+    width: '100%',
+    textAlign: 'center',
+    fontSize: 9,
+    lineHeight: 11,
     fontWeight: '700',
     marginTop: 2,
     letterSpacing: 0,

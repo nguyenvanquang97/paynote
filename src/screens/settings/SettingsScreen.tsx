@@ -5,12 +5,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  Share,
   Image,
   Platform,
   AppState,
 } from 'react-native';
+import RNShare from 'react-native-share';
 import {
   checkNotificationAccess,
   checkBatteryOptimizationDisabled,
@@ -30,6 +29,8 @@ import type { CustomCategory } from '../../app/store';
 import { theme } from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
 import { SUPPORTED_BANKS } from '../../shared/constants';
+import { dialog } from '../../shared/components/Dialog';
+import { toast } from '../../shared/components/Toast';
 
 const C = {
   bg: theme.colors.appBg,
@@ -80,18 +81,19 @@ const SettingsScreen: React.FC = () => {
       const txs = await getTransactions(10000);
       const backupData = { transactions: txs, customCategories };
       const jsonStr = JSON.stringify(backupData, null, 2);
-      // Use ExternalDirectoryPath on Android so the file is accessible to other apps
-      const dir = Platform.OS === 'android' ? RNFS.ExternalDirectoryPath : RNFS.DocumentDirectoryPath;
+      // Write to CacheDir so FileProvider can expose it via content:// URI
+      const dir = RNFS.CachesDirectoryPath;
       const path = `${dir}/PayNote_Backup_${dayjs().format('YYYYMMDD_HHmmss')}.json`;
       await RNFS.writeFile(path, jsonStr, 'utf8');
-      await Share.share({
+      await RNShare.open({
         title: 'PayNote Backup',
-        url: Platform.OS === 'android' ? `file://${path}` : path,
-        message: 'Đây là file backup PayNote của bạn',
+        url: `file://${path}`,
+        type: 'application/json',
+        failOnCancel: false,
       });
     } catch (err) {
       console.error(err);
-      Alert.alert('Lỗi', 'Không thể xuất dữ liệu');
+      toast.error('Không thể xuất dữ liệu');
     }
   };
 
@@ -108,17 +110,19 @@ const SettingsScreen: React.FC = () => {
         tx.bank,
       ].join(','));
       const csv = [header, ...rows].join('\n');
-      const dir = Platform.OS === 'android' ? RNFS.ExternalDirectoryPath : RNFS.DocumentDirectoryPath;
+      // Write to CacheDir so FileProvider can expose it via content:// URI
+      const dir = RNFS.CachesDirectoryPath;
       const path = `${dir}/PayNote_Export_${dayjs().format('YYYYMMDD_HHmmss')}.csv`;
       await RNFS.writeFile(path, csv, 'utf8');
-      await Share.share({
+      await RNShare.open({
         title: 'PayNote Export',
-        url: Platform.OS === 'android' ? `file://${path}` : path,
-        message: 'File CSV PayNote – mở bằng Excel hoặc Google Sheets',
+        url: `file://${path}`,
+        type: 'text/csv',
+        failOnCancel: false,
       });
     } catch (err) {
       console.error(err);
-      Alert.alert('Lỗi', 'Không thể xuất CSV');
+      toast.error('Không thể xuất CSV');
     }
   };
 
@@ -129,7 +133,7 @@ const SettingsScreen: React.FC = () => {
         type: [types.json, types.allFiles],
       });
 
-      if (!res) return;
+      if (!res) { return; }
 
       const content = await RNFS.readFile(res.uri, 'utf8');
       const backupData = JSON.parse(content);
@@ -138,61 +142,58 @@ const SettingsScreen: React.FC = () => {
         throw new Error('Invalid format');
       }
 
-      Alert.alert(
+      dialog.confirm(
         'Xác nhận khôi phục',
         'Toàn bộ dữ liệu hiện tại sẽ bị xóa và thay thế bằng dữ liệu từ file backup. Bạn có chắc chắn?',
-        [
-          { text: 'Hủy', style: 'cancel' },
-          {
-            text: 'Khôi phục',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await resetData();
-                await importTransactions(backupData.transactions);
-                if (backupData.customCategories) {
-                  Object.values(backupData.customCategories).forEach((c: any) => addCustomCategory(c));
-                }
-                loadTransactions();
-                loadStats();
-                Alert.alert('Thành công', 'Dữ liệu đã được khôi phục');
-              } catch (e) {
-                console.error(e);
-                Alert.alert('Lỗi', 'Khôi phục thất bại');
+        {
+          confirmText: 'Khôi phục',
+          cancelText: 'Hủy',
+          variant: 'danger',
+          onConfirm: async () => {
+            try {
+              await resetData();
+              await importTransactions(backupData.transactions);
+              if (backupData.customCategories) {
+                Object.values(backupData.customCategories).forEach((c: any) => addCustomCategory(c));
               }
-            },
+              loadTransactions();
+              loadStats();
+              toast.success('Dữ liệu đã được khôi phục');
+            } catch (e) {
+              console.error(e);
+              toast.error('Khôi phục thất bại');
+            }
           },
-        ]
+        }
       );
     } catch (err) {
       // User cancelled the picker – silently ignore
       const errCode = (err as any)?.code;
       if (errCode !== 'DOCUMENT_PICKER_CANCELED' && errCode !== 'OPERATION_CANCELED') {
         console.error(err);
-        Alert.alert('Lỗi', 'Không thể đọc file');
+        toast.error('Không thể đọc file');
       }
     }
   };
 
   const handleResetData = () => {
-    Alert.alert(
+    dialog.confirm(
       'Xóa toàn bộ dữ liệu',
       'Bạn có chắc chắn muốn xóa tất cả giao dịch và danh mục tự tạo? Hành động này không thể hoàn tác.',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Xóa tất cả',
-          style: 'destructive',
-          onPress: async () => {
-            await resetData();
-            loadTransactions();
-            loadStats();
-            Alert.alert('Thành công', 'Đã xóa toàn bộ dữ liệu');
-          },
+      {
+        confirmText: 'Xóa tất cả',
+        cancelText: 'Hủy',
+        variant: 'danger',
+        onConfirm: async () => {
+          await resetData();
+          loadTransactions();
+          loadStats();
+          toast.success('Đã xóa toàn bộ dữ liệu');
         },
-      ]
+      }
     );
   };
+
   return (
     <React.Fragment>
       <ScrollView style={s.container} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>

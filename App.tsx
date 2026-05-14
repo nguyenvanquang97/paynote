@@ -16,6 +16,8 @@ import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import SplashScreen from './src/screens/splash/SplashScreen';
 import BubbleTabBar from './src/shared/components/BubbleTabBar';
 import {theme} from './src/shared/theme';
+import {DialogContainer} from './src/shared/components/Dialog';
+import {ToastContainer} from './src/shared/components/Toast';
 import {useBankNotifications} from './src/native';
 import {processNotification} from './src/modules/banking';
 import {useAppStore} from './src/app/store';
@@ -131,6 +133,8 @@ export default function App() {
             </React.Fragment>
           )}
         </BottomSheetModalProvider>
+        <DialogContainer />
+        <ToastContainer />
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

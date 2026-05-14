@@ -15,6 +15,7 @@ type IconName =
   | 'chevron-left'
   | 'chevron-right'
   | 'plus'
+  | 'undo'
   | 'inbox'
   | 'list'
   | 'food'
@@ -125,6 +126,18 @@ export default function AppIcon({name, size = 20, color = C.textPrimary, strokeW
         <Svg width={s} height={s} viewBox="0 0 24 24" fill="none">
           <Line x1="12" y1="5" x2="12" y2="19" stroke={color} strokeWidth={sw} />
           <Line x1="5" y1="12" x2="19" y2="12" stroke={color} strokeWidth={sw} />
+        </Svg>
+      );
+    case 'undo':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M9 8H4v5M4 8l3.8-3.5A9 9 0 1 1 7 18.5"
+            stroke={color}
+            strokeWidth={sw}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </Svg>
       );
     case 'inbox':

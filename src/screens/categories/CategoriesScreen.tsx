@@ -5,7 +5,6 @@ import {
   StyleSheet,
   SectionList,
   TouchableOpacity,
-  Alert,
   Pressable,
 } from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -16,6 +15,7 @@ import AddCategoryModal from './AddCategoryModal';
 import SwipeableRow from '../../shared/components/SwipeableRow';
 import {theme} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
+import {dialog} from '../../shared/components/Dialog';
 
 const COLORS = {
   bg: theme.colors.appBg,
@@ -55,17 +55,15 @@ const CategoriesScreen: React.FC = () => {
   };
 
   const handleDelete = (cat: CategoryItem) => {
-    Alert.alert(
+    dialog.confirm(
       'Xóa danh mục',
       `Bạn có chắc muốn xóa danh mục "${cat.name}"?`,
-      [
-        {text: 'Hủy', style: 'cancel'},
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: () => deleteCustomCategory(cat.id),
-        },
-      ],
+      {
+        confirmText: 'Xóa',
+        cancelText: 'Hủy',
+        variant: 'danger',
+        onConfirm: () => deleteCustomCategory(cat.id),
+      },
     );
   };
 

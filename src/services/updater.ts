@@ -1,5 +1,7 @@
-import {Alert, Linking} from 'react-native';
+import {Linking} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import {dialog} from '../shared/components/Dialog';
+import {toast} from '../shared/components/Toast';
 
 const GITHUB_REPO = 'nguyenvanquang97/paynote';
 
@@ -19,7 +21,7 @@ export const checkForUpdates = async (silent = true) => {
     
     if (!response.ok) {
       if (!silent) {
-        Alert.alert('Thông báo', 'Không thể kiểm tra bản cập nhật lúc này.');
+        toast.warning('Không thể kiểm tra bản cập nhật lúc này.');
       }
       return;
     }
@@ -32,29 +34,28 @@ export const checkForUpdates = async (silent = true) => {
       const isNewer = compareVersions(latestVersion, currentVersion) > 0;
       
       if (isNewer && apkAsset) {
-        Alert.alert(
+        dialog.confirm(
           'Bản cập nhật mới',
           `Phiên bản mới ${data.tag_name} đã sẵn sàng.\n\nCó gì mới:\n${data.name}`,
-          [
-            {text: 'Để sau', style: 'cancel'},
-            {
-              text: 'Cập nhật ngay',
-              onPress: () => {
-                Linking.openURL(apkAsset.browser_download_url);
-              },
+          {
+            confirmText: 'Cập nhật ngay',
+            cancelText: 'Để sau',
+            variant: 'default',
+            onConfirm: () => {
+              Linking.openURL(apkAsset.browser_download_url);
             },
-          ]
+          }
         );
       } else if (!silent) {
-        Alert.alert('Thông báo', 'Bạn đang sử dụng phiên bản mới nhất.');
+        toast.success('Bạn đang sử dụng phiên bản mới nhất.');
       }
     } else if (!silent) {
-      Alert.alert('Thông báo', 'Bạn đang sử dụng phiên bản mới nhất.');
+      toast.success('Bạn đang sử dụng phiên bản mới nhất.');
     }
   } catch (error) {
     console.error('Update check failed:', error);
     if (!silent) {
-      Alert.alert('Thông báo', 'Có lỗi xảy ra khi kiểm tra cập nhật.');
+      toast.error('Có lỗi xảy ra khi kiểm tra cập nhật.');
     }
   }
 };

@@ -5,12 +5,12 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
 import {useAppStore, type CustomCategory} from '../../app/store';
 import {theme} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
+import {toast} from '../../shared/components/Toast';
 
 const COLORS = {
   bg: theme.colors.surface,
@@ -67,7 +67,7 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
     const trimmedIcon = icon.trim();
 
     if (!trimmedName || !trimmedIcon) {
-      Alert.alert('Lỗi', 'Vui lòng nhập Tên và Biểu tượng (Emoji)');
+      toast.error('Vui lòng nhập Tên và Biểu tượng (Emoji)');
       return;
     }
 

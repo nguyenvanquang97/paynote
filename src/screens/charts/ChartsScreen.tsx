@@ -111,6 +111,12 @@ const ChartsScreen: React.FC = () => {
     else {setSelectedMonth(selectedYear, selectedMonth + 1);}
   };
 
+  const goToCurrentMonth = () => {
+    setSelectedMonth(dayjs().year(), dayjs().month() + 1);
+  };
+
+  const isCurrentMonth = selectedYear === dayjs().year() && selectedMonth === dayjs().month() + 1;
+
   const currentMonthLabel = dayjs()
     .year(selectedYear)
     .month(selectedMonth - 1)
@@ -163,7 +169,14 @@ const ChartsScreen: React.FC = () => {
         <TouchableOpacity onPress={goToPrevMonth} style={styles.monthButton}>
           <AppIcon name="chevron-left" size={18} color={COLORS.accent} />
         </TouchableOpacity>
-        <Text style={styles.monthLabel}>{currentMonthLabel}</Text>
+        <View style={styles.monthLabelContainer}>
+          <Text style={styles.monthLabel}>{currentMonthLabel}</Text>
+          {!isCurrentMonth && (
+            <TouchableOpacity onPress={goToCurrentMonth} style={styles.todayButton}>
+              <AppIcon name="undo" size={15} color={COLORS.accent} />
+            </TouchableOpacity>
+          )}
+        </View>
         <TouchableOpacity onPress={goToNextMonth} style={styles.monthButton}>
           <AppIcon name="chevron-right" size={18} color={COLORS.accent} />
         </TouchableOpacity>
@@ -331,6 +344,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     minWidth: 160,
     textAlign: 'center',
+  },
+  monthLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 160,
+    gap: 8,
+  },
+  todayButton: {
+    padding: 6,
+    backgroundColor: theme.colors.surfaceMuted,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
   },
   statsRow: {flexDirection: 'row', gap: 12, marginBottom: 20},
   statCard: {

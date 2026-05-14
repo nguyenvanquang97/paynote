@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
@@ -18,6 +17,7 @@ import dayjs from 'dayjs';
 import type {Transaction} from '../../shared/types';
 import {theme} from '../../shared/theme';
 import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
+import {toast} from '../../shared/components/Toast';
 
 const COLORS = {
   bg: theme.colors.surface,
@@ -104,7 +104,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
     const amount = parseInt(amountStr.replace(/[^0-9]/g, ''), 10);
 
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Lỗi', 'Vui lòng nhập số tiền hợp lệ');
+      toast.error('Vui lòng nhập số tiền hợp lệ');
       return;
     }
 
@@ -132,7 +132,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
       handleClose();
     } catch (error) {
       console.error('Error saving transaction:', error);
-      Alert.alert('Lỗi', 'Không thể lưu giao dịch');
+      toast.error('Không thể lưu giao dịch');
     }
   };
 

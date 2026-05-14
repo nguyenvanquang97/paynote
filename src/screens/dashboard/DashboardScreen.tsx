@@ -9,7 +9,6 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
-import Svg, {Path} from 'react-native-svg';
 import {useAppStore} from '../../app/store';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import dayjs from 'dayjs';
@@ -86,6 +85,12 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
+  const goToCurrentMonth = () => {
+    setSelectedMonth(dayjs().year(), dayjs().month() + 1);
+  };
+
+  const isCurrentMonth = selectedYear === dayjs().year() && selectedMonth === dayjs().month() + 1;
+
   const recentTransactions = transactions.slice(0, 5);
 
   const openTransactionsFor = (nextFilter: 'income' | 'expense') => {
@@ -118,9 +123,7 @@ const DashboardScreen: React.FC = () => {
           <Text style={styles.greeting} numberOfLines={1}>Hi, {profile.name}</Text>
         </View>
         <TouchableOpacity style={styles.notifyButton} activeOpacity={0.85}>
-          <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-            <Path d="M15 18H9m9-1H6l1.2-1.3A2 2 0 0 0 7.8 14V11a4.2 4.2 0 1 1 8.4 0v3c0 .52.2 1.01.56 1.38L18 17ZM13.73 18a2 2 0 0 1-3.46 0" stroke={COLORS.text} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"/>
-          </Svg>
+          <AppIcon name="bell" size={24} color={COLORS.text} />
           <View style={styles.notifyDot} />
         </TouchableOpacity>
       </View>
@@ -129,7 +132,14 @@ const DashboardScreen: React.FC = () => {
         <TouchableOpacity onPress={goToPrevMonth} style={styles.monthButton}>
           <AppIcon name="chevron-left" size={18} color={COLORS.accent} />
         </TouchableOpacity>
-        <Text style={styles.monthLabel}>{currentMonthLabel}</Text>
+        <View style={styles.monthLabelContainer}>
+          <Text style={styles.monthLabel}>{currentMonthLabel}</Text>
+          {!isCurrentMonth && (
+            <TouchableOpacity onPress={goToCurrentMonth} style={styles.todayButton}>
+              <AppIcon name="undo" size={15} color={COLORS.accent} />
+            </TouchableOpacity>
+          )}
+        </View>
         <TouchableOpacity onPress={goToNextMonth} style={styles.monthButton}>
           <AppIcon name="chevron-right" size={18} color={COLORS.accent} />
         </TouchableOpacity>
@@ -327,6 +337,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     minWidth: 160,
     textAlign: 'center',
+  },
+  monthLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 160,
+    gap: 8,
+  },
+  todayButton: {
+    padding: 6,
+    backgroundColor: theme.colors.surfaceMuted,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
   },
   balanceCard: {
     backgroundColor: COLORS.hero,
