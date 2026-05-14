@@ -27,8 +27,20 @@ import {checkForUpdates} from '../../services/updater';
 import DeviceInfo from 'react-native-device-info';
 import type {Transaction} from '../../shared/types';
 import type {CustomCategory} from '../../app/store';
+import {theme} from '../../shared/theme';
+import AppIcon from '../../shared/components/AppIcon';
 
-const C = {bg: '#0f0f1a', card: '#1a1a2e', border: '#2a2a4a', pri: '#6c5ce7', ok: '#00b894', err: '#e17055', txt: '#fff', sub: '#a0a0b8', acc: '#a29bfe'};
+const C = {
+  bg: theme.colors.appBg,
+  card: theme.colors.surface,
+  border: theme.colors.border,
+  pri: theme.colors.primary,
+  ok: theme.colors.income,
+  err: theme.colors.expense,
+  txt: theme.colors.textPrimary,
+  sub: theme.colors.textSecondary,
+  acc: theme.colors.primaryDeep,
+};
 
 const SettingsScreen: React.FC = () => {
   const {
@@ -189,7 +201,7 @@ const SettingsScreen: React.FC = () => {
           {profile.avatarUrl ? (
             <Image source={{uri: profile.avatarUrl}} style={{width: 60, height: 60, borderRadius: 30}} />
           ) : (
-            <Text style={{fontSize:40}}>👤</Text>
+            <AppIcon name="user" size={34} color={C.acc} />
           )}
         </View>
         <View style={s.profileInfo}>
@@ -203,41 +215,41 @@ const SettingsScreen: React.FC = () => {
 
       <Text style={s.sec}>Quyền truy cập</Text>
       <View style={s.card}>
-        <View style={s.row}><Text style={s.icon}>🔔</Text><View style={{flex:1}}><Text style={s.label}>Notification Access</Text><Text style={s.desc}>Cần để đọc thông báo ngân hàng</Text></View>
-          <View style={[s.badge,{backgroundColor:hasNotificationAccess?'#1d4e3e':'#4e1d1d'}]}><Text style={{color:hasNotificationAccess?C.ok:C.err,fontSize:12,fontWeight:'600'}}>{hasNotificationAccess?'Đã bật':'Tắt'}</Text></View></View>
+        <View style={s.row}><View style={s.iconWrap}><AppIcon name="bell" size={20} color={C.acc} /></View><View style={{flex:1}}><Text style={s.label}>Notification Access</Text><Text style={s.desc}>Cần để đọc thông báo ngân hàng</Text></View>
+          <View style={[s.badge,{backgroundColor:hasNotificationAccess ? theme.colors.primarySoft : '#fde7e3'}]}><Text style={{color:hasNotificationAccess?C.ok:C.err,fontSize:12,fontWeight:'600'}}>{hasNotificationAccess?'Đã bật':'Tắt'}</Text></View></View>
         {!hasNotificationAccess && <TouchableOpacity style={s.btn} onPress={()=>{openNotificationSettings();setTimeout(checkAccess,3000);}}><Text style={s.btnTxt}>Mở cài đặt</Text></TouchableOpacity>}
       </View>
-      <View style={s.card}><View style={s.row}><Text style={s.icon}>🔋</Text><View style={{flex:1}}><Text style={s.label}>Battery Optimization</Text><Text style={s.desc}>Tắt tối ưu pin để app chạy nền</Text></View>
-        <View style={[s.badge,{backgroundColor:isBatteryOptimizationDisabled?'#1d4e3e':'#4e1d1d'}]}><Text style={{color:isBatteryOptimizationDisabled?C.ok:C.err,fontSize:12,fontWeight:'600'}}>{isBatteryOptimizationDisabled?'Đã tắt':'Đang bật'}</Text></View></View>
+      <View style={s.card}><View style={s.row}><View style={s.iconWrap}><AppIcon name="battery" size={20} color={C.acc} /></View><View style={{flex:1}}><Text style={s.label}>Battery Optimization</Text><Text style={s.desc}>Tắt tối ưu pin để app chạy nền</Text></View>
+        <View style={[s.badge,{backgroundColor:isBatteryOptimizationDisabled ? theme.colors.primarySoft : '#fde7e3'}]}><Text style={{color:isBatteryOptimizationDisabled?C.ok:C.err,fontSize:12,fontWeight:'600'}}>{isBatteryOptimizationDisabled?'Đã tắt':'Đang bật'}</Text></View></View>
         <TouchableOpacity style={s.btn} onPress={()=>{openBatteryOptimizationSettings();setTimeout(checkAccess,1500);}}><Text style={s.btnTxt}>Cài đặt pin</Text></TouchableOpacity></View>
       <Text style={s.sec}>Dữ liệu</Text>
       <TouchableOpacity style={s.card} onPress={handleExportJSON}>
         <View style={s.row}>
-          <Text style={s.icon}>📤</Text>
+          <View style={s.iconWrap}><AppIcon name="upload" size={20} color={C.acc} /></View>
           <View style={{flex:1}}><Text style={s.label}>Sao lưu JSON</Text><Text style={s.desc}>Xuất file JSON để backup/restore</Text></View>
-          <Text style={{color:C.sub}}>▶</Text>
+          <AppIcon name="chevron-right" size={16} color={C.sub} />
         </View>
       </TouchableOpacity>
 
       <TouchableOpacity style={s.card} onPress={handleExportCSV}>
         <View style={s.row}>
-          <Text style={s.icon}>📊</Text>
+          <View style={s.iconWrap}><AppIcon name="list" size={20} color={C.acc} /></View>
           <View style={{flex:1}}><Text style={s.label}>Xuất CSV</Text><Text style={s.desc}>Mở bằng Excel / Google Sheets</Text></View>
-          <Text style={{color:C.sub}}>▶</Text>
+          <AppIcon name="chevron-right" size={16} color={C.sub} />
         </View>
       </TouchableOpacity>
 
       <TouchableOpacity style={s.card} onPress={handleImportJSON}>
         <View style={s.row}>
-          <Text style={s.icon}>📥</Text>
+          <View style={s.iconWrap}><AppIcon name="download" size={20} color={C.acc} /></View>
           <View style={{flex:1}}><Text style={s.label}>Phục hồi dữ liệu</Text><Text style={s.desc}>Nhập file JSON đã sao lưu</Text></View>
-          <Text style={{color:C.sub}}>▶</Text>
+          <AppIcon name="chevron-right" size={16} color={C.sub} />
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[s.card, {borderColor: '#e1705533', backgroundColor: '#e1705511'}]} onPress={handleResetData}>
+      <TouchableOpacity style={[s.card, s.dangerCard]} onPress={handleResetData}>
         <View style={s.row}>
-          <Text style={s.icon}>🗑️</Text>
+          <View style={s.iconWrap}><AppIcon name="trash" size={20} color={C.err} /></View>
           <View style={{flex:1}}><Text style={s.label}>Xoá toàn bộ dữ liệu</Text><Text style={s.desc}>Reset app về trạng thái ban đầu</Text></View>
         </View>
       </TouchableOpacity>
@@ -270,15 +282,18 @@ const s = StyleSheet.create({
   profileInfo: {flex: 1},
   profileName: {color: C.txt, fontSize: 18, fontWeight: '700'},
   profileDesc: {color: C.sub, fontSize: 13, marginTop: 4},
-  profileEditBtn: {backgroundColor: '#2a2a4a', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20},
+  profileEditBtn: {backgroundColor: theme.colors.surfaceMuted, borderWidth: 1, borderColor: C.border, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20},
   profileEditTxt: {color: C.txt, fontSize: 13, fontWeight: '600'},
   sec:{color:C.sub,fontSize:13,fontWeight:'600',textTransform:'uppercase',letterSpacing:1,marginTop:20,marginBottom:10,marginLeft:4},
   card:{backgroundColor:C.card,borderRadius:16,padding:16,marginBottom:10,borderWidth:1,borderColor:C.border},
   row:{flexDirection:'row',alignItems:'center',gap:12},
-  icon:{fontSize:24},label:{color:C.txt,fontSize:15,fontWeight:'600'},desc:{color:C.sub,fontSize:12,marginTop:2},
+  icon:{fontSize:24},
+  iconWrap:{width:30,height:30,borderRadius:15,backgroundColor:theme.colors.surfaceMuted,alignItems:'center',justifyContent:'center'},
+  label:{color:C.txt,fontSize:15,fontWeight:'600'},desc:{color:C.sub,fontSize:12,marginTop:2},
   badge:{borderRadius:8,paddingVertical:4,paddingHorizontal:10},
   btn:{marginTop:12,backgroundColor:C.pri,borderRadius:10,paddingVertical:10,alignItems:'center'},
-  btnTxt:{color:C.txt,fontSize:14,fontWeight:'600'},
+  btnTxt:{color:theme.colors.textOnDark,fontSize:14,fontWeight:'700'},
+  dangerCard: {borderColor: '#f4c7bd', backgroundColor: '#fff4f1'},
 });
 
 export default SettingsScreen;

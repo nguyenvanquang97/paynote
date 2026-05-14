@@ -6,24 +6,42 @@ import {
   SectionList,
   TouchableOpacity,
   Alert,
+  Pressable,
 } from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {BottomSheetModal} from '@gorhom/bottom-sheet';
-import {CATEGORY_ICONS, KEYWORD_CATEGORIES} from '../../shared/constants';
+import {CATEGORY_ICONS, KEYWORD_CATEGORIES, getCategoryLabel} from '../../shared/constants';
 import {useAppStore, type CustomCategory} from '../../app/store';
 import AddCategoryModal from './AddCategoryModal';
 import SwipeableRow from '../../shared/components/SwipeableRow';
+import {theme} from '../../shared/theme';
+import AppIcon from '../../shared/components/AppIcon';
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  food: '🍔',
+  cafe: '☕',
+  transport: '🚗',
+  shopping: '🛒',
+  subscription: '📱',
+  transfer: '💸',
+  salary: '💰',
+  entertainment: '🎬',
+  health: '🏥',
+  education: '📚',
+  bills: '📄',
+  other: '📌',
+};
 
 const COLORS = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  cardBorder: '#2a2a4a',
-  primary: '#6c5ce7',
-  text: '#ffffff',
-  textSecondary: '#a0a0b8',
-  accent: '#a29bfe',
-  income: '#00b894',
-  expense: '#e17055',
+  bg: theme.colors.appBg,
+  card: theme.colors.surface,
+  cardBorder: theme.colors.border,
+  primary: theme.colors.primary,
+  text: theme.colors.textPrimary,
+  textSecondary: theme.colors.textSecondary,
+  accent: theme.colors.primaryDeep,
+  income: theme.colors.income,
+  expense: theme.colors.expense,
 };
 
 interface CategoryItem {
@@ -41,7 +59,9 @@ const CategoriesScreen: React.FC = () => {
 
   const handleOpenAdd = () => {
     setEditingCategory(null);
-    bottomSheetRef.current?.present();
+    setTimeout(() => {
+      bottomSheetRef.current?.present();
+    }, 0);
   };
 
   const handleOpenEdit = (cat: CustomCategory) => {
@@ -73,7 +93,7 @@ const CategoriesScreen: React.FC = () => {
 
   const builtinCategories: CategoryItem[] = Object.entries(CATEGORY_ICONS).map(([id, icon]) => ({
     id,
-    name: id,
+    name: getCategoryLabel(id),
     icon,
     keywords: categoryMap[id] || [],
     isCustom: false,
@@ -81,8 +101,8 @@ const CategoriesScreen: React.FC = () => {
 
   const customCategoriesList: CategoryItem[] = Object.values(customCategories || {}).map(c => ({
     id: c.id,
-    name: c.name,
-    icon: c.icon,
+    name: c.name?.trim() || 'Danh mục tùy chỉnh',
+    icon: c.icon?.trim() || 'custom',
     keywords: c.keywords || [],
     isCustom: true,
   }));
@@ -102,9 +122,22 @@ const CategoriesScreen: React.FC = () => {
 
   const renderCategory = ({item, section}: {item: CategoryItem; section: any}) => {
     const content = (
-      <View style={styles.categoryCard}>
+      <Pressable
+        disabled={!item.isCustom}
+        onPress={item.isCustom ? () => {
+          const customCat = customCategories[item.id];
+          if (customCat) {handleOpenEdit(customCat);}
+        } : undefined}
+        android_ripple={{color: 'rgba(0,0,0,0.05)'}}
+        style={styles.categoryCard}>
         <View style={styles.categoryHeader}>
-          <Text style={styles.categoryIcon}>{item.icon}</Text>
+          <View style={styles.categoryIconWrap}>
+            {item.isCustom ? (
+              <AppIcon name="other" size={24} color={COLORS.accent} />
+            ) : (
+              <Text style={styles.categoryEmoji}>{CATEGORY_EMOJI[item.id] || '📌'}</Text>
+            )}
+          </View>
           <View style={{flex: 1}}>
             <Text style={styles.categoryName}>{item.name}</Text>
             {item.isCustom && (
@@ -123,15 +156,12 @@ const CategoriesScreen: React.FC = () => {
             ))}
           </View>
         )}
-      </View>
+      </Pressable>
     );
 
     if (item.isCustom) {
-      const customCat = customCategories[item.id];
       return (
-        <SwipeableRow
-          onEdit={customCat ? () => handleOpenEdit(customCat) : undefined}
-          onDelete={() => handleDelete(item)}>
+        <SwipeableRow onDelete={() => handleDelete(item)}>
           {content}
         </SwipeableRow>
       );
@@ -161,8 +191,12 @@ const CategoriesScreen: React.FC = () => {
         stickySectionHeadersEnabled={false}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={handleOpenAdd}>
-        <Text style={styles.fabIcon}>+</Text>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={handleOpenAdd}
+        hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+        activeOpacity={0.9}>
+        <AppIcon name="plus" size={30} color={theme.colors.textOnDark} />
       </TouchableOpacity>
 
       <AddCategoryModal
@@ -190,43 +224,50 @@ const styles = StyleSheet.create({
   sectionHeaderText: {
     color: COLORS.accent,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   categoryCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   categoryHeader: {flexDirection: 'row', alignItems: 'center', gap: 12},
-  categoryIcon: {fontSize: 28},
+  categoryIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.surfaceMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryEmoji: {fontSize: 24},
   categoryName: {
     color: COLORS.text,
     fontSize: 16,
     fontWeight: '600',
-    textTransform: 'capitalize',
   },
   customBadge: {
     marginTop: 4,
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(108, 92, 231, 0.15)',
+    backgroundColor: theme.colors.primarySoft,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  customBadgeText: {color: COLORS.accent, fontSize: 11, fontWeight: '600'},
+  customBadgeText: {color: COLORS.accent, fontSize: 11, fontWeight: '700'},
   keywordsContainer: {flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12},
   keywordBadge: {
-    backgroundColor: '#2a2a4a',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
-  keywordText: {color: COLORS.accent, fontSize: 12},
+  keywordText: {color: COLORS.accent, fontSize: 12, fontWeight: '600'},
   fab: {
     position: 'absolute',
     bottom: 24,
@@ -238,12 +279,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    zIndex: 20,
   },
-  fabIcon: {color: COLORS.text, fontSize: 32, fontWeight: '300', marginTop: -2},
+  fabIcon: {color: theme.colors.textOnDark, fontSize: 32, fontWeight: '500', marginTop: -2},
 });
 
 export default CategoriesScreen;

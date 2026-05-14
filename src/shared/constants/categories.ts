@@ -1,16 +1,36 @@
 export const CATEGORY_ICONS: Record<string, string> = {
-  food: '🍔',
-  cafe: '☕',
-  transport: '🚗',
-  shopping: '🛒',
-  subscription: '📱',
-  transfer: '💸',
-  salary: '💰',
-  entertainment: '🎬',
-  health: '🏥',
-  education: '📚',
-  bills: '📄',
-  other: '📌',
+  food: 'food',
+  cafe: 'cafe',
+  transport: 'transport',
+  shopping: 'shopping',
+  subscription: 'subscription',
+  transfer: 'transfer',
+  salary: 'salary',
+  entertainment: 'entertainment',
+  health: 'health',
+  education: 'education',
+  bills: 'bills',
+  other: 'other',
+};
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  food: 'Ăn uống',
+  cafe: 'Cà phê',
+  transport: 'Di chuyển',
+  shopping: 'Mua sắm',
+  subscription: 'Đăng ký',
+  transfer: 'Chuyển khoản',
+  salary: 'Lương',
+  entertainment: 'Giải trí',
+  health: 'Sức khỏe',
+  education: 'Giáo dục',
+  bills: 'Hóa đơn',
+  other: 'Khác',
+};
+
+export const getCategoryLabel = (categoryId?: string | null): string => {
+  if (!categoryId) {return CATEGORY_LABELS.other;}
+  return CATEGORY_LABELS[categoryId] || categoryId;
 };
 
 export const KEYWORD_CATEGORIES: Record<string, string> = {

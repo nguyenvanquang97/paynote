@@ -10,23 +10,25 @@ import {
   Alert,
 } from 'react-native';
 import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
-import {CATEGORY_ICONS} from '../../shared/constants';
+import {CATEGORY_ICONS, getCategoryLabel} from '../../shared/constants';
 import {insertTransaction, updateTransaction} from '../../database';
 import {useAppStore} from '../../app/store';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
 import type {Transaction} from '../../shared/types';
+import {theme} from '../../shared/theme';
+import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
 
 const COLORS = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  cardBorder: '#2a2a4a',
-  primary: '#6c5ce7',
-  income: '#00b894',
-  expense: '#e17055',
-  text: '#ffffff',
-  textSecondary: '#a0a0b8',
-  handle: '#3a3a5a',
+  bg: theme.colors.surface,
+  card: theme.colors.surfaceMuted,
+  cardBorder: theme.colors.border,
+  primary: theme.colors.primary,
+  income: theme.colors.income,
+  expense: theme.colors.expense,
+  text: theme.colors.textPrimary,
+  textSecondary: theme.colors.textSecondary,
+  handle: '#b2bea9',
 };
 
 interface Props {
@@ -35,7 +37,8 @@ interface Props {
   editTransaction?: Transaction | null;
 }
 
-const SNAP_POINTS = ['75%', '95%'];
+const SNAP_POINTS = ['80%'];
+const INCOME_CATEGORY_IDS = new Set(['salary', 'transfer', 'other']);
 
 const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTransaction}) => {
   const isEditing = !!editTransaction;
@@ -49,10 +52,18 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
 
   const {loadTransactions, loadStats, customCategories} = useAppStore();
 
-  const categories = [
-    ...Object.keys(CATEGORY_ICONS).map(id => ({id, name: id, icon: CATEGORY_ICONS[id]})),
+  const allCategories = [
+    ...Object.keys(CATEGORY_ICONS).map(id => ({id, name: getCategoryLabel(id), icon: CATEGORY_ICONS[id]})),
     ...Object.values(customCategories || {}).map(c => ({id: c.id, name: c.name, icon: c.icon})),
   ];
+
+  const categories = allCategories.filter(cat => {
+    if (Object.prototype.hasOwnProperty.call(CATEGORY_ICONS, cat.id)) {
+      if (type === 'income') {return INCOME_CATEGORY_IDS.has(cat.id);}
+      return cat.id !== 'salary';
+    }
+    return true;
+  });
 
   // Pre-fill form when editing
   useEffect(() => {
@@ -76,6 +87,12 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
     setDate(new Date());
     setShowDatePicker(false);
   };
+
+  useEffect(() => {
+    if (!categories.some(c => c.id === category)) {
+      setCategory(type === 'income' ? 'salary' : 'other');
+    }
+  }, [type, categories, category]);
 
   const handleClose = () => {
     bottomSheetRef.current?.dismiss();
@@ -130,6 +147,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
     <BottomSheetModal
       ref={bottomSheetRef}
       snapPoints={SNAP_POINTS}
+      enableDynamicSizing={false}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBg}
@@ -138,11 +156,12 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
       <View style={styles.header}>
         <Text style={styles.title}>{isEditing ? 'Sửa giao dịch' : 'Thêm giao dịch'}</Text>
         <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-          <Text style={styles.closeText}>✕</Text>
+          <AppIcon name="close" size={18} color={COLORS.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      <BottomSheetScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+      <View style={styles.form}>
+      <BottomSheetScrollView contentContainerStyle={styles.formFields} keyboardShouldPersistTaps="handled">
         {/* Type Switcher */}
         <View style={styles.typeSwitcher}>
           <TouchableOpacity
@@ -199,7 +218,13 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
                   key={cat.id}
                   style={[styles.categoryItem, category === cat.id && styles.categoryItemActive]}
                   onPress={() => setCategory(cat.id)}>
-                  <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                  <View style={styles.categoryIconWrap}>
+                    {Object.prototype.hasOwnProperty.call(CATEGORY_ICONS, cat.id) ? (
+                      <AppIcon name={categoryIconName(cat.id)} size={24} color={theme.colors.primaryDeep} />
+                    ) : (
+                      <AppIcon name="other" size={24} color={theme.colors.primaryDeep} />
+                    )}
+                  </View>
                   <Text style={[styles.categoryText, category === cat.id && styles.categoryTextActive]}>
                     {cat.name}
                   </Text>
@@ -221,10 +246,12 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
           />
         </View>
 
+      </BottomSheetScrollView>
+
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu giao dịch'}</Text>
         </TouchableOpacity>
-      </BottomSheetScrollView>
+      </View>
     </BottomSheetModal>
   );
 };
@@ -244,7 +271,8 @@ const styles = StyleSheet.create({
   title: {color: COLORS.text, fontSize: 18, fontWeight: '700'},
   closeBtn: {padding: 4},
   closeText: {color: COLORS.textSecondary, fontSize: 22},
-  form: {padding: 20, paddingBottom: 48},
+  form: {padding: 20, paddingBottom: 16, flex: 1},
+  formFields: {paddingBottom: 12},
   typeSwitcher: {
     flexDirection: 'row',
     backgroundColor: COLORS.card,
@@ -254,7 +282,7 @@ const styles = StyleSheet.create({
   },
   typeButton: {flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8},
   typeText: {color: COLORS.textSecondary, fontSize: 15, fontWeight: '600'},
-  typeTextActive: {color: COLORS.text},
+  typeTextActive: {color: theme.colors.textOnDark},
   inputGroup: {marginBottom: 20},
   label: {color: COLORS.textSecondary, fontSize: 14, marginBottom: 8},
   input: {
@@ -285,18 +313,19 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
     minWidth: 80,
   },
-  categoryItemActive: {borderColor: COLORS.primary, backgroundColor: 'rgba(108, 92, 231, 0.1)'},
+  categoryItemActive: {borderColor: COLORS.primary, backgroundColor: theme.colors.primarySoft},
   categoryIcon: {fontSize: 28, marginBottom: 4},
-  categoryText: {color: COLORS.textSecondary, fontSize: 12, textTransform: 'capitalize'},
-  categoryTextActive: {color: COLORS.primary, fontWeight: '600'},
+  categoryIconWrap: {marginBottom: 4},
+  categoryText: {color: COLORS.textSecondary, fontSize: 12},
+  categoryTextActive: {color: theme.colors.primaryDeep, fontWeight: '700'},
   saveButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 'auto',
   },
-  saveButtonText: {color: COLORS.text, fontSize: 16, fontWeight: '700'},
+  saveButtonText: {color: theme.colors.textOnDark, fontSize: 16, fontWeight: '700'},
 });
 
 export default AddTransactionModal;

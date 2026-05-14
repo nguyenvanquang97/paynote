@@ -3779,6 +3779,7 @@ __metadata:
     react-native-gesture-handler: ^2.31.2
     react-native-gifted-charts: ^1.4.76
     react-native-image-picker: ^8.2.1
+    react-native-linear-gradient: ^2.8.3
     react-native-mmkv: ^4.3.1
     react-native-nitro-modules: ^0.35.6
     react-native-reanimated: ^4.3.1
@@ -7821,6 +7822,16 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: dc82d54e0bf8f89208a538bb0d14e4891af6efae27ed5b7b21be683a72c38c5219ab9be1ea9bd40aa1c905d481174e649d0b71aeceaa9946e6c707f251568282
+  languageName: node
+  linkType: hard
+
+"react-native-linear-gradient@npm:^2.8.3":
+  version: 2.8.3
+  resolution: "react-native-linear-gradient@npm:2.8.3"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: f980d324e551bbc475c6406bdc5250a08242020cbe653412fa169bbdf51e28a502e225de105b4d696d6a1a1b733d44782469020f4936d8b3ce0e2c78e51cf58f
   languageName: node
   linkType: hard
 

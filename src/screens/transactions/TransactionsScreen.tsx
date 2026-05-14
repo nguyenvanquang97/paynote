@@ -8,42 +8,65 @@ import {
   RefreshControl,
   Alert,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import {BottomSheetModal} from '@gorhom/bottom-sheet';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {useAppStore} from '../../app/store';
-import {CATEGORY_ICONS, SUPPORTED_BANKS} from '../../shared/constants';
+import {CATEGORY_ICONS, SUPPORTED_BANKS, getCategoryLabel} from '../../shared/constants';
 import type {Transaction} from '../../shared/types';
 import {deleteTransaction} from '../../database';
 import dayjs from 'dayjs';
 import AddTransactionModal from './AddTransactionModal';
 import SwipeableRow from '../../shared/components/SwipeableRow';
+import {theme} from '../../shared/theme';
+import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
+import {useRoute} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
+const CATEGORY_EMOJI: Record<string, string> = {
+  food: '🍔',
+  cafe: '☕',
+  transport: '🚗',
+  shopping: '🛒',
+  subscription: '📱',
+  transfer: '💸',
+  salary: '💰',
+  entertainment: '🎬',
+  health: '🏥',
+  education: '📚',
+  bills: '📄',
+  other: '📌',
+};
 
 const COLORS = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  cardBorder: '#2a2a4a',
-  primary: '#6c5ce7',
-  income: '#00b894',
-  expense: '#e17055',
-  text: '#ffffff',
-  textSecondary: '#a0a0b8',
-  accent: '#a29bfe',
-  warning: '#fdcb6e',
+  bg: theme.colors.appBg,
+  card: theme.colors.surface,
+  cardBorder: theme.colors.border,
+  primary: theme.colors.primary,
+  income: theme.colors.income,
+  expense: theme.colors.expense,
+  text: theme.colors.textPrimary,
+  textSecondary: theme.colors.textSecondary,
+  accent: theme.colors.primaryDeep,
+  warning: theme.colors.warning,
+  primarySoft: theme.colors.primarySoft,
 };
 
 const formatCurrency = (amount: number): string =>
   new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
 
 const TransactionsScreen: React.FC = () => {
+  const route = useRoute<any>();
   const {transactions, isLoading, loadTransactions} = useAppStore();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [grouping, setGrouping] = useState<'day' | 'week' | 'month'>('day');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [pendingJump, setPendingJump] = useState<{year: number; month: number} | null>(null);
 
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const sectionListRef = useRef<SectionList<any>>(null);
+  const lastJumpTsRef = useRef<number>(0);
 
   useEffect(() => {
     loadTransactions();
@@ -93,7 +116,7 @@ const TransactionsScreen: React.FC = () => {
         const end = dayjs(tx.timestamp).endOf('week');
         key = `Tuần: ${start.format('DD/MM')} - ${end.format('DD/MM/YYYY')}`;
       } else {
-        key = dayjs(tx.timestamp).format('Tháng MM/YYYY');
+        key = dayjs(tx.timestamp).format('[Tháng] MM/YYYY');
       }
       if (!map.has(key)) {map.set(key, []);}
       map.get(key)!.push(tx);
@@ -101,22 +124,58 @@ const TransactionsScreen: React.FC = () => {
     return Array.from(map.entries()).map(([title, data]) => ({title, data}));
   }, [filteredTransactions, grouping]);
 
+  useEffect(() => {
+    const jump = route?.params?.fromDashboard;
+    if (!jump || !jump.ts || jump.ts === lastJumpTsRef.current) {return;}
+
+    lastJumpTsRef.current = jump.ts;
+    if (jump.filter === 'income' || jump.filter === 'expense') {
+      setFilter(jump.filter);
+    } else {
+      setFilter('all');
+    }
+    setGrouping('month');
+    setPendingJump({year: jump.year, month: jump.month});
+  }, [route?.params]);
+
+  useEffect(() => {
+    if (!pendingJump || grouping !== 'month' || sections.length === 0) {return;}
+    const targetTitle = `Tháng ${String(pendingJump.month).padStart(2, '0')}/${pendingJump.year}`;
+    const sectionIndex = sections.findIndex(s => s.title === targetTitle);
+    if (sectionIndex >= 0) {
+      requestAnimationFrame(() => {
+        sectionListRef.current?.scrollToLocation({
+          sectionIndex,
+          itemIndex: 0,
+          animated: true,
+          viewOffset: 12,
+        });
+      });
+    }
+    setPendingJump(null);
+  }, [pendingJump, grouping, sections]);
+
   const renderTransaction = ({item: tx}: {item: Transaction}) => {
     const bankConfig = SUPPORTED_BANKS[tx.bank as keyof typeof SUPPORTED_BANKS];
-    const icon = CATEGORY_ICONS[tx.category || 'other'] || CATEGORY_ICONS.other;
+    const categoryId = CATEGORY_ICONS[tx.category || 'other'] ? (tx.category || 'other') : 'other';
 
     return (
-      <SwipeableRow
-        onEdit={() => handleOpenEdit(tx)}
-        onDelete={() => handleDelete(tx)}>
-        <View
+      <SwipeableRow onDelete={() => handleDelete(tx)}>
+        <Pressable
+          onPress={() => handleOpenEdit(tx)}
+          android_ripple={{color: 'rgba(0,0,0,0.05)'}}
           style={[
             styles.txCard,
             tx.isSuspectedGap && styles.txCardSuspected,
           ]}>
-          <View style={styles.txHeader}>
+          <View
+          style={[
+            styles.txHeader,
+          ]}>
             <View style={styles.txLeft}>
-              <Text style={styles.txIcon}>{icon}</Text>
+              <View style={styles.txIconWrap}>
+                <Text style={styles.txEmoji}>{CATEGORY_EMOJI[categoryId] || '📌'}</Text>
+              </View>
               <View style={styles.txInfo}>
                 <Text style={styles.txDescription} numberOfLines={1}>
                   {tx.description || 'Không có mô tả'}
@@ -139,16 +198,19 @@ const TransactionsScreen: React.FC = () => {
 
           {tx.isSuspectedGap && (
             <View style={styles.warningBadge}>
-              <Text style={styles.warningText}>⚠️ Có thể thiếu giao dịch trước đó</Text>
+              <View style={styles.warningRow}>
+                <AppIcon name="warning" size={14} color="#8a5a0e" />
+                <Text style={styles.warningText}>Có thể thiếu giao dịch trước đó</Text>
+              </View>
             </View>
           )}
 
           {tx.category && (
             <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{tx.category}</Text>
+              <Text style={styles.categoryText}>{getCategoryLabel(tx.category)}</Text>
             </View>
           )}
-        </View>
+        </Pressable>
       </SwipeableRow>
     );
   };
@@ -183,6 +245,7 @@ const TransactionsScreen: React.FC = () => {
       </View>
 
       <SectionList
+        ref={sectionListRef}
         sections={sections}
         keyExtractor={item => item.id}
         renderItem={renderTransaction}
@@ -195,14 +258,15 @@ const TransactionsScreen: React.FC = () => {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={loadTransactions} />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📋</Text>
+            <AppIcon name="list" size={42} color={COLORS.textSecondary} />
             <Text style={styles.emptyText}>Không có giao dịch</Text>
           </View>
         }
+        onScrollToIndexFailed={() => {}}
       />
 
       <TouchableOpacity style={styles.fab} onPress={handleOpenAdd}>
-        <Text style={styles.fabIcon}>+</Text>
+        <AppIcon name="plus" size={30} color={theme.colors.textOnDark} />
       </TouchableOpacity>
 
       <AddTransactionModal
@@ -220,33 +284,33 @@ const styles = StyleSheet.create({
   filterButton: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: COLORS.card,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  filterButtonActive: {backgroundColor: COLORS.primary, borderColor: COLORS.primary},
+  filterButtonActive: {backgroundColor: COLORS.primarySoft, borderColor: COLORS.primary},
   filterText: {color: COLORS.textSecondary, fontSize: 14, fontWeight: '500'},
-  filterTextActive: {color: COLORS.text},
+  filterTextActive: {color: COLORS.text, fontWeight: '700'},
   groupingRow: {flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8},
   groupButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 16,
+    borderRadius: 999,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  groupButtonActive: {backgroundColor: '#3a3a5a', borderColor: '#4a4a6a'},
+  groupButtonActive: {backgroundColor: COLORS.primarySoft, borderColor: COLORS.primary},
   groupText: {color: COLORS.textSecondary, fontSize: 12, fontWeight: '500'},
-  groupTextActive: {color: COLORS.text},
+  groupTextActive: {color: COLORS.text, fontWeight: '700'},
   listContent: {padding: 16, paddingTop: 0},
   sectionHeader: {backgroundColor: COLORS.bg, paddingVertical: 8, marginBottom: 4},
-  sectionHeaderText: {color: COLORS.accent, fontSize: 14, fontWeight: '600'},
+  sectionHeaderText: {color: COLORS.accent, fontSize: 14, fontWeight: '700'},
   txCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 10,
     borderWidth: 1,
@@ -255,7 +319,15 @@ const styles = StyleSheet.create({
   txCardSuspected: {borderColor: COLORS.warning, borderWidth: 2},
   txHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
   txLeft: {flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1},
-  txIcon: {fontSize: 28},
+  txIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  txEmoji: {fontSize: 24},
   txInfo: {flex: 1},
   txDescription: {color: COLORS.text, fontSize: 15, fontWeight: '500', maxWidth: width * 0.45},
   txMeta: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4},
@@ -265,23 +337,24 @@ const styles = StyleSheet.create({
   txAmount: {fontSize: 16, fontWeight: '700'},
   warningBadge: {
     marginTop: 10,
-    backgroundColor: '#3d3520',
+    backgroundColor: '#fff3d6',
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 10,
   },
-  warningText: {color: COLORS.warning, fontSize: 12},
+  warningRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  warningText: {color: '#8a5a0e', fontSize: 12},
   categoryBadge: {
     marginTop: 8,
     alignSelf: 'flex-start',
-    backgroundColor: '#2a2a4a',
+    backgroundColor: COLORS.primarySoft,
     borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
-  categoryText: {color: COLORS.accent, fontSize: 12, textTransform: 'capitalize'},
+  categoryText: {color: COLORS.accent, fontSize: 12},
   emptyState: {alignItems: 'center', paddingVertical: 60},
-  emptyIcon: {fontSize: 48, marginBottom: 12},
+  emptyIcon: {marginBottom: 12},
   emptyText: {color: COLORS.textSecondary, fontSize: 16},
   fab: {
     position: 'absolute',
@@ -294,12 +367,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
   },
-  fabIcon: {color: COLORS.text, fontSize: 32, fontWeight: '300', marginTop: -2},
+  fabIcon: {color: theme.colors.textOnDark, fontSize: 32, fontWeight: '500', marginTop: -2},
 });
 
 export default TransactionsScreen;

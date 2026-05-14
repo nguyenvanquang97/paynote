@@ -1,20 +1,18 @@
 import React, {useRef} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Animated} from 'react-native';
 import {Swipeable} from 'react-native-gesture-handler';
+import {theme} from '../theme';
+import AppIcon from './AppIcon';
 
 interface SwipeableRowProps {
   children: React.ReactNode;
-  onEdit?: () => void;
   onDelete?: () => void;
-  editLabel?: string;
   deleteLabel?: string;
 }
 
 const SwipeableRow: React.FC<SwipeableRowProps> = ({
   children,
-  onEdit,
   onDelete,
-  editLabel = 'Sửa',
   deleteLabel = 'Xóa',
 }) => {
   const swipeableRef = useRef<Swipeable>(null);
@@ -25,34 +23,15 @@ const SwipeableRow: React.FC<SwipeableRowProps> = ({
     progress: Animated.AnimatedInterpolation<number>,
     _drag: Animated.AnimatedInterpolation<number>,
   ) => {
-    const actions: React.ReactNode[] = [];
+    if (!onDelete) {return <View />;}
 
-    if (onEdit) {
-      const trans = progress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [onDelete ? 160 : 80, 0],
-      });
-      actions.push(
-        <Animated.View key="edit" style={{transform: [{translateX: trans}]}}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => {
-              close();
-              onEdit();
-            }}>
-            <Text style={styles.actionIcon}>✏️</Text>
-            <Text style={styles.actionText}>{editLabel}</Text>
-          </TouchableOpacity>
-        </Animated.View>,
-      );
-    }
+    const trans = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [80, 0],
+    });
 
-    if (onDelete) {
-      const trans = progress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [80, 0],
-      });
-      actions.push(
+    return (
+      <View style={styles.actionsContainer}>
         <Animated.View key="delete" style={{transform: [{translateX: trans}]}}>
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
@@ -60,14 +39,12 @@ const SwipeableRow: React.FC<SwipeableRowProps> = ({
               close();
               onDelete();
             }}>
-            <Text style={styles.actionIcon}>🗑️</Text>
+            <AppIcon name="trash" size={20} color={theme.colors.textOnDark} />
             <Text style={styles.actionText}>{deleteLabel}</Text>
           </TouchableOpacity>
-        </Animated.View>,
-      );
-    }
-
-    return <View style={styles.actionsContainer}>{actions}</View>;
+        </Animated.View>
+      </View>
+    );
   };
 
   return (
@@ -89,26 +66,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   actionButton: {
-    width: 76,
+    flex: 1,
+    height: '100%',
+    width: 82,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 18,
     marginLeft: 6,
-    gap: 4,
-  },
-  editButton: {
-    backgroundColor: '#1e3a5f',
+    gap: 6,
+    paddingVertical: 8,
   },
   deleteButton: {
-    backgroundColor: '#3d1515',
-  },
-  actionIcon: {
-    fontSize: 20,
+    backgroundColor: theme.colors.expense,
   },
   actionText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    color: theme.colors.textOnDark,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 

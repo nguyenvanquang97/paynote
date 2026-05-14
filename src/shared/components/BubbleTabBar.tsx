@@ -10,17 +10,18 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, {Path, Rect, Circle, Line, Polyline} from 'react-native-svg';
 import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
+import {theme} from '../theme';
 
 const {width} = Dimensions.get('window');
 
 const C = {
-  bg: '#1a1a2e',
-  border: '#2a2a4a',
-  active: '#6c5ce7',
-  inactive: '#5a5a7a',
-  bubble: 'rgba(108, 92, 231, 0.15)',
-  text: '#ffffff',
-  textInactive: '#6a6a8a',
+  bg: theme.colors.surface,
+  border: theme.colors.border,
+  active: theme.colors.primaryDeep,
+  inactive: '#7d877f',
+  bubble: theme.colors.primarySoft,
+  text: theme.colors.textPrimary,
+  textInactive: theme.colors.textSecondary,
 };
 
 const TAB_ICON_SIZE = 22;
@@ -100,6 +101,11 @@ export default function BubbleTabBar({state, descriptors, navigation}: BottomTab
 
   const tabCount = state.routes.length;
   const tabWidth = width / tabCount;
+  const tabAnims = useRef<Record<string, Animated.Value>>(
+    Object.fromEntries(
+      state.routes.map((route, idx) => [route.key, new Animated.Value(state.index === idx ? 1 : 0)]),
+    ),
+  ).current;
 
   // Animated value for bubble horizontal position
   const bubbleAnim = useRef(new Animated.Value(state.index * tabWidth)).current;
@@ -112,6 +118,18 @@ export default function BubbleTabBar({state, descriptors, navigation}: BottomTab
       stiffness: 200,
     }).start();
   }, [state.index, tabWidth, bubbleAnim]);
+
+  useEffect(() => {
+    const animations = state.routes.map((route, idx) =>
+      Animated.spring(tabAnims[route.key], {
+        toValue: state.index === idx ? 1 : 0,
+        useNativeDriver: true,
+        damping: 14,
+        stiffness: 180,
+      }),
+    );
+    Animated.parallel(animations).start();
+  }, [state.index, state.routes, tabAnims]);
 
   return (
     <View
@@ -138,6 +156,19 @@ export default function BubbleTabBar({state, descriptors, navigation}: BottomTab
         const isActive = state.index === index;
         const color = isActive ? C.active : C.inactive;
         const labelColor = isActive ? C.text : C.textInactive;
+        const anim = tabAnims[route.key];
+        const iconTranslateY = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -4],
+        });
+        const iconScale = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 1.16],
+        });
+        const labelOpacity = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.8, 1],
+        });
 
         const onPress = () => {
           const event = navigation.emit({
@@ -158,13 +189,18 @@ export default function BubbleTabBar({state, descriptors, navigation}: BottomTab
             style={[styles.tab, {width: tabWidth}]}
             accessibilityRole="button"
             accessibilityState={isActive ? {selected: true} : {}}>
-            <Animated.View style={[styles.tabContent, isActive && styles.tabContentActive]}>
-              {ROUTE_ICONS[route.name]?.(color)}
-              <Text
-                style={[styles.label, {color: labelColor}]}
+            <Animated.View style={styles.tabContent}>
+              <Animated.View
+                style={{
+                  transform: [{translateY: iconTranslateY}, {scale: iconScale}],
+                }}>
+                {ROUTE_ICONS[route.name]?.(color)}
+              </Animated.View>
+              <Animated.Text
+                style={[styles.label, {color: labelColor, opacity: labelOpacity}]}
                 numberOfLines={1}>
                 {options.tabBarLabel?.toString() || ROUTE_LABELS[route.name] || route.name}
-              </Text>
+              </Animated.Text>
             </Animated.View>
           </TouchableOpacity>
         );
@@ -177,17 +213,16 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: C.bg,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
+    borderTopWidth: 0,
     height: TAB_BAR_HEIGHT + 20, // base height + padding
     alignItems: 'center',
     paddingTop: 8,
     position: 'relative',
-    elevation: 8,
-    shadowColor: '#000',
+    elevation: 12,
+    shadowColor: theme.colors.shadow,
     shadowOffset: {width: 0, height: -2},
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
   },
   bubble: {
     position: 'absolute',
@@ -196,7 +231,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.bubble,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(108, 92, 231, 0.3)',
+    borderColor: '#b8e4a7',
   },
   tab: {
     alignItems: 'center',
@@ -209,13 +244,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  tabContentActive: {
-    transform: [{scale: 1.05}],
-  },
   label: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 2,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
 });

@@ -6,15 +6,26 @@ import {
   openNotificationSettings,
   openBatteryOptimizationSettings,
 } from '../../native';
+import {theme} from '../../shared/theme';
+import AppIcon from '../../shared/components/AppIcon';
 
-const C = {bg: '#0f0f1a', card: '#1a1a2e', border: '#2a2a4a', pri: '#6c5ce7', ok: '#00b894', txt: '#fff', sub: '#a0a0b8', acc: '#a29bfe'};
+const C = {
+  bg: theme.colors.appBg,
+  card: theme.colors.surface,
+  border: theme.colors.border,
+  pri: theme.colors.primary,
+  ok: theme.colors.income,
+  txt: theme.colors.textPrimary,
+  sub: theme.colors.textSecondary,
+  acc: theme.colors.primaryDeep,
+};
 
 interface Props { onComplete: () => void; }
 
 const steps = [
-  {icon: '🔔', title: 'Quyền thông báo', desc: 'Cho phép PayNote đọc notification ngân hàng để tự động ghi nhận giao dịch', action: 'notif'},
-  {icon: '🔋', title: 'Tối ưu pin', desc: 'Tắt tối ưu pin để PayNote luôn chạy nền và không bỏ lỡ giao dịch nào', action: 'battery'},
-  {icon: '✅', title: 'Sẵn sàng!', desc: 'PayNote đã sẵn sàng. Giao dịch sẽ tự động được ghi nhận khi bạn nhận thông báo ngân hàng', action: 'done'},
+  {icon: 'bell', title: 'Quyền thông báo', desc: 'Cho phép PayNote đọc notification ngân hàng để tự động ghi nhận giao dịch', action: 'notif'},
+  {icon: 'battery', title: 'Tối ưu pin', desc: 'Tắt tối ưu pin để PayNote luôn chạy nền và không bỏ lỡ giao dịch nào', action: 'battery'},
+  {icon: 'list', title: 'Sẵn sàng!', desc: 'PayNote đã sẵn sàng. Giao dịch sẽ tự động được ghi nhận khi bạn nhận thông báo ngân hàng', action: 'done'},
 ];
 
 const OnboardingScreen: React.FC<Props> = ({onComplete}) => {
@@ -41,7 +52,9 @@ const OnboardingScreen: React.FC<Props> = ({onComplete}) => {
     <View style={s.container}>
       <View style={s.dots}>{steps.map((_, i) => <View key={i} style={[s.dot, i === step && s.dotActive]} />)}</View>
       <View style={s.content}>
-        <Text style={s.icon}>{current.icon}</Text>
+        <View style={s.iconWrap}>
+          <AppIcon name={current.icon as any} size={64} color={C.acc} />
+        </View>
         <Text style={s.title}>{current.title}</Text>
         <Text style={s.desc}>{current.desc}</Text>
         {current.action === 'notif' && notifOk && <Text style={s.ok}>Đã bật quyền thông báo</Text>}
@@ -68,13 +81,14 @@ const s = StyleSheet.create({
   dotActive:{backgroundColor:C.pri,width:24},
   content:{alignItems:'center',flex:1,justifyContent:'center'},
   icon:{fontSize:80,marginBottom:24},
+  iconWrap:{width:88,height:88,borderRadius:44,backgroundColor:C.card,justifyContent:'center',alignItems:'center',marginBottom:24,borderWidth:1,borderColor:C.border},
   title:{color:C.txt,fontSize:28,fontWeight:'700',marginBottom:12},
   desc:{color:C.sub,fontSize:16,textAlign:'center',lineHeight:24,paddingHorizontal:20},
   ok:{color:C.ok,fontSize:14,fontWeight:'600',marginTop:14},
   actions:{gap:12,marginBottom:40},
-  actionBtn:{backgroundColor:C.card,borderRadius:14,paddingVertical:16,alignItems:'center',borderWidth:1,borderColor:C.border},
+  actionBtn:{backgroundColor:C.card,borderRadius:18,paddingVertical:16,alignItems:'center',borderWidth:1,borderColor:C.border},
   actionTxt:{color:C.acc,fontSize:16,fontWeight:'600'},
-  nextBtn:{backgroundColor:C.pri,borderRadius:14,paddingVertical:16,alignItems:'center'},
+  nextBtn:{backgroundColor:C.pri,borderRadius:18,paddingVertical:16,alignItems:'center'},
   nextTxt:{color:C.txt,fontSize:16,fontWeight:'600'},
 });
 

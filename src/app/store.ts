@@ -133,7 +133,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     const data = storage.getString('custom_categories');
     if (data) {
       try {
-        set({customCategories: JSON.parse(data)});
+        const parsed = JSON.parse(data) as Record<string, CustomCategory>;
+        const sanitized = Object.fromEntries(
+          Object.entries(parsed || {}).filter(([, cat]) => {
+            return Boolean(
+              cat &&
+              typeof cat.id === 'string' &&
+              cat.id.trim().length > 0 &&
+              typeof cat.name === 'string' &&
+              cat.name.trim().length > 0 &&
+              typeof cat.icon === 'string' &&
+              cat.icon.trim().length > 0,
+            );
+          }),
+        ) as Record<string, CustomCategory>;
+        storage.set('custom_categories', JSON.stringify(sanitized));
+        set({customCategories: sanitized});
       } catch (e) {
         console.error('Failed to parse custom categories', e);
       }

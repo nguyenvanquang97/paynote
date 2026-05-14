@@ -12,15 +12,17 @@ import {
 } from 'react-native';
 import {useAppStore} from '../../app/store';
 import {launchImageLibrary} from 'react-native-image-picker';
+import {theme} from '../../shared/theme';
+import AppIcon from '../../shared/components/AppIcon';
 
 const COLORS = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  cardBorder: '#2a2a4a',
-  primary: '#6c5ce7',
-  text: '#ffffff',
-  textSecondary: '#a0a0b8',
-  overlay: 'rgba(0, 0, 0, 0.7)',
+  bg: theme.colors.surface,
+  card: theme.colors.surfaceMuted,
+  cardBorder: theme.colors.border,
+  primary: theme.colors.primary,
+  text: theme.colors.textPrimary,
+  textSecondary: theme.colors.textSecondary,
+  overlay: 'rgba(0, 0, 0, 0.45)',
 };
 
 interface Props {
@@ -71,7 +73,7 @@ const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
           <View style={styles.header}>
             <Text style={styles.title}>Cập nhật hồ sơ</Text>
             <TouchableOpacity onPress={onClose}>
-              <Text style={styles.closeText}>✕</Text>
+              <AppIcon name="close" size={20} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -84,10 +86,10 @@ const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
                 {avatarUrl ? (
                   <Image source={{uri: avatarUrl}} style={styles.avatarImage} />
                 ) : (
-                  <Text style={styles.avatarEmoji}>👤</Text>
+                  <AppIcon name="user" size={38} color={COLORS.textSecondary} />
                 )}
                 <View style={styles.editBadge}>
-                  <Text style={styles.editBadgeText}>✏️</Text>
+                  <AppIcon name="edit" size={14} color={theme.colors.textOnDark} />
                 </View>
               </TouchableOpacity>
             </View>

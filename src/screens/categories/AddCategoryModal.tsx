@@ -7,17 +7,19 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import {BottomSheetModal, BottomSheetBackdrop} from '@gorhom/bottom-sheet';
+import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
 import {useAppStore, type CustomCategory} from '../../app/store';
+import {theme} from '../../shared/theme';
+import AppIcon from '../../shared/components/AppIcon';
 
 const COLORS = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  cardBorder: '#2a2a4a',
-  primary: '#6c5ce7',
-  text: '#ffffff',
-  textSecondary: '#a0a0b8',
-  handle: '#3a3a5a',
+  bg: theme.colors.surface,
+  card: theme.colors.surfaceMuted,
+  cardBorder: theme.colors.border,
+  primary: theme.colors.primary,
+  text: theme.colors.textPrimary,
+  textSecondary: theme.colors.textSecondary,
+  handle: '#b2bea9',
 };
 
 interface Props {
@@ -35,7 +37,7 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
   const [icon, setIcon] = useState('');
   const [keywords, setKeywords] = useState('');
 
-  const {addCustomCategory, updateCustomCategory} = useAppStore();
+  const {addCustomCategory, updateCustomCategory, customCategories} = useAppStore();
 
   useEffect(() => {
     if (editCategory) {
@@ -74,9 +76,17 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
       .map(k => k.trim().toLowerCase())
       .filter(k => k.length > 0);
 
+    const normalizedName = trimmedName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    const candidateId = normalizedName || `custom_${Date.now()}`;
     const id = isEditing
       ? editCategory!.id
-      : trimmedName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      : (customCategories[candidateId] ? `${candidateId}_${Date.now()}` : candidateId);
 
     const category: CustomCategory = {id, name: trimmedName, icon: trimmedIcon, keywords: keywordList};
 
@@ -100,6 +110,7 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
     <BottomSheetModal
       ref={bottomSheetRef}
       snapPoints={SNAP_POINTS}
+      enableDynamicSizing={false}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBg}
@@ -108,11 +119,12 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
       <View style={styles.header}>
         <Text style={styles.title}>{isEditing ? 'Sửa danh mục' : 'Thêm danh mục mới'}</Text>
         <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-          <Text style={styles.closeText}>✕</Text>
+          <AppIcon name="close" size={18} color={COLORS.textSecondary} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.form}>
+        <BottomSheetScrollView contentContainerStyle={styles.formFields} keyboardShouldPersistTaps="handled">
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Tên danh mục</Text>
           <TextInput
@@ -147,6 +159,7 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
           />
         </View>
 
+        </BottomSheetScrollView>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu danh mục'}</Text>
         </TouchableOpacity>
@@ -168,9 +181,10 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.cardBorder,
   },
   title: {color: COLORS.text, fontSize: 18, fontWeight: '700'},
-  closeBtn: {padding: 4},
+  closeBtn: {padding: 8, zIndex: 10},
   closeText: {color: COLORS.textSecondary, fontSize: 22},
-  form: {padding: 20},
+  form: {padding: 20, flex: 1},
+  formFields: {paddingBottom: 12},
   inputGroup: {marginBottom: 20},
   label: {color: COLORS.textSecondary, fontSize: 14, marginBottom: 8},
   input: {
@@ -187,9 +201,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 'auto',
   },
-  saveButtonText: {color: COLORS.text, fontSize: 16, fontWeight: '700'},
+  saveButtonText: {color: theme.colors.textOnDark, fontSize: 16, fontWeight: '700'},
 });
 
 export default AddCategoryModal;

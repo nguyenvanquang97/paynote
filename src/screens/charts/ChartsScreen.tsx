@@ -12,25 +12,28 @@ import {PieChart, BarChart} from 'react-native-gifted-charts';
 import {useAppStore} from '../../app/store';
 import {getTransactionsByDateRange} from '../../database';
 import dayjs from 'dayjs';
-import {CATEGORY_ICONS} from '../../shared/constants';
+import {CATEGORY_ICONS, getCategoryLabel} from '../../shared/constants';
+import {theme} from '../../shared/theme';
+import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
 
 const {width} = Dimensions.get('window');
 
 const COLORS = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  cardBorder: '#2a2a4a',
-  primary: '#6c5ce7',
-  income: '#00b894',
-  expense: '#e17055',
-  text: '#ffffff',
-  textSecondary: '#a0a0b8',
-  accent: '#a29bfe',
+  bg: theme.colors.appBg,
+  card: theme.colors.surface,
+  cardBorder: theme.colors.border,
+  primary: theme.colors.primary,
+  income: theme.colors.income,
+  expense: theme.colors.expense,
+  text: theme.colors.textPrimary,
+  textSecondary: theme.colors.textSecondary,
+  accent: theme.colors.primaryDeep,
+  surfaceMuted: theme.colors.surfaceMuted,
 };
 
 const CHART_COLORS = [
-  '#6c5ce7', '#00b894', '#e17055', '#fdcb6e', '#0984e3',
-  '#a29bfe', '#55efc4', '#fd79a8', '#fab1a0', '#74b9ff',
+  '#65d75f', '#2fb34e', '#e76452', '#f0ae3e', '#57a2e8',
+  '#7ebd5a', '#87dca8', '#f08fb1', '#f2c09c', '#6fc4f9',
   '#81ecec', '#dfe6e9',
 ];
 
@@ -119,7 +122,8 @@ const ChartsScreen: React.FC = () => {
     .map((stat, i) => ({
       value: stat.total,
       color: CHART_COLORS[i % CHART_COLORS.length],
-      label: stat.category,
+      categoryId: stat.category,
+      label: getCategoryLabel(stat.category),
       text: `${((stat.total / totalExpense) * 100).toFixed(1)}%`,
     }));
 
@@ -153,11 +157,11 @@ const ChartsScreen: React.FC = () => {
       {/* Month Selector */}
       <View style={styles.monthSelector}>
         <TouchableOpacity onPress={goToPrevMonth} style={styles.monthButton}>
-          <Text style={styles.monthButtonText}>◀</Text>
+          <AppIcon name="chevron-left" size={18} color={COLORS.accent} />
         </TouchableOpacity>
         <Text style={styles.monthLabel}>{currentMonthLabel}</Text>
         <TouchableOpacity onPress={goToNextMonth} style={styles.monthButton}>
-          <Text style={styles.monthButtonText}>▶</Text>
+          <AppIcon name="chevron-right" size={18} color={COLORS.accent} />
         </TouchableOpacity>
       </View>
 
@@ -206,7 +210,7 @@ const ChartsScreen: React.FC = () => {
                 <View key={i} style={styles.legendItem}>
                   <View style={[styles.legendDot, {backgroundColor: item.color}]} />
                   <Text style={styles.legendLabel} numberOfLines={1}>
-                    {CATEGORY_ICONS[item.label] || '📌'} {item.label}
+                    <AppIcon name={categoryIconName(item.categoryId)} size={14} color={COLORS.accent} /> {item.label}
                   </Text>
                   <Text style={styles.legendPercent}>{item.text}</Text>
                 </View>
@@ -271,7 +275,7 @@ const ChartsScreen: React.FC = () => {
               ? ((stat.total / totalExpense) * 100).toFixed(1)
               : '0';
             const color = CHART_COLORS[i % CHART_COLORS.length];
-            const icon = CATEGORY_ICONS[stat.category] || '📌';
+            const icon = categoryIconName(CATEGORY_ICONS[stat.category] ? stat.category : 'other');
             const barWidth = totalExpense > 0
               ? (stat.total / totalExpense) * (width - 80)
               : 0;
@@ -280,8 +284,8 @@ const ChartsScreen: React.FC = () => {
               <View key={stat.category} style={styles.statRow}>
                 <View style={styles.statRowHeader}>
                   <View style={styles.statRowLeft}>
-                    <Text style={styles.statIcon}>{icon}</Text>
-                    <Text style={styles.statName}>{stat.category}</Text>
+                    <AppIcon name={icon} size={16} color={COLORS.accent} />
+                    <Text style={styles.statName}>{getCategoryLabel(stat.category)}</Text>
                     <Text style={styles.statCount}>{stat.count} GD</Text>
                   </View>
                   <View style={styles.statRowRight}>
@@ -313,12 +317,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 16,
   },
-  monthButton: {padding: 12, backgroundColor: COLORS.card, borderRadius: 12},
+  monthButton: {padding: 12, backgroundColor: COLORS.card, borderRadius: 16, borderWidth: 1, borderColor: COLORS.cardBorder},
   monthButtonText: {color: COLORS.accent, fontSize: 16},
   monthLabel: {
     color: COLORS.text,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     minWidth: 160,
     textAlign: 'center',
   },
@@ -326,7 +330,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: COLORS.card,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     borderLeftWidth: 4,
     borderWidth: 1,
@@ -335,10 +339,10 @@ const styles = StyleSheet.create({
   statLabel: {color: COLORS.textSecondary, fontSize: 12, marginBottom: 4},
   statAmount: {fontSize: 15, fontWeight: '600'},
   section: {marginBottom: 20},
-  sectionTitle: {color: COLORS.text, fontSize: 17, fontWeight: '600', marginBottom: 12},
+  sectionTitle: {color: COLORS.text, fontSize: 17, fontWeight: '700', marginBottom: 12},
   chartCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 16,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
@@ -371,7 +375,7 @@ const styles = StyleSheet.create({
   emptyIcon: {fontSize: 40, marginBottom: 8},
   emptyText: {color: COLORS.textSecondary, fontSize: 14, textAlign: 'center'},
   statRow: {
-    backgroundColor: '#161628',
+    backgroundColor: COLORS.surfaceMuted,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -381,7 +385,7 @@ const styles = StyleSheet.create({
   statRowHeader: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8},
   statRowLeft: {flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1},
   statIcon: {fontSize: 20},
-  statName: {color: COLORS.text, fontSize: 14, fontWeight: '500', textTransform: 'capitalize'},
+  statName: {color: COLORS.text, fontSize: 14, fontWeight: '500'},
   statCount: {color: COLORS.textSecondary, fontSize: 12},
   statRowRight: {alignItems: 'flex-end'},
   statRowAmount: {fontSize: 14, fontWeight: '600'},
