@@ -1,4 +1,4 @@
-import React, {useEffect, useCallback} from 'react';
+import React, {useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -12,30 +12,32 @@ import {
 import {useAppStore} from '../../app/store';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import dayjs from 'dayjs';
-import {theme} from '../../shared/theme';
+import {theme, useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
 import {useNavigation} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
-
-const COLORS = {
-  bg: theme.colors.appBg,
-  card: theme.colors.surface,
-  cardBorder: theme.colors.border,
-  primary: theme.colors.primary,
-  income: theme.colors.income,
-  expense: theme.colors.expense,
-  text: theme.colors.textPrimary,
-  textSecondary: theme.colors.textSecondary,
-  accent: theme.colors.primaryDeep,
-  hero: '#ffffff',
-};
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
 };
 
 const DashboardScreen: React.FC = () => {
+  const t = useThemeColors();
+  const COLORS = useMemo(() => ({
+    bg: t.appBg,
+    card: t.surface,
+    cardBorder: t.border,
+    primary: t.primary,
+    income: t.income,
+    expense: t.expense,
+    text: t.textPrimary,
+    textSecondary: t.textSecondary,
+    accent: t.primaryDeep,
+    hero: t.surfaceMuted,
+    soft: t.primarySoft,
+  }), [t]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const navigation = useNavigation<any>();
   const {
     transactions,
@@ -50,6 +52,9 @@ const DashboardScreen: React.FC = () => {
     setSelectedMonth,
     profile,
     customCategories,
+    categoryBudgets,
+    getBudgetStatus,
+    inAppNotifications,
   } = useAppStore();
 
   useEffect(() => {
@@ -92,6 +97,19 @@ const DashboardScreen: React.FC = () => {
   const isCurrentMonth = selectedYear === dayjs().year() && selectedMonth === dayjs().month() + 1;
 
   const recentTransactions = transactions.slice(0, 5);
+  const unreadNotifications = inAppNotifications.filter(item => !item.isRead).length;
+  const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+  const budgetsInMonth = Object.values(categoryBudgets).filter(item => item.monthKey === monthKey);
+  const budgetSummary = budgetsInMonth.reduce(
+    (acc, item) => {
+      const status = getBudgetStatus(item.categoryId, selectedYear, selectedMonth);
+      acc.totalLimit += status.limit;
+      acc.totalSpent += status.spent;
+      if (status.isOver) {acc.overCount += 1;}
+      return acc;
+    },
+    {totalLimit: 0, totalSpent: 0, overCount: 0},
+  );
 
   const openTransactionsFor = (nextFilter: 'income' | 'expense') => {
     navigation.navigate('Transactions', {
@@ -122,9 +140,16 @@ const DashboardScreen: React.FC = () => {
           </View>
           <Text style={styles.greeting} numberOfLines={1}>Hi, {profile.name}</Text>
         </View>
-        <TouchableOpacity style={styles.notifyButton} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.notifyButton}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('Notifications')}>
           <AppIcon name="bell" size={24} color={COLORS.text} />
-          <View style={styles.notifyDot} />
+          {unreadNotifications > 0 && (
+            <View style={styles.notifyDot}>
+              <Text style={styles.notifyDotText}>{unreadNotifications > 9 ? '9+' : unreadNotifications}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -177,6 +202,18 @@ const DashboardScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      {budgetsInMonth.length > 0 && (
+        <View style={[styles.balanceCard, {marginBottom: 24, paddingVertical: 16}]}>
+          <Text style={styles.balanceLabel}>Ngân sách tháng</Text>
+          <Text style={[styles.statAmount, {color: COLORS.text}]}>
+            {formatCurrency(budgetSummary.totalSpent)} / {formatCurrency(budgetSummary.totalLimit)}
+          </Text>
+          <Text style={[styles.categoryCount, {marginTop: 6}]}>
+            Danh mục vượt hạn mức: {budgetSummary.overCount}
+          </Text>
+        </View>
+      )}
+
       {categoryStats.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Chi tiêu theo danh mục</Text>
@@ -188,9 +225,11 @@ const DashboardScreen: React.FC = () => {
             const emoji = CATEGORY_ICONS[stat.category]
               ? CATEGORY_EMOJI[stat.category]
               : customCategories?.[stat.category]?.icon || '📌';
+            const budgetStatus = getBudgetStatus(stat.category, selectedYear, selectedMonth);
+            const isOverBudget = budgetStatus.exists && budgetStatus.isOver;
 
             return (
-              <View key={stat.category || index} style={styles.categoryItem}>
+              <View key={stat.category || index} style={[styles.categoryItem, isOverBudget && styles.categoryItemOver]}>
                 <View style={styles.categoryLeft}>
                   <View style={styles.categoryIconWrap}>
                     <Text style={styles.categoryEmoji}>{emoji}</Text>
@@ -203,6 +242,12 @@ const DashboardScreen: React.FC = () => {
                   </View>
                 </View>
                 <View style={styles.categoryRight}>
+                  {isOverBudget && (
+                    <View style={styles.overBadge}>
+                      <AppIcon name="warning" size={12} color={COLORS.expense} />
+                      <Text style={styles.overBadgeText}>Vượt</Text>
+                    </View>
+                  )}
                   <Text style={styles.categoryAmount}>
                     {formatCurrency(stat.total)}
                   </Text>
@@ -265,7 +310,19 @@ const DashboardScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: {
+  bg: string;
+  card: string;
+  cardBorder: string;
+  primary: string;
+  income: string;
+  expense: string;
+  text: string;
+  textSecondary: string;
+  accent: string;
+  hero: string;
+  soft: string;
+}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.bg,
@@ -309,12 +366,20 @@ const styles = StyleSheet.create({
   notifyIcon: {fontSize: 18},
   notifyDot: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 6,
+    right: 6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
     backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifyDotText: {
+    color: theme.colors.textOnDark,
+    fontSize: 9,
+    fontWeight: '700',
   },
   monthSelector: {
     flexDirection: 'row',
@@ -347,7 +412,7 @@ const styles = StyleSheet.create({
   },
   todayButton: {
     padding: 6,
-    backgroundColor: theme.colors.surfaceMuted,
+    backgroundColor: COLORS.soft,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
@@ -417,6 +482,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  categoryItemOver: {
+    borderColor: '#f4c7bd',
+    backgroundColor: '#fff4f1',
+  },
   categoryLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -426,7 +495,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: theme.colors.surfaceMuted,
+    backgroundColor: COLORS.soft,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -442,6 +511,21 @@ const styles = StyleSheet.create({
   },
   categoryRight: {
     alignItems: 'flex-end',
+  },
+  overBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fde7e3',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
+  overBadgeText: {
+    color: COLORS.expense,
+    fontSize: 11,
+    fontWeight: '700',
   },
   categoryAmount: {
     color: COLORS.expense,
@@ -473,7 +557,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: theme.colors.surfaceMuted,
+    backgroundColor: COLORS.soft,
     justifyContent: 'center',
     alignItems: 'center',
   },

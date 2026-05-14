@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -6,7 +6,8 @@ import {
   View,
 } from 'react-native';
 import { create } from 'zustand';
-import { theme } from '../theme';
+import { useAppStore } from '../../app/store';
+import { useThemeColors } from '../theme';
 import AppIcon from './AppIcon';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -46,22 +47,36 @@ export const toast = {
   warning: (msg: string, duration?: number) => useToastStore.getState().show(msg, 'warning', duration),
 };
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-
-const TOAST_CONFIG: Record<ToastType, { bg: string; border: string; icon: string; iconColor: string }> = {
-  success: { bg: '#e8f9ed', border: theme.colors.income, icon: 'check-circle', iconColor: theme.colors.income },
-  error:   { bg: '#fdf0ee', border: theme.colors.expense, icon: 'x-circle', iconColor: theme.colors.expense },
-  info:    { bg: '#eaf5dc', border: theme.colors.primary, icon: 'info', iconColor: theme.colors.primaryDeep },
-  warning: { bg: '#fff8e8', border: theme.colors.warning, icon: 'warning', iconColor: '#c97b0a' },
-};
-
 // ─── Single Toast Item ────────────────────────────────────────────────────────
 
 const ToastItem: React.FC<{ item: ToastItem }> = ({ item }) => {
+  const t = useThemeColors();
+  const mode = useAppStore(s => s.themeMode);
+  const C = useMemo(() => ({
+    text: t.textPrimary,
+    successBg: mode === 'light' ? '#e8f9ed' : '#183626',
+    errorBg: mode === 'light' ? '#fdf0ee' : '#3b1e1a',
+    infoBg: mode === 'light' ? '#eaf5dc' : '#1d3525',
+    warningBg: mode === 'light' ? '#fff8e8' : '#3a2f1a',
+    success: t.income,
+    expense: t.expense,
+    primary: t.primary,
+    primaryDeep: t.primaryDeep,
+    warning: t.warning,
+    warningIcon: mode === 'light' ? '#c97b0a' : '#f7c66b',
+  }), [mode, t]);
+  const styles = useMemo(() => createStyles(C), [C]);
+
   const hide = useToastStore(s => s.hide);
   const translateY = useRef(new Animated.Value(80)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  const config = TOAST_CONFIG[item.type];
+  const toastConfig: Record<ToastType, { bg: string; border: string; icon: string; iconColor: string }> = {
+    success: { bg: C.successBg, border: C.success, icon: 'check-circle', iconColor: C.success },
+    error: { bg: C.errorBg, border: C.expense, icon: 'x-circle', iconColor: C.expense },
+    info: { bg: C.infoBg, border: C.primary, icon: 'info', iconColor: C.primaryDeep },
+    warning: { bg: C.warningBg, border: C.warning, icon: 'warning', iconColor: C.warningIcon },
+  };
+  const config = toastConfig[item.type];
 
   useEffect(() => {
     // slide in
@@ -95,12 +110,12 @@ const ToastItem: React.FC<{ item: ToastItem }> = ({ item }) => {
   return (
     <Animated.View
       style={[
-        s.toast,
+        styles.toast,
         { backgroundColor: config.bg, borderColor: config.border },
         { transform: [{ translateY }], opacity },
       ]}>
       <AppIcon name={config.icon as any} size={20} color={config.iconColor} />
-      <Text style={s.msg} numberOfLines={3}>{item.message}</Text>
+      <Text style={styles.msg} numberOfLines={3}>{item.message}</Text>
     </Animated.View>
   );
 };
@@ -108,10 +123,27 @@ const ToastItem: React.FC<{ item: ToastItem }> = ({ item }) => {
 // ─── Toast Container ──────────────────────────────────────────────────────────
 
 export const ToastContainer: React.FC = () => {
+  const t = useThemeColors();
+  const mode = useAppStore(s => s.themeMode);
+  const C = useMemo(() => ({
+    text: t.textPrimary,
+    successBg: mode === 'light' ? '#e8f9ed' : '#183626',
+    errorBg: mode === 'light' ? '#fdf0ee' : '#3b1e1a',
+    infoBg: mode === 'light' ? '#eaf5dc' : '#1d3525',
+    warningBg: mode === 'light' ? '#fff8e8' : '#3a2f1a',
+    success: t.income,
+    expense: t.expense,
+    primary: t.primary,
+    primaryDeep: t.primaryDeep,
+    warning: t.warning,
+    warningIcon: mode === 'light' ? '#c97b0a' : '#f7c66b',
+  }), [mode, t]);
+  const styles = useMemo(() => createStyles(C), [C]);
+
   const toasts = useToastStore(s => s.toasts);
   if (toasts.length === 0) { return null; }
   return (
-    <View style={s.container} pointerEvents="none">
+    <View style={styles.container} pointerEvents="none">
       {toasts.map(item => <ToastItem key={item.id} item={item} />)}
     </View>
   );
@@ -119,7 +151,19 @@ export const ToastContainer: React.FC = () => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
+const createStyles = (C: {
+  text: string;
+  successBg: string;
+  errorBg: string;
+  infoBg: string;
+  warningBg: string;
+  success: string;
+  expense: string;
+  primary: string;
+  primaryDeep: string;
+  warning: string;
+  warningIcon: string;
+}) => StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 90,
@@ -144,7 +188,7 @@ const s = StyleSheet.create({
   },
   msg: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: C.text,
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,

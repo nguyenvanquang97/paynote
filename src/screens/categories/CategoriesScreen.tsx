@@ -1,4 +1,4 @@
-import React, {useRef, useState} from 'react';
+import React, {useRef, useState, useMemo} from 'react';
 import {
   View,
   Text,
@@ -13,21 +13,9 @@ import {CATEGORY_ICONS, CATEGORY_EMOJI, KEYWORD_CATEGORIES, getCategoryLabel} fr
 import {useAppStore, type CustomCategory} from '../../app/store';
 import AddCategoryModal from './AddCategoryModal';
 import SwipeableRow from '../../shared/components/SwipeableRow';
-import {theme} from '../../shared/theme';
+import {useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
 import {dialog} from '../../shared/components/Dialog';
-
-const COLORS = {
-  bg: theme.colors.appBg,
-  card: theme.colors.surface,
-  cardBorder: theme.colors.border,
-  primary: theme.colors.primary,
-  text: theme.colors.textPrimary,
-  textSecondary: theme.colors.textSecondary,
-  accent: theme.colors.primaryDeep,
-  income: theme.colors.income,
-  expense: theme.colors.expense,
-};
 
 interface CategoryItem {
   id: string;
@@ -38,6 +26,23 @@ interface CategoryItem {
 }
 
 const CategoriesScreen: React.FC = () => {
+  const t = useThemeColors();
+  const COLORS = useMemo(() => ({
+    bg: t.appBg,
+    card: t.surface,
+    cardBorder: t.border,
+    primary: t.primary,
+    text: t.textPrimary,
+    textSecondary: t.textSecondary,
+    accent: t.primaryDeep,
+    income: t.income,
+    expense: t.expense,
+    muted: t.surfaceMuted,
+    soft: t.primarySoft,
+    shadow: t.shadow,
+    onDark: t.textOnDark,
+  }), [t]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const {customCategories, deleteCustomCategory} = useAppStore();
   const [editingCategory, setEditingCategory] = useState<CustomCategory | null>(null);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -177,7 +182,7 @@ const CategoriesScreen: React.FC = () => {
         onPress={handleOpenAdd}
         hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
         activeOpacity={0.9}>
-        <AppIcon name="plus" size={30} color={theme.colors.textOnDark} />
+        <AppIcon name="plus" size={30} color={COLORS.onDark} />
       </TouchableOpacity>
 
       <AddCategoryModal
@@ -189,7 +194,21 @@ const CategoriesScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: {
+  bg: string;
+  card: string;
+  cardBorder: string;
+  primary: string;
+  text: string;
+  textSecondary: string;
+  accent: string;
+  income: string;
+  expense: string;
+  muted: string;
+  soft: string;
+  shadow: string;
+  onDark: string;
+}) => StyleSheet.create({
   container: {flex: 1, backgroundColor: COLORS.bg},
   listContent: {padding: 16, paddingBottom: 100},
   headerText: {
@@ -222,7 +241,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: theme.colors.surfaceMuted,
+    backgroundColor: COLORS.muted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -235,7 +254,7 @@ const styles = StyleSheet.create({
   customBadge: {
     marginTop: 4,
     alignSelf: 'flex-start',
-    backgroundColor: theme.colors.primarySoft,
+    backgroundColor: COLORS.soft,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -243,7 +262,7 @@ const styles = StyleSheet.create({
   customBadgeText: {color: COLORS.accent, fontSize: 11, fontWeight: '700'},
   keywordsContainer: {flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12},
   keywordBadge: {
-    backgroundColor: theme.colors.surfaceMuted,
+    backgroundColor: COLORS.muted,
     borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 10,
@@ -260,13 +279,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
-    shadowColor: theme.colors.shadow,
+    shadowColor: COLORS.shadow,
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.14,
     shadowRadius: 10,
     zIndex: 20,
   },
-  fabIcon: {color: theme.colors.textOnDark, fontSize: 32, fontWeight: '500', marginTop: -2},
+  fabIcon: {color: COLORS.onDark, fontSize: 32, fontWeight: '500', marginTop: -2},
 });
 
 export default CategoriesScreen;

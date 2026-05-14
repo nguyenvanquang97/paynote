@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useEffect, useState, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -13,23 +13,10 @@ import {useAppStore} from '../../app/store';
 import {getTransactionsByDateRange} from '../../database';
 import dayjs from 'dayjs';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
-import {theme} from '../../shared/theme';
+import {theme, useThemeColors} from '../../shared/theme';
 import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
 
 const {width} = Dimensions.get('window');
-
-const COLORS = {
-  bg: theme.colors.appBg,
-  card: theme.colors.surface,
-  cardBorder: theme.colors.border,
-  primary: theme.colors.primary,
-  income: theme.colors.income,
-  expense: theme.colors.expense,
-  text: theme.colors.textPrimary,
-  textSecondary: theme.colors.textSecondary,
-  accent: theme.colors.primaryDeep,
-  surfaceMuted: theme.colors.surfaceMuted,
-};
 
 const CHART_COLORS = [
   '#e76452', '#f0ae3e', '#57a2e8', '#f08fb1', '#9b59b6',
@@ -47,6 +34,21 @@ const formatCurrencyShort = (amount: number): string => {
 };
 
 const ChartsScreen: React.FC = () => {
+  const t = useThemeColors();
+  const COLORS = useMemo(() => ({
+    bg: t.appBg,
+    card: t.surface,
+    cardBorder: t.border,
+    primary: t.primary,
+    income: t.income,
+    expense: t.expense,
+    text: t.textPrimary,
+    textSecondary: t.textSecondary,
+    accent: t.primaryDeep,
+    surfaceMuted: t.surfaceMuted,
+    soft: t.primarySoft,
+  }), [t]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const {
     categoryStats,
     totalIncome,
@@ -57,6 +59,8 @@ const ChartsScreen: React.FC = () => {
     loadStats,
     setSelectedMonth,
     customCategories,
+    categoryBudgets,
+    getBudgetStatus,
   } = useAppStore();
 
   const [monthlyData, setMonthlyData] = useState<
@@ -157,6 +161,18 @@ const ChartsScreen: React.FC = () => {
     ...monthlyData.map(m => Math.max(m.income, m.expense)),
     1,
   );
+  const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+  const budgetsInMonth = Object.values(categoryBudgets).filter(item => item.monthKey === monthKey);
+  const budgetSummary = budgetsInMonth.reduce(
+    (acc, item) => {
+      const status = getBudgetStatus(item.categoryId, selectedYear, selectedMonth);
+      acc.totalLimit += status.limit;
+      acc.totalSpent += status.spent;
+      if (status.isOver) {acc.overCount += 1;}
+      return acc;
+    },
+    {totalLimit: 0, totalSpent: 0, overCount: 0},
+  );
 
   return (
     <ScrollView
@@ -197,6 +213,16 @@ const ChartsScreen: React.FC = () => {
           </Text>
         </View>
       </View>
+
+      {budgetsInMonth.length > 0 && (
+        <View style={[styles.chartCard, {marginBottom: 20}]}>
+          <Text style={styles.sectionTitle}>Ngân sách tháng</Text>
+          <Text style={styles.legendLabel}>
+            {formatCurrency(budgetSummary.totalSpent)} / {formatCurrency(budgetSummary.totalLimit)}
+          </Text>
+          <Text style={styles.legendPercent}>Danh mục vượt: {budgetSummary.overCount}</Text>
+        </View>
+      )}
 
       {/* Pie Chart - Category breakdown */}
       {pieData.length > 0 ? (
@@ -295,12 +321,14 @@ const ChartsScreen: React.FC = () => {
             const emoji = CATEGORY_ICONS[stat.category]
               ? CATEGORY_EMOJI[stat.category]
               : customCategories?.[stat.category]?.icon || '📌';
+            const budgetStatus = getBudgetStatus(stat.category, selectedYear, selectedMonth);
+            const isOverBudget = budgetStatus.exists && budgetStatus.isOver;
             const barWidth = totalExpense > 0
               ? (stat.total / totalExpense) * (width - 80)
               : 0;
 
             return (
-              <View key={stat.category} style={styles.statRow}>
+              <View key={stat.category} style={[styles.statRow, isOverBudget && styles.statRowOver]}>
                 <View style={styles.statRowHeader}>
                   <View style={styles.statRowLeft}>
                     <Text style={{fontSize: 16}}>{emoji}</Text>
@@ -308,6 +336,12 @@ const ChartsScreen: React.FC = () => {
                     <Text style={styles.statCount}>{stat.count} GD</Text>
                   </View>
                   <View style={styles.statRowRight}>
+                    {isOverBudget && (
+                      <View style={styles.overBadge}>
+                        <AppIcon name="warning" size={12} color={COLORS.expense} />
+                        <Text style={styles.overBadgeText}>Vượt</Text>
+                      </View>
+                    )}
                     <Text style={[styles.statRowAmount, {color: COLORS.expense}]}>
                       {formatCurrency(stat.total)}
                     </Text>
@@ -326,7 +360,19 @@ const ChartsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: {
+  bg: string;
+  card: string;
+  cardBorder: string;
+  primary: string;
+  income: string;
+  expense: string;
+  text: string;
+  textSecondary: string;
+  accent: string;
+  surfaceMuted: string;
+  soft: string;
+}) => StyleSheet.create({
   container: {flex: 1, backgroundColor: COLORS.bg},
   content: {padding: 16, paddingBottom: 40},
   monthSelector: {
@@ -354,7 +400,7 @@ const styles = StyleSheet.create({
   },
   todayButton: {
     padding: 6,
-    backgroundColor: theme.colors.surfaceMuted,
+    backgroundColor: COLORS.soft,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
@@ -415,12 +461,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  statRowOver: {
+    borderColor: '#f4c7bd',
+    backgroundColor: '#fff4f1',
+  },
   statRowHeader: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8},
   statRowLeft: {flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1},
   statIcon: {fontSize: 20},
   statName: {color: COLORS.text, fontSize: 14, fontWeight: '500'},
   statCount: {color: COLORS.textSecondary, fontSize: 12},
   statRowRight: {alignItems: 'flex-end'},
+  overBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fde7e3',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
+  overBadgeText: {
+    color: COLORS.expense,
+    fontSize: 11,
+    fontWeight: '700',
+  },
   statRowAmount: {fontSize: 14, fontWeight: '600'},
   statRowPercent: {color: COLORS.textSecondary, fontSize: 12},
   progressBarBg: {

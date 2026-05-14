@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
   Modal,
   View,
@@ -12,18 +12,8 @@ import {
 } from 'react-native';
 import {useAppStore} from '../../app/store';
 import {launchImageLibrary} from 'react-native-image-picker';
-import {theme} from '../../shared/theme';
+import {useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
-
-const COLORS = {
-  bg: theme.colors.surface,
-  card: theme.colors.surfaceMuted,
-  cardBorder: theme.colors.border,
-  primary: theme.colors.primary,
-  text: theme.colors.textPrimary,
-  textSecondary: theme.colors.textSecondary,
-  overlay: 'rgba(0, 0, 0, 0.45)',
-};
 
 interface Props {
   visible: boolean;
@@ -31,6 +21,19 @@ interface Props {
 }
 
 const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
+  const t = useThemeColors();
+  const C = useMemo(() => ({
+    bg: t.surface,
+    card: t.surfaceMuted,
+    cardBorder: t.border,
+    primary: t.primary,
+    text: t.textPrimary,
+    textSecondary: t.textSecondary,
+    onDark: t.textOnDark,
+    overlay: 'rgba(0, 0, 0, 0.45)',
+  }), [t]);
+  const styles = useMemo(() => createStyles(C), [C]);
+
   const {profile, setProfile} = useAppStore();
   const [name, setName] = useState(profile.name);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl);
@@ -64,7 +67,7 @@ const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      transparent
       onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -73,12 +76,11 @@ const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
           <View style={styles.header}>
             <Text style={styles.title}>Cập nhật hồ sơ</Text>
             <TouchableOpacity onPress={onClose}>
-              <AppIcon name="close" size={20} color={COLORS.textSecondary} />
+              <AppIcon name="close" size={20} color={C.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.form}>
-            {/* Avatar */}
             <View style={styles.avatarSection}>
               <TouchableOpacity
                 style={styles.avatarPlaceholder}
@@ -86,27 +88,25 @@ const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
                 {avatarUrl ? (
                   <Image source={{uri: avatarUrl}} style={styles.avatarImage} />
                 ) : (
-                  <AppIcon name="user" size={38} color={COLORS.textSecondary} />
+                  <AppIcon name="user" size={38} color={C.textSecondary} />
                 )}
                 <View style={styles.editBadge}>
-                  <AppIcon name="edit" size={14} color={theme.colors.textOnDark} />
+                  <AppIcon name="edit" size={14} color={C.onDark} />
                 </View>
               </TouchableOpacity>
             </View>
 
-            {/* Name */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tên hiển thị</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Nhập tên của bạn"
-                placeholderTextColor={COLORS.textSecondary}
+                placeholderTextColor={C.textSecondary}
                 value={name}
                 onChangeText={setName}
               />
             </View>
 
-            {/* Save Button */}
             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
               <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
             </TouchableOpacity>
@@ -117,14 +117,23 @@ const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (C: {
+  bg: string;
+  card: string;
+  cardBorder: string;
+  primary: string;
+  text: string;
+  textSecondary: string;
+  onDark: string;
+  overlay: string;
+}) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: COLORS.overlay,
+    backgroundColor: C.overlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: COLORS.bg,
+    backgroundColor: C.bg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -134,16 +143,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.cardBorder,
+    borderBottomColor: C.cardBorder,
   },
   title: {
-    color: COLORS.text,
+    color: C.text,
     fontSize: 18,
     fontWeight: '700',
-  },
-  closeText: {
-    color: COLORS.textSecondary,
-    fontSize: 24,
   },
   form: {
     padding: 20,
@@ -156,7 +161,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: COLORS.cardBorder,
+    backgroundColor: C.cardBorder,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -166,44 +171,38 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
   },
-  avatarEmoji: {
-    fontSize: 40,
-  },
   editBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: COLORS.primary,
+    backgroundColor: C.primary,
     borderRadius: 16,
     width: 32,
     height: 32,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.bg,
-  },
-  editBadgeText: {
-    fontSize: 14,
+    borderColor: C.bg,
   },
   inputGroup: {
     marginBottom: 20,
   },
   label: {
-    color: COLORS.textSecondary,
+    color: C.textSecondary,
     fontSize: 14,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: COLORS.card,
+    backgroundColor: C.card,
     borderRadius: 12,
     padding: 16,
-    color: COLORS.text,
+    color: C.text,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderColor: C.cardBorder,
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: C.primary,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
@@ -211,7 +210,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   saveButtonText: {
-    color: COLORS.text,
+    color: C.onDark,
     fontSize: 16,
     fontWeight: '700',
   },

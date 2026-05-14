@@ -4,4 +4,5 @@ export {
   checkBatteryOptimizationDisabled,
   openNotificationSettings,
   openBatteryOptimizationSettings,
+  showBudgetAlertNotification,
 } from './useBankNotifications';

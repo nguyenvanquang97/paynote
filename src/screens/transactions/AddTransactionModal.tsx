@@ -1,4 +1,4 @@
-import React, {useState, useRef, useCallback, useEffect} from 'react';
+import React, {useState, useRef, useCallback, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -15,21 +15,11 @@ import {useAppStore} from '../../app/store';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
 import type {Transaction} from '../../shared/types';
-import {theme} from '../../shared/theme';
+import {useThemeColors} from '../../shared/theme';
 import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
 import {toast} from '../../shared/components/Toast';
-
-const COLORS = {
-  bg: theme.colors.surface,
-  card: theme.colors.surfaceMuted,
-  cardBorder: theme.colors.border,
-  primary: theme.colors.primary,
-  income: theme.colors.income,
-  expense: theme.colors.expense,
-  text: theme.colors.textPrimary,
-  textSecondary: theme.colors.textSecondary,
-  handle: '#b2bea9',
-};
+import NumericInput from '../../shared/components/NumericInput';
+import {triggerBudgetAlertsForTransaction} from '../../services/budgetAlerts';
 
 interface Props {
   bottomSheetRef: React.RefObject<BottomSheetModal | null>;
@@ -41,6 +31,23 @@ const SNAP_POINTS = ['80%'];
 const INCOME_CATEGORY_IDS = new Set(['salary', 'transfer', 'other']);
 
 const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTransaction}) => {
+  const t = useThemeColors();
+  const COLORS = useMemo(() => ({
+    bg: t.surface,
+    card: t.surfaceMuted,
+    cardBorder: t.border,
+    primary: t.primary,
+    primarySoft: t.primarySoft,
+    primaryDeep: t.primaryDeep,
+    income: t.income,
+    expense: t.expense,
+    text: t.textPrimary,
+    textSecondary: t.textSecondary,
+    handle: t.neutral,
+    onDark: t.textOnDark,
+  }), [t]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
   const isEditing = !!editTransaction;
 
   const [type, setType] = useState<'expense' | 'income'>('expense');
@@ -129,6 +136,18 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
 
       loadTransactions();
       loadStats();
+      await triggerBudgetAlertsForTransaction({
+        id: editTransaction?.id || `manual_${Date.now()}`,
+        bank: 'cash',
+        amount,
+        transactionType: type,
+        timestamp: date.getTime(),
+        rawText: `Manual entry: ${description || category}`,
+        description: description.trim() || undefined,
+        category,
+        isSuspectedGap: false,
+        createdAt: editTransaction?.createdAt || Date.now(),
+      });
       handleClose();
     } catch (error) {
       console.error('Error saving transaction:', error);
@@ -179,9 +198,8 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
         {/* Amount */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Số tiền (₫)</Text>
-          <TextInput
+          <NumericInput
             style={[styles.input, styles.amountInput, {color: type === 'income' ? COLORS.income : COLORS.expense}]}
-            keyboardType="numeric"
             placeholder="0"
             placeholderTextColor={COLORS.textSecondary}
             value={amountStr}
@@ -256,7 +274,20 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: {
+  bg: string;
+  card: string;
+  cardBorder: string;
+  primary: string;
+  primarySoft: string;
+  primaryDeep: string;
+  income: string;
+  expense: string;
+  text: string;
+  textSecondary: string;
+  handle: string;
+  onDark: string;
+}) => StyleSheet.create({
   sheetBg: {backgroundColor: COLORS.bg},
   handle: {backgroundColor: COLORS.handle, width: 40},
   header: {
@@ -282,7 +313,7 @@ const styles = StyleSheet.create({
   },
   typeButton: {flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8},
   typeText: {color: COLORS.textSecondary, fontSize: 15, fontWeight: '600'},
-  typeTextActive: {color: theme.colors.textOnDark},
+  typeTextActive: {color: COLORS.onDark},
   inputGroup: {marginBottom: 20},
   label: {color: COLORS.textSecondary, fontSize: 14, marginBottom: 8},
   input: {
@@ -313,11 +344,11 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
     minWidth: 80,
   },
-  categoryItemActive: {borderColor: COLORS.primary, backgroundColor: theme.colors.primarySoft},
+  categoryItemActive: {borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft},
   categoryIcon: {fontSize: 28, marginBottom: 4},
   categoryIconWrap: {marginBottom: 4},
   categoryText: {color: COLORS.textSecondary, fontSize: 12},
-  categoryTextActive: {color: theme.colors.primaryDeep, fontWeight: '700'},
+  categoryTextActive: {color: COLORS.primaryDeep, fontWeight: '700'},
   saveButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 16,
@@ -325,7 +356,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 'auto',
   },
-  saveButtonText: {color: theme.colors.textOnDark, fontSize: 16, fontWeight: '700'},
+  saveButtonText: {color: COLORS.onDark, fontSize: 16, fontWeight: '700'},
 });
 
 export default AddTransactionModal;

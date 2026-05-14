@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, {useState, useCallback, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -8,19 +8,9 @@ import {
 } from 'react-native';
 import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
 import {useAppStore, type CustomCategory} from '../../app/store';
-import {theme} from '../../shared/theme';
+import {useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
 import {toast} from '../../shared/components/Toast';
-
-const COLORS = {
-  bg: theme.colors.surface,
-  card: theme.colors.surfaceMuted,
-  cardBorder: theme.colors.border,
-  primary: theme.colors.primary,
-  text: theme.colors.textPrimary,
-  textSecondary: theme.colors.textSecondary,
-  handle: '#b2bea9',
-};
 
 interface Props {
   bottomSheetRef: React.RefObject<BottomSheetModal | null>;
@@ -31,6 +21,19 @@ interface Props {
 const SNAP_POINTS = ['60%'];
 
 const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategory}) => {
+  const t = useThemeColors();
+  const COLORS = useMemo(() => ({
+    bg: t.surface,
+    card: t.surfaceMuted,
+    cardBorder: t.border,
+    primary: t.primary,
+    text: t.textPrimary,
+    textSecondary: t.textSecondary,
+    handle: t.neutral,
+    onDark: t.textOnDark,
+  }), [t]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
   const isEditing = !!editCategory;
 
   const [name, setName] = useState('');
@@ -125,39 +128,39 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
 
       <View style={styles.form}>
         <BottomSheetScrollView contentContainerStyle={styles.formFields} keyboardShouldPersistTaps="handled">
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Tên danh mục</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="VD: Du lịch"
-            placeholderTextColor={COLORS.textSecondary}
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Tên danh mục</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="VD: Du lịch"
+              placeholderTextColor={COLORS.textSecondary}
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Biểu tượng (Emoji)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="VD: ✈️"
-            placeholderTextColor={COLORS.textSecondary}
-            value={icon}
-            onChangeText={setIcon}
-            maxLength={4}
-          />
-        </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Biểu tượng (Emoji)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="VD: ✈️"
+              placeholderTextColor={COLORS.textSecondary}
+              value={icon}
+              onChangeText={setIcon}
+              maxLength={4}
+            />
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Từ khóa tự động (Cách nhau bởi dấu phẩy)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="VD: traveloka, agoda, ve may bay"
-            placeholderTextColor={COLORS.textSecondary}
-            value={keywords}
-            onChangeText={setKeywords}
-          />
-        </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Từ khóa tự động (Cách nhau bởi dấu phẩy)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="VD: traveloka, agoda, ve may bay"
+              placeholderTextColor={COLORS.textSecondary}
+              value={keywords}
+              onChangeText={setKeywords}
+            />
+          </View>
 
         </BottomSheetScrollView>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -168,7 +171,16 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: {
+  bg: string;
+  card: string;
+  cardBorder: string;
+  primary: string;
+  text: string;
+  textSecondary: string;
+  handle: string;
+  onDark: string;
+}) => StyleSheet.create({
   sheetBg: {backgroundColor: COLORS.bg},
   handle: {backgroundColor: COLORS.handle, width: 40},
   header: {
@@ -182,7 +194,6 @@ const styles = StyleSheet.create({
   },
   title: {color: COLORS.text, fontSize: 18, fontWeight: '700'},
   closeBtn: {padding: 8, zIndex: 10},
-  closeText: {color: COLORS.textSecondary, fontSize: 22},
   form: {padding: 20, flex: 1},
   formFields: {paddingBottom: 12},
   inputGroup: {marginBottom: 20},
@@ -203,7 +214,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 'auto',
   },
-  saveButtonText: {color: theme.colors.textOnDark, fontSize: 16, fontWeight: '700'},
+  saveButtonText: {color: COLORS.onDark, fontSize: 16, fontWeight: '700'},
 });
 
 export default AddCategoryModal;

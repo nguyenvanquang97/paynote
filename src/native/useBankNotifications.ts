@@ -53,3 +53,8 @@ export const checkBatteryOptimizationDisabled = (): Promise<boolean> => {
     });
   });
 };
+
+export const showBudgetAlertNotification = (title: string, message: string): void => {
+  if (!NotificationBridge?.showBudgetAlertNotification) {return;}
+  NotificationBridge.showBudgetAlertNotification(title, message);
+};

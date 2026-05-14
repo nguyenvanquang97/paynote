@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback, useRef} from 'react';
+import React, {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -18,31 +18,35 @@ import {deleteTransaction} from '../../database';
 import dayjs from 'dayjs';
 import AddTransactionModal from './AddTransactionModal';
 import SwipeableRow from '../../shared/components/SwipeableRow';
-import {theme} from '../../shared/theme';
+import {useThemeColors} from '../../shared/theme';
 import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
 import {dialog} from '../../shared/components/Dialog';
 import {useRoute} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
 
-const COLORS = {
-  bg: theme.colors.appBg,
-  card: theme.colors.surface,
-  cardBorder: theme.colors.border,
-  primary: theme.colors.primary,
-  income: theme.colors.income,
-  expense: theme.colors.expense,
-  text: theme.colors.textPrimary,
-  textSecondary: theme.colors.textSecondary,
-  accent: theme.colors.primaryDeep,
-  warning: theme.colors.warning,
-  primarySoft: theme.colors.primarySoft,
-};
-
 const formatCurrency = (amount: number): string =>
   new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
 
 const TransactionsScreen: React.FC = () => {
+  const t = useThemeColors();
+  const COLORS = useMemo(() => ({
+    bg: t.appBg,
+    card: t.surface,
+    cardBorder: t.border,
+    primary: t.primary,
+    income: t.income,
+    expense: t.expense,
+    text: t.textPrimary,
+    textSecondary: t.textSecondary,
+    accent: t.primaryDeep,
+    warning: t.warning,
+    primarySoft: t.primarySoft,
+    muted: t.surfaceMuted,
+    shadow: t.shadow,
+    onDark: t.textOnDark,
+  }), [t]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const route = useRoute<any>();
   const {transactions, isLoading, loadTransactions, customCategories} = useAppStore();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
@@ -252,7 +256,7 @@ const TransactionsScreen: React.FC = () => {
       />
 
       <TouchableOpacity style={styles.fab} onPress={handleOpenAdd}>
-        <AppIcon name="plus" size={30} color={theme.colors.textOnDark} />
+        <AppIcon name="plus" size={30} color={COLORS.onDark} />
       </TouchableOpacity>
 
       <AddTransactionModal
@@ -264,7 +268,22 @@ const TransactionsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: {
+  bg: string;
+  card: string;
+  cardBorder: string;
+  primary: string;
+  income: string;
+  expense: string;
+  text: string;
+  textSecondary: string;
+  accent: string;
+  warning: string;
+  primarySoft: string;
+  muted: string;
+  shadow: string;
+  onDark: string;
+}) => StyleSheet.create({
   container: {flex: 1, backgroundColor: COLORS.bg},
   filterRow: {flexDirection: 'row', padding: 16, gap: 8},
   filterButton: {
@@ -311,7 +330,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.surfaceMuted,
+    backgroundColor: COLORS.muted,
   },
   txEmoji: {fontSize: 24},
   txInfo: {flex: 1},
@@ -353,12 +372,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
-    shadowColor: theme.colors.shadow,
+    shadowColor: COLORS.shadow,
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.14,
     shadowRadius: 10,
   },
-  fabIcon: {color: theme.colors.textOnDark, fontSize: 32, fontWeight: '500', marginTop: -2},
+  fabIcon: {color: COLORS.onDark, fontSize: 32, fontWeight: '500', marginTop: -2},
 });
 
 export default TransactionsScreen;

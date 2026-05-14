@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
   Modal,
@@ -9,7 +9,8 @@ import {
   View,
 } from 'react-native';
 import { create } from 'zustand';
-import { theme } from '../theme';
+import { useAppStore } from '../../app/store';
+import { useThemeColors } from '../theme';
 import AppIcon from './AppIcon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -90,24 +91,29 @@ export const dialog = {
   },
 };
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-
-const VARIANT_CONFIG: Record<DialogVariant, { icon: string; iconColor: string; iconBg: string }> = {
-  default: { icon: 'info', iconColor: theme.colors.primaryDeep, iconBg: theme.colors.primarySoft },
-  danger: { icon: 'trash', iconColor: theme.colors.expense, iconBg: '#fde8e3' },
-  success: { icon: 'check-circle', iconColor: theme.colors.income, iconBg: '#e2f9ea' },
-  warning: { icon: 'warning', iconColor: '#c97b0a', iconBg: '#fff3d6' },
-};
-
-const BUTTON_COLOR: Record<NonNullable<DialogButton['style']>, string> = {
-  default: theme.colors.primaryDeep,
-  cancel: theme.colors.textSecondary,
-  destructive: theme.colors.expense,
-};
-
 // ─── Dialog Component ─────────────────────────────────────────────────────────
 
 export const DialogContainer: React.FC = () => {
+  const t = useThemeColors();
+  const mode = useAppStore(s => s.themeMode);
+  const C = useMemo(() => ({
+    bg: t.surface,
+    border: t.border,
+    text: t.textPrimary,
+    textSecondary: t.textSecondary,
+    primaryDeep: t.primaryDeep,
+    primarySoft: t.primarySoft,
+    income: t.income,
+    expense: t.expense,
+    warning: t.warning,
+    overlay: 'rgba(0, 0, 0, 0.55)',
+    iconDangerBg: mode === 'light' ? '#fde8e3' : '#3a1f1a',
+    iconSuccessBg: mode === 'light' ? '#e2f9ea' : '#163524',
+    iconWarningBg: mode === 'light' ? '#fff3d6' : '#3e3018',
+    warningIcon: mode === 'light' ? '#c97b0a' : '#f7c66b',
+  }), [mode, t]);
+  const s = useMemo(() => createStyles(C), [C]);
+
   const { visible, config, close } = useDialogStore();
   const scale = useRef(new Animated.Value(0.85)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -136,7 +142,18 @@ export const DialogContainer: React.FC = () => {
   if (!config) { return null; }
 
   const variant = config.variant ?? 'default';
-  const varConf = VARIANT_CONFIG[variant];
+  const variantConfig: Record<DialogVariant, { icon: string; iconColor: string; iconBg: string }> = {
+    default: { icon: 'info', iconColor: C.primaryDeep, iconBg: C.primarySoft },
+    danger: { icon: 'trash', iconColor: C.expense, iconBg: C.iconDangerBg },
+    success: { icon: 'check-circle', iconColor: C.income, iconBg: C.iconSuccessBg },
+    warning: { icon: 'warning', iconColor: C.warningIcon, iconBg: C.iconWarningBg },
+  };
+  const buttonColors: Record<NonNullable<DialogButton['style']>, string> = {
+    default: C.primaryDeep,
+    cancel: C.textSecondary,
+    destructive: C.expense,
+  };
+  const varConf = variantConfig[variant];
   const buttons = config.buttons ?? [{ text: 'Đóng', style: 'cancel' as const }];
 
   const handleButton = async (btn: DialogButton) => {
@@ -156,7 +173,7 @@ export const DialogContainer: React.FC = () => {
       onRequestClose={close}>
       <View style={{ flex: 1 }}>
         <Pressable
-          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.55)' }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: C.overlay }]}
           onPress={close}
         />
 
@@ -196,9 +213,9 @@ export const DialogContainer: React.FC = () => {
                     <Text
                       style={[
                         s.btnText,
-                        isDestructive && { color: BUTTON_COLOR.destructive },
-                        isCancel && !isDestructive && { color: BUTTON_COLOR.cancel },
-                        !isDestructive && isLast && { color: BUTTON_COLOR.default, fontWeight: '700' },
+                        isDestructive && { color: buttonColors.destructive },
+                        isCancel && !isDestructive && { color: buttonColors.cancel },
+                        !isDestructive && isLast && { color: buttonColors.default, fontWeight: '700' },
                       ]}>
                       {btn.text}
                     </Text>
@@ -215,7 +232,22 @@ export const DialogContainer: React.FC = () => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
+const createStyles = (C: {
+  bg: string;
+  border: string;
+  text: string;
+  textSecondary: string;
+  primaryDeep: string;
+  primarySoft: string;
+  income: string;
+  expense: string;
+  warning: string;
+  overlay: string;
+  iconDangerBg: string;
+  iconSuccessBg: string;
+  iconWarningBg: string;
+  warningIcon: string;
+}) => StyleSheet.create({
   centeredView: {
     flex: 1,
     justifyContent: 'center',
@@ -224,11 +256,11 @@ const s = StyleSheet.create({
   },
   card: {
     width: '100%',
-    backgroundColor: theme.colors.surface,
+    backgroundColor: C.bg,
     borderRadius: 28,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: C.border,
     elevation: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -246,7 +278,7 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    color: theme.colors.textPrimary,
+    color: C.text,
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
@@ -254,7 +286,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   message: {
-    color: theme.colors.textSecondary,
+    color: C.textSecondary,
     fontSize: 14,
     lineHeight: 22,
     textAlign: 'center',
@@ -263,7 +295,7 @@ const s = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: C.border,
   },
   btnRow: {
     flexDirection: 'row',
@@ -277,13 +309,13 @@ const s = StyleSheet.create({
   },
   btnBorderRight: {
     borderRightWidth: 1,
-    borderRightColor: theme.colors.border,
+    borderRightColor: C.border,
   },
   btnPrimary: {},
   btnDestructive: {},
   btnText: {
     fontSize: 15,
     fontWeight: '600',
-    color: theme.colors.textPrimary,
+    color: C.text,
   },
 });

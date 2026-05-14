@@ -1,4 +1,4 @@
-import React, {useRef, useEffect} from 'react';
+import React, {useRef, useEffect, useMemo} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -9,17 +9,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, {Path, Rect, Circle, Line, Polyline} from 'react-native-svg';
 import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
-import {theme} from '../theme';
-
-const C = {
-  bg: theme.colors.surface,
-  border: theme.colors.border,
-  active: theme.colors.primaryDeep,
-  inactive: '#7d877f',
-  bubble: theme.colors.primarySoft,
-  text: theme.colors.textPrimary,
-  textInactive: theme.colors.textSecondary,
-};
+import {useThemeColors} from '../theme';
 
 const TAB_ICON_SIZE = 22;
 
@@ -91,6 +81,18 @@ const BUBBLE_PADDING_H = 14;
 const BUBBLE_PADDING_V = 8;
 
 export default function BubbleTabBar({state, descriptors, navigation}: BottomTabBarProps) {
+  const t = useThemeColors();
+  const C = useMemo(() => ({
+    bg: t.surface,
+    border: t.border,
+    active: t.primaryDeep,
+    inactive: t.neutral,
+    bubble: t.primarySoft,
+    text: t.textPrimary,
+    textInactive: t.textSecondary,
+    shadow: t.shadow,
+  }), [t]);
+  const styles = useMemo(() => createStyles(C), [C]);
   const {width} = useWindowDimensions();
   const insets = useSafeAreaInsets();
   // On devices without hardware nav bar, insets.bottom = 0
@@ -208,7 +210,16 @@ export default function BubbleTabBar({state, descriptors, navigation}: BottomTab
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: {
+  bg: string;
+  border: string;
+  active: string;
+  inactive: string;
+  bubble: string;
+  text: string;
+  textInactive: string;
+  shadow: string;
+}) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: C.bg,
@@ -218,7 +229,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     position: 'relative',
     elevation: 12,
-    shadowColor: theme.colors.shadow,
+    shadowColor: C.shadow,
     shadowOffset: {width: 0, height: -2},
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -230,7 +241,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.bubble,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#b8e4a7',
+    borderColor: C.border,
   },
   tab: {
     alignItems: 'center',
