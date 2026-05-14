@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
-import {CATEGORY_ICONS, getCategoryLabel} from '../../shared/constants';
+import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import {insertTransaction, updateTransaction} from '../../database';
 import {useAppStore} from '../../app/store';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -219,11 +219,11 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
                   style={[styles.categoryItem, category === cat.id && styles.categoryItemActive]}
                   onPress={() => setCategory(cat.id)}>
                   <View style={styles.categoryIconWrap}>
-                    {Object.prototype.hasOwnProperty.call(CATEGORY_ICONS, cat.id) ? (
-                      <AppIcon name={categoryIconName(cat.id)} size={24} color={theme.colors.primaryDeep} />
-                    ) : (
-                      <AppIcon name="other" size={24} color={theme.colors.primaryDeep} />
-                    )}
+                    <Text style={{fontSize: 24}}>
+                      {Object.prototype.hasOwnProperty.call(CATEGORY_ICONS, cat.id)
+                        ? CATEGORY_EMOJI[cat.id] || '📌'
+                        : cat.icon || '📌'}
+                    </Text>
                   </View>
                   <Text style={[styles.categoryText, category === cat.id && styles.categoryTextActive]}>
                     {cat.name}

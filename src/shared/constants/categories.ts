@@ -13,6 +13,21 @@ export const CATEGORY_ICONS: Record<string, string> = {
   other: 'other',
 };
 
+export const CATEGORY_EMOJI: Record<string, string> = {
+  food: '🍔',
+  cafe: '☕',
+  transport: '🚗',
+  shopping: '🛒',
+  subscription: '📱',
+  transfer: '💸',
+  salary: '💰',
+  entertainment: '🎬',
+  health: '🏥',
+  education: '📚',
+  bills: '📄',
+  other: '📌',
+};
+
 export const CATEGORY_LABELS: Record<string, string> = {
   food: 'Ăn uống',
   cafe: 'Cà phê',

@@ -13,7 +13,7 @@ import {
 import {BottomSheetModal} from '@gorhom/bottom-sheet';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {useAppStore} from '../../app/store';
-import {CATEGORY_ICONS, SUPPORTED_BANKS, getCategoryLabel} from '../../shared/constants';
+import {CATEGORY_ICONS, CATEGORY_EMOJI, SUPPORTED_BANKS, getCategoryLabel} from '../../shared/constants';
 import type {Transaction} from '../../shared/types';
 import {deleteTransaction} from '../../database';
 import dayjs from 'dayjs';
@@ -24,20 +24,6 @@ import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
 import {useRoute} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
-const CATEGORY_EMOJI: Record<string, string> = {
-  food: '🍔',
-  cafe: '☕',
-  transport: '🚗',
-  shopping: '🛒',
-  subscription: '📱',
-  transfer: '💸',
-  salary: '💰',
-  entertainment: '🎬',
-  health: '🏥',
-  education: '📚',
-  bills: '📄',
-  other: '📌',
-};
 
 const COLORS = {
   bg: theme.colors.appBg,
@@ -58,7 +44,7 @@ const formatCurrency = (amount: number): string =>
 
 const TransactionsScreen: React.FC = () => {
   const route = useRoute<any>();
-  const {transactions, isLoading, loadTransactions} = useAppStore();
+  const {transactions, isLoading, loadTransactions, customCategories} = useAppStore();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [grouping, setGrouping] = useState<'day' | 'week' | 'month'>('day');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -157,7 +143,9 @@ const TransactionsScreen: React.FC = () => {
 
   const renderTransaction = ({item: tx}: {item: Transaction}) => {
     const bankConfig = SUPPORTED_BANKS[tx.bank as keyof typeof SUPPORTED_BANKS];
-    const categoryId = CATEGORY_ICONS[tx.category || 'other'] ? (tx.category || 'other') : 'other';
+    const emoji = CATEGORY_ICONS[tx.category || 'other']
+      ? CATEGORY_EMOJI[tx.category || 'other']
+      : customCategories?.[tx.category || 'other']?.icon || '📌';
 
     return (
       <SwipeableRow onDelete={() => handleDelete(tx)}>
@@ -174,7 +162,7 @@ const TransactionsScreen: React.FC = () => {
           ]}>
             <View style={styles.txLeft}>
               <View style={styles.txIconWrap}>
-                <Text style={styles.txEmoji}>{CATEGORY_EMOJI[categoryId] || '📌'}</Text>
+                <Text style={styles.txEmoji}>{emoji}</Text>
               </View>
               <View style={styles.txInfo}>
                 <Text style={styles.txDescription} numberOfLines={1}>

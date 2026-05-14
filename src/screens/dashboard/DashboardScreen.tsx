@@ -11,27 +11,13 @@ import {
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {useAppStore} from '../../app/store';
-import {CATEGORY_ICONS, getCategoryLabel} from '../../shared/constants';
+import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import dayjs from 'dayjs';
 import {theme} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
 import {useNavigation} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
-const CATEGORY_EMOJI: Record<string, string> = {
-  food: '🍔',
-  cafe: '☕',
-  transport: '🚗',
-  shopping: '🛒',
-  subscription: '📱',
-  transfer: '💸',
-  salary: '💰',
-  entertainment: '🎬',
-  health: '🏥',
-  education: '📚',
-  bills: '📄',
-  other: '📌',
-};
 
 const COLORS = {
   bg: theme.colors.appBg,
@@ -64,6 +50,7 @@ const DashboardScreen: React.FC = () => {
     loadStats,
     setSelectedMonth,
     profile,
+    customCategories,
   } = useAppStore();
 
   useEffect(() => {
@@ -188,13 +175,15 @@ const DashboardScreen: React.FC = () => {
               totalExpense > 0
                 ? ((stat.total / totalExpense) * 100).toFixed(1)
                 : '0';
-            const categoryId = CATEGORY_ICONS[stat.category] ? stat.category : 'other';
+            const emoji = CATEGORY_ICONS[stat.category]
+              ? CATEGORY_EMOJI[stat.category]
+              : customCategories?.[stat.category]?.icon || '📌';
 
             return (
               <View key={stat.category || index} style={styles.categoryItem}>
                 <View style={styles.categoryLeft}>
                   <View style={styles.categoryIconWrap}>
-                    <Text style={styles.categoryEmoji}>{CATEGORY_EMOJI[categoryId] || '📌'}</Text>
+                    <Text style={styles.categoryEmoji}>{emoji}</Text>
                   </View>
                   <View>
                     <Text style={styles.categoryName}>{getCategoryLabel(stat.category)}</Text>
@@ -231,7 +220,9 @@ const DashboardScreen: React.FC = () => {
               <View style={styles.txLeft}>
                 <View style={styles.txIconWrap}>
                   <Text style={styles.txEmoji}>
-                    {CATEGORY_EMOJI[CATEGORY_ICONS[tx.category || 'other'] ? (tx.category || 'other') : 'other'] || '📌'}
+                    {CATEGORY_ICONS[tx.category || 'other']
+                      ? CATEGORY_EMOJI[tx.category || 'other']
+                      : customCategories?.[tx.category || 'other']?.icon || '📌'}
                   </Text>
                 </View>
                 <View>

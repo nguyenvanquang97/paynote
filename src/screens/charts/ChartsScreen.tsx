@@ -12,7 +12,7 @@ import {PieChart, BarChart} from 'react-native-gifted-charts';
 import {useAppStore} from '../../app/store';
 import {getTransactionsByDateRange} from '../../database';
 import dayjs from 'dayjs';
-import {CATEGORY_ICONS, getCategoryLabel} from '../../shared/constants';
+import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import {theme} from '../../shared/theme';
 import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
 
@@ -32,9 +32,9 @@ const COLORS = {
 };
 
 const CHART_COLORS = [
-  '#65d75f', '#2fb34e', '#e76452', '#f0ae3e', '#57a2e8',
-  '#7ebd5a', '#87dca8', '#f08fb1', '#f2c09c', '#6fc4f9',
-  '#81ecec', '#dfe6e9',
+  '#e76452', '#f0ae3e', '#57a2e8', '#f08fb1', '#9b59b6',
+  '#e67e22', '#34495e', '#e84393', '#fd79a8', '#6c5ce7',
+  '#00cec9', '#fab1a0',
 ];
 
 const formatCurrency = (amount: number): string =>
@@ -56,6 +56,7 @@ const ChartsScreen: React.FC = () => {
     isLoading,
     loadStats,
     setSelectedMonth,
+    customCategories,
   } = useAppStore();
 
   const [monthlyData, setMonthlyData] = useState<
@@ -64,7 +65,7 @@ const ChartsScreen: React.FC = () => {
 
   const fetchMonthlyData = useCallback(async () => {
     const months = [];
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 2; i >= -2; i--) {
       const d = dayjs().subtract(i, 'month');
       const startDate = d.startOf('month').valueOf();
       const endDate = d.endOf('month').valueOf();
@@ -123,6 +124,9 @@ const ChartsScreen: React.FC = () => {
       value: stat.total,
       color: CHART_COLORS[i % CHART_COLORS.length],
       categoryId: stat.category,
+      emoji: CATEGORY_ICONS[stat.category]
+        ? CATEGORY_EMOJI[stat.category]
+        : customCategories?.[stat.category]?.icon || '📌',
       label: getCategoryLabel(stat.category),
       text: `${((stat.total / totalExpense) * 100).toFixed(1)}%`,
     }));
@@ -210,7 +214,7 @@ const ChartsScreen: React.FC = () => {
                 <View key={i} style={styles.legendItem}>
                   <View style={[styles.legendDot, {backgroundColor: item.color}]} />
                   <Text style={styles.legendLabel} numberOfLines={1}>
-                    <AppIcon name={categoryIconName(item.categoryId)} size={14} color={COLORS.accent} /> {item.label}
+                    {item.emoji} {item.label}
                   </Text>
                   <Text style={styles.legendPercent}>{item.text}</Text>
                 </View>
@@ -225,9 +229,9 @@ const ChartsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Bar Chart - 6 months income vs expense */}
+      {/* Bar Chart - 5 months income vs expense */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Thu nhập vs Chi tiêu (6 tháng)</Text>
+        <Text style={styles.sectionTitle}>Thu nhập vs Chi tiêu (5 tháng)</Text>
         <View style={styles.chartCard}>
           <View style={styles.barLegendRow}>
             <View style={styles.barLegendItem}>
@@ -275,7 +279,9 @@ const ChartsScreen: React.FC = () => {
               ? ((stat.total / totalExpense) * 100).toFixed(1)
               : '0';
             const color = CHART_COLORS[i % CHART_COLORS.length];
-            const icon = categoryIconName(CATEGORY_ICONS[stat.category] ? stat.category : 'other');
+            const emoji = CATEGORY_ICONS[stat.category]
+              ? CATEGORY_EMOJI[stat.category]
+              : customCategories?.[stat.category]?.icon || '📌';
             const barWidth = totalExpense > 0
               ? (stat.total / totalExpense) * (width - 80)
               : 0;
@@ -284,7 +290,7 @@ const ChartsScreen: React.FC = () => {
               <View key={stat.category} style={styles.statRow}>
                 <View style={styles.statRowHeader}>
                   <View style={styles.statRowLeft}>
-                    <AppIcon name={icon} size={16} color={COLORS.accent} />
+                    <Text style={{fontSize: 16}}>{emoji}</Text>
                     <Text style={styles.statName}>{getCategoryLabel(stat.category)}</Text>
                     <Text style={styles.statCount}>{stat.count} GD</Text>
                   </View>

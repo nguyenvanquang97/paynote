@@ -10,27 +10,12 @@ import {
 } from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {BottomSheetModal} from '@gorhom/bottom-sheet';
-import {CATEGORY_ICONS, KEYWORD_CATEGORIES, getCategoryLabel} from '../../shared/constants';
+import {CATEGORY_ICONS, CATEGORY_EMOJI, KEYWORD_CATEGORIES, getCategoryLabel} from '../../shared/constants';
 import {useAppStore, type CustomCategory} from '../../app/store';
 import AddCategoryModal from './AddCategoryModal';
 import SwipeableRow from '../../shared/components/SwipeableRow';
 import {theme} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  food: '🍔',
-  cafe: '☕',
-  transport: '🚗',
-  shopping: '🛒',
-  subscription: '📱',
-  transfer: '💸',
-  salary: '💰',
-  entertainment: '🎬',
-  health: '🏥',
-  education: '📚',
-  bills: '📄',
-  other: '📌',
-};
 
 const COLORS = {
   bg: theme.colors.appBg,
@@ -132,11 +117,9 @@ const CategoriesScreen: React.FC = () => {
         style={styles.categoryCard}>
         <View style={styles.categoryHeader}>
           <View style={styles.categoryIconWrap}>
-            {item.isCustom ? (
-              <AppIcon name="other" size={24} color={COLORS.accent} />
-            ) : (
-              <Text style={styles.categoryEmoji}>{CATEGORY_EMOJI[item.id] || '📌'}</Text>
-            )}
+            <Text style={styles.categoryEmoji}>
+              {item.isCustom ? item.icon || '📌' : CATEGORY_EMOJI[item.id] || '📌'}
+            </Text>
           </View>
           <View style={{flex: 1}}>
             <Text style={styles.categoryName}>{item.name}</Text>

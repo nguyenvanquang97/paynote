@@ -79,7 +79,7 @@ export default function App() {
       setShowOnboarding(!hasOnboarded);
 
       const elapsed = Date.now() - startedAt;
-      const minSplashMs = 1800;
+      const minSplashMs = 2200;
       const remain = Math.max(0, minSplashMs - elapsed);
       setTimeout(() => setIsReady(true), remain);
     };
