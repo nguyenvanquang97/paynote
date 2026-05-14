@@ -7,6 +7,7 @@ export {
   updateTransactionCategory,
   markAsSuspectedGap,
   deleteTransaction,
+  updateTransaction,
   deleteAllTransactions,
   importTransactions,
   getMonthlyStats,

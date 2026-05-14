@@ -54,6 +54,8 @@ interface AppState {
   setNotificationAccess: (hasAccess: boolean) => void;
   loadCustomCategories: () => void;
   addCustomCategory: (category: CustomCategory) => void;
+  deleteCustomCategory: (id: string) => void;
+  updateCustomCategory: (category: CustomCategory) => void;
   loadProfile: () => void;
   setProfile: (profile: Profile) => void;
   resetData: () => Promise<void>;
@@ -139,6 +141,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addCustomCategory: (category: CustomCategory) => {
+    set(state => {
+      const newCategories = {...state.customCategories, [category.id]: category};
+      storage.set('custom_categories', JSON.stringify(newCategories));
+      return {customCategories: newCategories};
+    });
+  },
+
+  deleteCustomCategory: (id: string) => {
+    set(state => {
+      const newCategories = {...state.customCategories};
+      delete newCategories[id];
+      storage.set('custom_categories', JSON.stringify(newCategories));
+      return {customCategories: newCategories};
+    });
+  },
+
+  updateCustomCategory: (category: CustomCategory) => {
     set(state => {
       const newCategories = {...state.customCategories, [category.id]: category};
       storage.set('custom_categories', JSON.stringify(newCategories));

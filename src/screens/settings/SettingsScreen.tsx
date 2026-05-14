@@ -1,11 +1,27 @@
 import React, {useState, useEffect} from 'react';
-import {View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share, Image} from 'react-native';
-import {checkNotificationAccess, openNotificationSettings, openBatteryOptimizationSettings} from '../../native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Share,
+  Image,
+  Platform,
+  AppState,
+} from 'react-native';
+import {
+  checkNotificationAccess,
+  checkBatteryOptimizationDisabled,
+  openNotificationSettings,
+  openBatteryOptimizationSettings,
+} from '../../native';
 import {useAppStore} from '../../app/store';
 import {getTransactions, importTransactions} from '../../database';
 import dayjs from 'dayjs';
 import ProfileModal from './ProfileModal';
-import { pick, isCancel, types } from '@react-native-documents/picker';
+import {pick, types} from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
 import {checkForUpdates} from '../../services/updater';
 import DeviceInfo from 'react-native-device-info';
@@ -27,33 +43,72 @@ const SettingsScreen: React.FC = () => {
     loadStats,
   } = useAppStore();
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
+  const [isBatteryOptimizationDisabled, setIsBatteryOptimizationDisabled] = useState(false);
 
-  useEffect(() => { checkAccess(); }, []);
-  const checkAccess = async () => { setNotificationAccess(await checkNotificationAccess()); };
+  useEffect(() => {
+    checkAccess();
+
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        checkAccess();
+      }
+    });
+
+    return () => sub.remove();
+  }, []);
+
+  const checkAccess = async () => {
+    setNotificationAccess(await checkNotificationAccess());
+    setIsBatteryOptimizationDisabled(await checkBatteryOptimizationDisabled());
+  };
 
   const handleExportJSON = async () => {
     try {
-      const txs = await getTransactions(10000); // get all ideally
-      const backupData = {
-        transactions: txs,
-        customCategories,
-      };
-      
+      const txs = await getTransactions(10000);
+      const backupData = {transactions: txs, customCategories};
       const jsonStr = JSON.stringify(backupData, null, 2);
-      const path = `${RNFS.DocumentDirectoryPath}/PayNote_Backup_${dayjs().format('YYYYMMDD_HHmmss')}.json`;
-      
+      // Use ExternalDirectoryPath on Android so the file is accessible to other apps
+      const dir = Platform.OS === 'android' ? RNFS.ExternalDirectoryPath : RNFS.DocumentDirectoryPath;
+      const path = `${dir}/PayNote_Backup_${dayjs().format('YYYYMMDD_HHmmss')}.json`;
       await RNFS.writeFile(path, jsonStr, 'utf8');
-      
       await Share.share({
         title: 'PayNote Backup',
-        url: `file://${path}`,
-        message: 'PayNote Backup File',
+        url: Platform.OS === 'android' ? `file://${path}` : path,
+        message: 'Đây là file backup PayNote của bạn',
       });
     } catch (err) {
       console.error(err);
       Alert.alert('Lỗi', 'Không thể xuất dữ liệu');
     }
   };
+
+  const handleExportCSV = async () => {
+    try {
+      const txs = await getTransactions(10000);
+      const header = 'Ngày,Loại,Số tiền,Danh mục,Mô tả,Ngân hàng';
+      const rows = txs.map(tx => [
+        dayjs(tx.timestamp).format('DD/MM/YYYY HH:mm'),
+        tx.transactionType === 'income' ? 'Thu nhập' : 'Chi tiêu',
+        tx.amount,
+        tx.category || '',
+        `"${(tx.description || '').replace(/"/g, '""')}"`,
+        tx.bank,
+      ].join(','));
+      const csv = [header, ...rows].join('\n');
+      const dir = Platform.OS === 'android' ? RNFS.ExternalDirectoryPath : RNFS.DocumentDirectoryPath;
+      const path = `${dir}/PayNote_Export_${dayjs().format('YYYYMMDD_HHmmss')}.csv`;
+      await RNFS.writeFile(path, csv, 'utf8');
+      await Share.share({
+        title: 'PayNote Export',
+        url: Platform.OS === 'android' ? `file://${path}` : path,
+        message: 'File CSV PayNote – mở bằng Excel hoặc Google Sheets',
+      });
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Lỗi', 'Không thể xuất CSV');
+    }
+  };
+
 
   const handleImportJSON = async () => {
     try {
@@ -97,7 +152,9 @@ const SettingsScreen: React.FC = () => {
         ]
       );
     } catch (err) {
-      if (!isCancel(err)) {
+      // User cancelled the picker – silently ignore
+      const errCode = (err as any)?.code;
+      if (errCode !== 'DOCUMENT_PICKER_CANCELED' && errCode !== 'OPERATION_CANCELED') {
         console.error(err);
         Alert.alert('Lỗi', 'Không thể đọc file');
       }
@@ -150,17 +207,26 @@ const SettingsScreen: React.FC = () => {
           <View style={[s.badge,{backgroundColor:hasNotificationAccess?'#1d4e3e':'#4e1d1d'}]}><Text style={{color:hasNotificationAccess?C.ok:C.err,fontSize:12,fontWeight:'600'}}>{hasNotificationAccess?'Đã bật':'Tắt'}</Text></View></View>
         {!hasNotificationAccess && <TouchableOpacity style={s.btn} onPress={()=>{openNotificationSettings();setTimeout(checkAccess,3000);}}><Text style={s.btnTxt}>Mở cài đặt</Text></TouchableOpacity>}
       </View>
-      <View style={s.card}><View style={s.row}><Text style={s.icon}>🔋</Text><View style={{flex:1}}><Text style={s.label}>Battery Optimization</Text><Text style={s.desc}>Tắt tối ưu pin để app chạy nền</Text></View></View>
-        <TouchableOpacity style={s.btn} onPress={openBatteryOptimizationSettings}><Text style={s.btnTxt}>Cài đặt pin</Text></TouchableOpacity></View>
+      <View style={s.card}><View style={s.row}><Text style={s.icon}>🔋</Text><View style={{flex:1}}><Text style={s.label}>Battery Optimization</Text><Text style={s.desc}>Tắt tối ưu pin để app chạy nền</Text></View>
+        <View style={[s.badge,{backgroundColor:isBatteryOptimizationDisabled?'#1d4e3e':'#4e1d1d'}]}><Text style={{color:isBatteryOptimizationDisabled?C.ok:C.err,fontSize:12,fontWeight:'600'}}>{isBatteryOptimizationDisabled?'Đã tắt':'Đang bật'}</Text></View></View>
+        <TouchableOpacity style={s.btn} onPress={()=>{openBatteryOptimizationSettings();setTimeout(checkAccess,1500);}}><Text style={s.btnTxt}>Cài đặt pin</Text></TouchableOpacity></View>
       <Text style={s.sec}>Dữ liệu</Text>
       <TouchableOpacity style={s.card} onPress={handleExportJSON}>
         <View style={s.row}>
           <Text style={s.icon}>📤</Text>
-          <View style={{flex:1}}><Text style={s.label}>Sao lưu dữ liệu</Text><Text style={s.desc}>Xuất file JSON để backup</Text></View>
+          <View style={{flex:1}}><Text style={s.label}>Sao lưu JSON</Text><Text style={s.desc}>Xuất file JSON để backup/restore</Text></View>
           <Text style={{color:C.sub}}>▶</Text>
         </View>
       </TouchableOpacity>
-      
+
+      <TouchableOpacity style={s.card} onPress={handleExportCSV}>
+        <View style={s.row}>
+          <Text style={s.icon}>📊</Text>
+          <View style={{flex:1}}><Text style={s.label}>Xuất CSV</Text><Text style={s.desc}>Mở bằng Excel / Google Sheets</Text></View>
+          <Text style={{color:C.sub}}>▶</Text>
+        </View>
+      </TouchableOpacity>
+
       <TouchableOpacity style={s.card} onPress={handleImportJSON}>
         <View style={s.row}>
           <Text style={s.icon}>📥</Text>

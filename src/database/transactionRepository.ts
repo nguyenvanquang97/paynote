@@ -138,6 +138,32 @@ export const deleteTransaction = async (id: string): Promise<void> => {
   );
 };
 
+export const updateTransaction = async (
+  id: string,
+  fields: {
+    amount: number;
+    transactionType: 'income' | 'expense';
+    description?: string;
+    category?: string;
+    timestamp: number;
+  },
+): Promise<void> => {
+  const db = await getDatabase();
+
+  await db.executeSql(
+    `UPDATE transactions SET amount = ?, transaction_type = ?, description = ?, category = ?, timestamp = ? WHERE id = ?`,
+    [
+      fields.amount,
+      fields.transactionType,
+      fields.description || null,
+      fields.category || null,
+      fields.timestamp,
+      id,
+    ],
+  );
+};
+
+
 export const deleteAllTransactions = async (): Promise<void> => {
   const db = await getDatabase();
   await db.executeSql(`DELETE FROM transactions`);

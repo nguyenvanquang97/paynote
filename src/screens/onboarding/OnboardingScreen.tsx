@@ -1,6 +1,11 @@
 import React, {useState} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
-import {checkNotificationAccess, openNotificationSettings, openBatteryOptimizationSettings} from '../../native';
+import {
+  checkNotificationAccess,
+  checkBatteryOptimizationDisabled,
+  openNotificationSettings,
+  openBatteryOptimizationSettings,
+} from '../../native';
 
 const C = {bg: '#0f0f1a', card: '#1a1a2e', border: '#2a2a4a', pri: '#6c5ce7', ok: '#00b894', txt: '#fff', sub: '#a0a0b8', acc: '#a29bfe'};
 
@@ -15,6 +20,7 @@ const steps = [
 const OnboardingScreen: React.FC<Props> = ({onComplete}) => {
   const [step, setStep] = useState(0);
   const [notifOk, setNotifOk] = useState(false);
+  const [batteryOk, setBatteryOk] = useState(false);
   const current = steps[step];
 
   const handleAction = async () => {
@@ -23,6 +29,9 @@ const OnboardingScreen: React.FC<Props> = ({onComplete}) => {
       setTimeout(async () => { setNotifOk(await checkNotificationAccess()); }, 3000);
     } else if (current.action === 'battery') {
       openBatteryOptimizationSettings();
+      setTimeout(async () => {
+        setBatteryOk(await checkBatteryOptimizationDisabled());
+      }, 1500);
     } else { onComplete(); return; }
   };
 
@@ -35,6 +44,8 @@ const OnboardingScreen: React.FC<Props> = ({onComplete}) => {
         <Text style={s.icon}>{current.icon}</Text>
         <Text style={s.title}>{current.title}</Text>
         <Text style={s.desc}>{current.desc}</Text>
+        {current.action === 'notif' && notifOk && <Text style={s.ok}>Đã bật quyền thông báo</Text>}
+        {current.action === 'battery' && batteryOk && <Text style={s.ok}>Đã tắt tối ưu pin</Text>}
       </View>
       <View style={s.actions}>
         {current.action !== 'done' && (
@@ -59,6 +70,7 @@ const s = StyleSheet.create({
   icon:{fontSize:80,marginBottom:24},
   title:{color:C.txt,fontSize:28,fontWeight:'700',marginBottom:12},
   desc:{color:C.sub,fontSize:16,textAlign:'center',lineHeight:24,paddingHorizontal:20},
+  ok:{color:C.ok,fontSize:14,fontWeight:'600',marginTop:14},
   actions:{gap:12,marginBottom:40},
   actionBtn:{backgroundColor:C.card,borderRadius:14,paddingVertical:16,alignItems:'center',borderWidth:1,borderColor:C.border},
   actionTxt:{color:C.acc,fontSize:16,fontWeight:'600'},

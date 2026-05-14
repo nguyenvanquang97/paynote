@@ -45,3 +45,11 @@ export const openNotificationSettings = (): void => {
 export const openBatteryOptimizationSettings = (): void => {
   NotificationBridge.openBatteryOptimizationSettings();
 };
+
+export const checkBatteryOptimizationDisabled = (): Promise<boolean> => {
+  return new Promise(resolve => {
+    NotificationBridge.isBatteryOptimizationDisabled((isDisabled: boolean) => {
+      resolve(isDisabled);
+    });
+  });
+};

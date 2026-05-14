@@ -1,6 +1,7 @@
 package com.paynote.app
 
 import android.util.Log
+import android.os.PowerManager
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -84,6 +85,25 @@ class NotificationBridge(
             reactContext.startActivity(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Error opening battery settings", e)
+        }
+    }
+
+    @ReactMethod
+    fun isBatteryOptimizationDisabled(callback: com.facebook.react.bridge.Callback) {
+        try {
+            val powerManager = reactContext.getSystemService(
+                android.content.Context.POWER_SERVICE
+            ) as? PowerManager
+
+            if (powerManager == null) {
+                callback.invoke(false)
+                return
+            }
+
+            val isIgnoring = powerManager.isIgnoringBatteryOptimizations(reactContext.packageName)
+            callback.invoke(isIgnoring)
+        } catch (e: Exception) {
+            callback.invoke(false)
         }
     }
 
