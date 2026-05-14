@@ -254,6 +254,34 @@ export const getLatestTransaction = async (
   return mapRowToTransaction(results.rows.item(0));
 };
 
+export const getPreviousTransaction = async (
+  bank: string,
+  timestamp: number,
+  createdAt: number,
+  excludeId: string,
+): Promise<Transaction | null> => {
+  const db = await getDatabase();
+
+  const [results] = await db.executeSql(
+    `SELECT * FROM transactions
+     WHERE bank = ?
+     AND id != ?
+     AND (
+       timestamp < ?
+       OR (timestamp = ? AND created_at < ?)
+     )
+     ORDER BY timestamp DESC, created_at DESC
+     LIMIT 1`,
+    [bank, excludeId, timestamp, timestamp, createdAt],
+  );
+
+  if (results.rows.length === 0) {
+    return null;
+  }
+
+  return mapRowToTransaction(results.rows.item(0));
+};
+
 // Helper function to map DB row to Transaction type
 const mapRowToTransaction = (row: any): Transaction => ({
   id: row.id,

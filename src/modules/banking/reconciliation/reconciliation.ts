@@ -1,5 +1,5 @@
 import type {Transaction} from '../../../shared/types';
-import {getLatestTransaction, markAsSuspectedGap} from '../../../database';
+import {getPreviousTransaction, markAsSuspectedGap} from '../../../database';
 
 /**
  * Reconciliation System
@@ -22,8 +22,14 @@ export const checkReconciliation = async (
     return {isSuspected: false};
   }
 
-  // Get the last transaction for the same bank
-  const prevTransaction = await getLatestTransaction(newTransaction.bank);
+  // Get the previous transaction for the same bank. This function runs after
+  // insertion, so the current row must be excluded from the lookup.
+  const prevTransaction = await getPreviousTransaction(
+    newTransaction.bank,
+    newTransaction.timestamp,
+    newTransaction.createdAt,
+    newTransaction.id,
+  );
 
   if (!prevTransaction || prevTransaction.balanceAfter === undefined) {
     return {isSuspected: false};

@@ -12,4 +12,5 @@ export {
   getMonthlyStats,
   getCategoryStats,
   getLatestTransaction,
+  getPreviousTransaction,
 } from './transactionRepository';

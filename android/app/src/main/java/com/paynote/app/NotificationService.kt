@@ -1,5 +1,7 @@
 package com.paynote.app
 
+import android.app.Notification
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -13,13 +15,12 @@ class NotificationService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         try {
             val packageName = sbn.packageName
+            val extras = sbn.notification.extras
 
-            val title = sbn.notification.extras
-                .getString("android.title")
+            val title = extras
+                .getString(Notification.EXTRA_TITLE)
 
-            val text = sbn.notification.extras
-                .getCharSequence("android.text")
-                ?.toString()
+            val text = extractNotificationText(extras)
 
             Log.d(TAG, "Notification from: $packageName")
 
@@ -31,6 +32,24 @@ class NotificationService : NotificationListenerService() {
         } catch (e: Exception) {
             Log.e(TAG, "Error processing notification", e)
         }
+    }
+
+    private fun extractNotificationText(extras: Bundle): String? {
+        extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
+            ?.toString()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { return it }
+
+        extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+            ?.mapNotNull { it?.toString() }
+            ?.filter { it.isNotBlank() }
+            ?.takeIf { it.isNotEmpty() }
+            ?.joinToString("\n")
+            ?.let { return it }
+
+        return extras.getCharSequence(Notification.EXTRA_TEXT)
+            ?.toString()
+            ?.takeIf { it.isNotBlank() }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {

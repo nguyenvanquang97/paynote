@@ -27,7 +27,7 @@ export const processNotification = async (
   skippedReason?: string;
 }> => {
   // Step 1: Detect bank
-  const bank = detectBank(notification.packageName);
+  const bank = detectBank(notification.packageName, notification.title);
 
   if (bank === 'unknown') {
     return {
