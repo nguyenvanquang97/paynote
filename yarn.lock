@@ -2100,6 +2100,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-documents/picker@npm:^12.0.1":
+  version: 12.0.1
+  resolution: "@react-native-documents/picker@npm:12.0.1"
+  peerDependencies:
+    react: "*"
+    react-native: ">=0.79.0"
+  checksum: c09898268171317eb1452cefa7c6efd2ada24c231901efa70759f778e26a93ea9d2a7d62e5ea2862995e0b3c37bc313eeb7479190611b69c05402488b1c6de91
+  languageName: node
+  linkType: hard
+
 "@react-native/assets-registry@npm:0.85.3":
   version: 0.85.3
   resolution: "@react-native/assets-registry@npm:0.85.3"
@@ -3677,6 +3687,7 @@ __metadata:
     "@react-native-community/cli-platform-android": 20.1.0
     "@react-native-community/cli-platform-ios": 20.1.0
     "@react-native-community/datetimepicker": ^9.1.0
+    "@react-native-documents/picker": ^12.0.1
     "@react-native/babel-preset": 0.85.3
     "@react-native/eslint-config": 0.85.3
     "@react-native/jest-preset": 0.85.3
@@ -3699,7 +3710,6 @@ __metadata:
     react: 19.2.3
     react-native: 0.85.3
     react-native-device-info: ^15.0.2
-    react-native-document-picker: ^9.3.1
     react-native-fs: ^2.20.0
     react-native-gifted-charts: ^1.4.76
     react-native-image-picker: ^8.2.1
@@ -7670,22 +7680,6 @@ __metadata:
   peerDependencies:
     react-native: "*"
   checksum: 932ec7ccfc885aeb39c455b31c55a1b345bd6fcfc8cf22f63fff88f42aefc82bf44e4b05daeaaa1231c4ea8590f25740ce6a0f38bc24a5c89d68702de832e8d6
-  languageName: node
-  linkType: hard
-
-"react-native-document-picker@npm:^9.3.1":
-  version: 9.3.1
-  resolution: "react-native-document-picker@npm:9.3.1"
-  dependencies:
-    invariant: ^2.2.4
-  peerDependencies:
-    react: "*"
-    react-native: "*"
-    react-native-windows: "*"
-  peerDependenciesMeta:
-    react-native-windows:
-      optional: true
-  checksum: 5979e4b93f15e0568ae70b70cc2304cd727f20939a58412d483517942df6d3cf3821319b3b7934bcaa2866ed1918ef9e8de9933ce6953209340abe3455403e0d
   languageName: node
   linkType: hard
 

@@ -5,7 +5,7 @@ import {useAppStore} from '../../app/store';
 import {getTransactions, importTransactions} from '../../database';
 import dayjs from 'dayjs';
 import ProfileModal from './ProfileModal';
-import DocumentPicker from 'react-native-document-picker';
+import { pick, isCancel, types } from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
 import {checkForUpdates} from '../../services/updater';
 import DeviceInfo from 'react-native-device-info';
@@ -57,9 +57,11 @@ const SettingsScreen: React.FC = () => {
 
   const handleImportJSON = async () => {
     try {
-      const res = await DocumentPicker.pickSingle({
-        type: [DocumentPicker.types.json, DocumentPicker.types.allFiles],
+      const [res] = await pick({
+        type: [types.json, types.allFiles],
       });
+
+      if (!res) return;
       
       const content = await RNFS.readFile(res.uri, 'utf8');
       const backupData = JSON.parse(content);
@@ -95,7 +97,7 @@ const SettingsScreen: React.FC = () => {
         ]
       );
     } catch (err) {
-      if (!DocumentPicker.isCancel(err)) {
+      if (!isCancel(err)) {
         console.error(err);
         Alert.alert('Lỗi', 'Không thể đọc file');
       }
