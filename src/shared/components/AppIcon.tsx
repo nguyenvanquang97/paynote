@@ -1,6 +1,5 @@
 import React from 'react';
 import Svg, {Path, Circle, Rect, Line, Polyline} from 'react-native-svg';
-import {theme} from '../theme';
 
 type IconName =
   | 'user'
@@ -38,9 +37,7 @@ interface AppIconProps {
   strokeWidth?: number;
 }
 
-const C = theme.colors;
-
-export default function AppIcon({name, size = 20, color = C.textPrimary, strokeWidth = 2}: AppIconProps) {
+export default function AppIcon({name, size = 20, color = '#888', strokeWidth = 2}: AppIconProps) {
   const s = size;
   const sw = strokeWidth;
   switch (name) {

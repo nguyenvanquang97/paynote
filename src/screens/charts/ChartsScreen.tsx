@@ -13,7 +13,7 @@ import {useAppStore} from '../../app/store';
 import {getTransactionsByDateRange} from '../../database';
 import dayjs from 'dayjs';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
-import {theme, useThemeColors} from '../../shared/theme';
+import {useThemeColors} from '../../shared/theme';
 import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
 
 const {width} = Dimensions.get('window');

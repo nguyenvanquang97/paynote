@@ -2,14 +2,17 @@ import React, {useState, useCallback, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
   Platform,
   ScrollView,
-  KeyboardAvoidingView,
 } from 'react-native';
-import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+} from '@gorhom/bottom-sheet';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import {insertTransaction, updateTransaction} from '../../database';
 import {useAppStore} from '../../app/store';
@@ -168,7 +171,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
       snapPoints={SNAP_POINTS}
       enableDynamicSizing={false}
       enablePanDownToClose
-      keyboardBehavior="interactive"
+      keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'fillParent'}
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
       backdropComponent={renderBackdrop}
@@ -182,14 +185,11 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
-        style={styles.keyboardAvoiding}>
-        <View style={styles.form}>
-          <BottomSheetScrollView
-            contentContainerStyle={styles.formFields}
-            keyboardShouldPersistTaps="handled">
+      <View style={styles.form}>
+        <BottomSheetScrollView
+          contentContainerStyle={styles.formFields}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive">
             <View style={styles.typeSwitcher}>
               <TouchableOpacity
                 style={[styles.typeButton, type === 'expense' && {backgroundColor: COLORS.expense}]}
@@ -259,7 +259,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Mô tả (Tuỳ chọn)</Text>
-              <TextInput
+              <BottomSheetTextInput
                 style={styles.input}
                 placeholder="Nhập mô tả..."
                 placeholderTextColor={COLORS.textSecondary}
@@ -267,13 +267,12 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
                 onChangeText={setDescription}
               />
             </View>
-          </BottomSheetScrollView>
+        </BottomSheetScrollView>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu giao dịch'}</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu giao dịch'}</Text>
+        </TouchableOpacity>
+      </View>
     </BottomSheetModal>
   );
 };
@@ -306,7 +305,6 @@ const createStyles = (COLORS: {
   title: {color: COLORS.text, fontSize: 18, fontWeight: '700'},
   closeBtn: {padding: 4},
   closeText: {color: COLORS.textSecondary, fontSize: 22},
-  keyboardAvoiding: {flex: 1},
   form: {padding: 20, paddingBottom: 16, flex: 1},
   formFields: {paddingBottom: 32},
   typeSwitcher: {

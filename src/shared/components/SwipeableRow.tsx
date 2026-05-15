@@ -1,7 +1,7 @@
-import React, {useRef} from 'react';
+import React, {useRef, useMemo} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Animated} from 'react-native';
 import {Swipeable} from 'react-native-gesture-handler';
-import {theme} from '../theme';
+import {useThemeColors} from '../theme';
 import AppIcon from './AppIcon';
 
 interface SwipeableRowProps {
@@ -15,7 +15,18 @@ const SwipeableRow: React.FC<SwipeableRowProps> = ({
   onDelete,
   deleteLabel = 'Xóa',
 }) => {
+  const colors = useThemeColors();
   const swipeableRef = useRef<Swipeable>(null);
+
+  // Dynamic styles theo theme
+  const dynStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        deleteButton: {backgroundColor: colors.expense},
+        actionText: {color: colors.textOnDark, fontSize: 14, fontWeight: '700'},
+      }),
+    [colors],
+  );
 
   const close = () => swipeableRef.current?.close();
 
@@ -31,16 +42,16 @@ const SwipeableRow: React.FC<SwipeableRowProps> = ({
     });
 
     return (
-      <View style={styles.actionsContainer}>
+      <View style={staticStyles.actionsContainer}>
         <Animated.View key="delete" style={{transform: [{translateX: trans}]}}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
+            style={[staticStyles.actionButton, dynStyles.deleteButton]}
             onPress={() => {
               close();
               onDelete();
             }}>
-            <AppIcon name="trash" size={20} color={theme.colors.textOnDark} />
-            <Text style={styles.actionText}>{deleteLabel}</Text>
+            <AppIcon name="trash" size={20} color={colors.textOnDark} />
+            <Text style={dynStyles.actionText}>{deleteLabel}</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -59,7 +70,8 @@ const SwipeableRow: React.FC<SwipeableRowProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+// Styles không phụ thuộc màu — tạo 1 lần ở module level
+const staticStyles = StyleSheet.create({
   actionsContainer: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -75,14 +87,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     gap: 6,
     paddingVertical: 8,
-  },
-  deleteButton: {
-    backgroundColor: theme.colors.expense,
-  },
-  actionText: {
-    color: theme.colors.textOnDark,
-    fontSize: 14,
-    fontWeight: '700',
   },
 });
 

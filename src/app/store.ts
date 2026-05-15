@@ -1,4 +1,5 @@
 import {create} from 'zustand';
+import {type ThemeMode, VALID_THEME_IDS, DEFAULT_THEME_ID} from '../shared/theme';
 import type {Transaction} from '../shared/types';
 import {
   getTransactions,
@@ -64,7 +65,7 @@ export interface InAppNotificationItem {
   isRead: boolean;
 }
 
-export type ThemeMode = 'light' | 'dark' | 'forest';
+export type {ThemeMode};
 
 export const toMonthKey = (year: number, month: number): string =>
   `${year}-${String(month).padStart(2, '0')}`;
@@ -177,7 +178,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   budgetAlertsEnabled: true,
   budgetAlertHistory: {},
   inAppNotifications: [],
-  themeMode: 'light',
+  themeMode: DEFAULT_THEME_ID,
 
   // Actions
   loadTransactions: async () => {
@@ -598,8 +599,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadThemeMode: () => {
     const raw = storage.getString('theme_mode');
     if (!raw) {return;}
-    if (raw === 'light' || raw === 'dark' || raw === 'forest') {
-      set({themeMode: raw});
+    if (VALID_THEME_IDS.has(raw)) {
+      set({themeMode: raw as ThemeMode});
     }
   },
 
@@ -631,7 +632,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       budgetAlertsEnabled: true,
       budgetAlertHistory: {},
       inAppNotifications: [],
-      themeMode: 'light',
+      themeMode: DEFAULT_THEME_ID,
     });
   },
 }));

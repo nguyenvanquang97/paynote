@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, ImageBackground, StyleSheet, Text, View } from 'react-native';
-import { theme } from '../../shared/theme';
+
+// SplashScreen render trước khi store/theme load xong → hardcode màu primary
+const SPLASH_PRIMARY = '#62d84e';
 
 const SplashScreen: React.FC = () => {
   const progress = useRef(new Animated.Value(0)).current;
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
     height: 10,
     marginHorizontal: 2,
     borderRadius: 999,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: SPLASH_PRIMARY,
     overflow: 'hidden',
   },
   shimmer: {

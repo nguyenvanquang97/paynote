@@ -12,7 +12,7 @@ import {
 import {useAppStore} from '../../app/store';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import dayjs from 'dayjs';
-import {theme, useThemeColors} from '../../shared/theme';
+import {useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
 import {useNavigation} from '@react-navigation/native';
 
@@ -36,6 +36,7 @@ const DashboardScreen: React.FC = () => {
     accent: t.primaryDeep,
     hero: t.surfaceMuted,
     soft: t.primarySoft,
+    textOnDark: t.textOnDark,
   }), [t]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const navigation = useNavigation<any>();
@@ -322,6 +323,7 @@ const createStyles = (COLORS: {
   accent: string;
   hero: string;
   soft: string;
+  textOnDark: string;
 }) => StyleSheet.create({
   container: {
     flex: 1,
@@ -377,7 +379,7 @@ const createStyles = (COLORS: {
     justifyContent: 'center',
   },
   notifyDotText: {
-    color: theme.colors.textOnDark,
+    color: COLORS.textOnDark,
     fontSize: 9,
     fontWeight: '700',
   },

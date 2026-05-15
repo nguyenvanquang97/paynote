@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {
   checkNotificationAccess,
@@ -6,19 +6,8 @@ import {
   openNotificationSettings,
   openBatteryOptimizationSettings,
 } from '../../native';
-import {theme} from '../../shared/theme';
+import {useThemeColors, theme} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
-
-const C = {
-  bg: theme.colors.appBg,
-  card: theme.colors.surface,
-  border: theme.colors.border,
-  pri: theme.colors.primary,
-  ok: theme.colors.income,
-  txt: theme.colors.textPrimary,
-  sub: theme.colors.textSecondary,
-  acc: theme.colors.primaryDeep,
-};
 
 interface Props { onComplete: () => void; }
 
@@ -33,6 +22,20 @@ const OnboardingScreen: React.FC<Props> = ({onComplete}) => {
   const [notifOk, setNotifOk] = useState(false);
   const [batteryOk, setBatteryOk] = useState(false);
   const current = steps[step];
+
+  const colors = useThemeColors();
+  const C = useMemo(() => ({
+    bg: colors.appBg,
+    card: colors.surface,
+    border: colors.border,
+    pri: colors.primary,
+    ok: colors.income,
+    txt: colors.textPrimary,
+    sub: colors.textSecondary,
+    acc: colors.primaryDeep,
+  }), [colors]);
+
+  const s = useMemo(() => createStyles(C), [C]);
 
   const handleAction = async () => {
     if (current.action === 'notif') {
@@ -74,15 +77,17 @@ const OnboardingScreen: React.FC<Props> = ({onComplete}) => {
   );
 };
 
-const s = StyleSheet.create({
+const createStyles = (C: {
+  bg: string; card: string; border: string; pri: string;
+  ok: string; txt: string; sub: string; acc: string;
+}) => StyleSheet.create({
   container:{flex:1,backgroundColor:C.bg,justifyContent:'space-between',padding:24},
   dots:{flexDirection:'row',justifyContent:'center',gap:8,marginTop:60},
   dot:{width:8,height:8,borderRadius:4,backgroundColor:C.border},
   dotActive:{backgroundColor:C.pri,width:24},
   content:{alignItems:'center',flex:1,justifyContent:'center'},
-  icon:{fontSize:80,marginBottom:24},
   iconWrap:{width:88,height:88,borderRadius:44,backgroundColor:C.card,justifyContent:'center',alignItems:'center',marginBottom:24,borderWidth:1,borderColor:C.border},
-  title:{color:C.txt,fontSize:28,fontWeight:'700',marginBottom:12},
+  title:{color:C.txt,fontSize:theme.text.title,fontWeight:'700',marginBottom:12},
   desc:{color:C.sub,fontSize:16,textAlign:'center',lineHeight:24,paddingHorizontal:20},
   ok:{color:C.ok,fontSize:14,fontWeight:'600',marginTop:14},
   actions:{gap:12,marginBottom:40},
