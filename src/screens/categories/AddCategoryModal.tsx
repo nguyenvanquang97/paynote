@@ -2,12 +2,16 @@ import React, {useState, useCallback, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+} from '@gorhom/bottom-sheet';
 import {useAppStore, type CustomCategory} from '../../app/store';
 import {useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
@@ -19,7 +23,7 @@ interface Props {
   editCategory?: CustomCategory | null;
 }
 
-const SNAP_POINTS = ['60%'];
+const SNAP_POINTS = ['70%'];
 
 const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategory}) => {
   const t = useThemeColors();
@@ -131,47 +135,52 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
       </View>
 
       <View style={styles.form}>
-          <BottomSheetScrollView
-            contentContainerStyle={styles.formFields}
-            keyboardShouldPersistTaps="handled">
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Tên danh mục</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="VD: Du lịch"
-                placeholderTextColor={COLORS.textSecondary}
-                value={name}
-                onChangeText={setName}
-              />
-            </View>
+        <BottomSheetScrollView
+          contentContainerStyle={styles.formFields}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive">
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Tên danh mục</Text>
+            <BottomSheetTextInput
+              style={styles.input}
+              placeholder="VD: Du lịch"
+              placeholderTextColor={COLORS.textSecondary}
+              value={name}
+              onChangeText={setName}
+              returnKeyType="next"
+            />
+          </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Biểu tượng (Emoji)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="VD: ✈️"
-                placeholderTextColor={COLORS.textSecondary}
-                value={icon}
-                onChangeText={setIcon}
-                maxLength={4}
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Biểu tượng (Emoji)</Text>
+            <BottomSheetTextInput
+              style={styles.input}
+              placeholder="VD: ✈️"
+              placeholderTextColor={COLORS.textSecondary}
+              value={icon}
+              onChangeText={setIcon}
+              maxLength={4}
+              returnKeyType="next"
+            />
+          </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Từ khóa tự động (Cách nhau bởi dấu phẩy)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="VD: traveloka, agoda, ve may bay"
-                placeholderTextColor={COLORS.textSecondary}
-                value={keywords}
-                onChangeText={setKeywords}
-              />
-            </View>
-          </BottomSheetScrollView>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Từ khóa tự động (Cách nhau bởi dấu phẩy)</Text>
+            <BottomSheetTextInput
+              style={styles.input}
+              placeholder="VD: traveloka, agoda, ve may bay"
+              placeholderTextColor={COLORS.textSecondary}
+              value={keywords}
+              onChangeText={setKeywords}
+              returnKeyType="done"
+              onSubmitEditing={handleSave}
+            />
+          </View>
 
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
             <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu danh mục'}</Text>
           </TouchableOpacity>
+        </BottomSheetScrollView>
       </View>
     </BottomSheetModal>
   );
@@ -200,8 +209,8 @@ const createStyles = (COLORS: {
   },
   title: {color: COLORS.text, fontSize: 18, fontWeight: '700'},
   closeBtn: {padding: 8, zIndex: 10},
-  form: {padding: 20, flex: 1},
-  formFields: {paddingBottom: 32},
+  form: {padding: 20, paddingBottom: 16, flex: 1},
+  formFields: {paddingBottom: 24},
   inputGroup: {marginBottom: 20},
   label: {color: COLORS.textSecondary, fontSize: 14, marginBottom: 8},
   input: {
@@ -218,7 +227,7 @@ const createStyles = (COLORS: {
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    marginTop: 'auto',
+    marginTop: 8,
   },
   saveButtonText: {color: COLORS.onDark, fontSize: 16, fontWeight: '700'},
 });
