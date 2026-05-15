@@ -1,4 +1,4 @@
-import React, {useState, useRef, useCallback, useEffect, useMemo} from 'react';
+import React, {useState, useCallback, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
 import type {Transaction} from '../../shared/types';
 import {useThemeColors} from '../../shared/theme';
-import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
+import AppIcon from '../../shared/components/AppIcon';
 import {toast} from '../../shared/components/Toast';
 import NumericInput from '../../shared/components/NumericInput';
 import {triggerBudgetAlertsForTransaction} from '../../services/budgetAlerts';
@@ -72,7 +72,6 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
     return true;
   });
 
-  // Pre-fill form when editing
   useEffect(() => {
     if (editTransaction) {
       setType(editTransaction.transactionType);
@@ -168,6 +167,9 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
       snapPoints={SNAP_POINTS}
       enableDynamicSizing={false}
       enablePanDownToClose
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBg}
       handleIndicatorStyle={styles.handle}
@@ -180,91 +182,87 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
       </View>
 
       <View style={styles.form}>
-      <BottomSheetScrollView contentContainerStyle={styles.formFields} keyboardShouldPersistTaps="handled">
-        {/* Type Switcher */}
-        <View style={styles.typeSwitcher}>
-          <TouchableOpacity
-            style={[styles.typeButton, type === 'expense' && {backgroundColor: COLORS.expense}]}
-            onPress={() => setType('expense')}>
-            <Text style={[styles.typeText, type === 'expense' && styles.typeTextActive]}>Chi tiêu</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.typeButton, type === 'income' && {backgroundColor: COLORS.income}]}
-            onPress={() => setType('income')}>
-            <Text style={[styles.typeText, type === 'income' && styles.typeTextActive]}>Thu nhập</Text>
-          </TouchableOpacity>
-        </View>
+        <BottomSheetScrollView
+          contentContainerStyle={styles.formFields}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.typeSwitcher}>
+            <TouchableOpacity
+              style={[styles.typeButton, type === 'expense' && {backgroundColor: COLORS.expense}]}
+              onPress={() => setType('expense')}>
+              <Text style={[styles.typeText, type === 'expense' && styles.typeTextActive]}>Chi tiêu</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.typeButton, type === 'income' && {backgroundColor: COLORS.income}]}
+              onPress={() => setType('income')}>
+              <Text style={[styles.typeText, type === 'income' && styles.typeTextActive]}>Thu nhập</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Amount */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Số tiền (₫)</Text>
-          <NumericInput
-            style={[styles.input, styles.amountInput, {color: type === 'income' ? COLORS.income : COLORS.expense}]}
-            placeholder="0"
-            placeholderTextColor={COLORS.textSecondary}
-            value={amountStr}
-            onChangeText={setAmountStr}
-          />
-        </View>
-
-        {/* Date */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Ngày giao dịch</Text>
-          <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.dateText}>{dayjs(date).format('DD/MM/YYYY HH:mm')}</Text>
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="datetime"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (selectedDate) {setDate(selectedDate);}
-              }}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Số tiền (₫)</Text>
+            <NumericInput
+              style={[styles.input, styles.amountInput, {color: type === 'income' ? COLORS.income : COLORS.expense}]}
+              placeholder="0"
+              placeholderTextColor={COLORS.textSecondary}
+              value={amountStr}
+              onChangeText={setAmountStr}
             />
-          )}
-        </View>
+          </View>
 
-        {/* Category */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Danh mục</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.categoryList}>
-              {categories.map(cat => (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.categoryItem, category === cat.id && styles.categoryItemActive]}
-                  onPress={() => setCategory(cat.id)}>
-                  <View style={styles.categoryIconWrap}>
-                    <Text style={{fontSize: 24}}>
-                      {Object.prototype.hasOwnProperty.call(CATEGORY_ICONS, cat.id)
-                        ? CATEGORY_EMOJI[cat.id] || '📌'
-                        : cat.icon || '📌'}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Ngày giao dịch</Text>
+            <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.dateText}>{dayjs(date).format('DD/MM/YYYY HH:mm')}</Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="datetime"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) {setDate(selectedDate);}
+                }}
+              />
+            )}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Danh mục</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.categoryList}>
+                {categories.map(cat => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.categoryItem, category === cat.id && styles.categoryItemActive]}
+                    onPress={() => setCategory(cat.id)}>
+                    <View style={styles.categoryIconWrap}>
+                      <Text style={{fontSize: 24}}>
+                        {Object.prototype.hasOwnProperty.call(CATEGORY_ICONS, cat.id)
+                          ? CATEGORY_EMOJI[cat.id] || '📌'
+                          : cat.icon || '📌'}
+                      </Text>
+                    </View>
+                    <Text style={[styles.categoryText, category === cat.id && styles.categoryTextActive]}>
+                      {cat.name}
                     </Text>
-                  </View>
-                  <Text style={[styles.categoryText, category === cat.id && styles.categoryTextActive]}>
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
 
-        {/* Description */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Mô tả (Tuỳ chọn)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nhập mô tả..."
-            placeholderTextColor={COLORS.textSecondary}
-            value={description}
-            onChangeText={setDescription}
-          />
-        </View>
-
-      </BottomSheetScrollView>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Mô tả (Tuỳ chọn)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nhập mô tả..."
+              placeholderTextColor={COLORS.textSecondary}
+              value={description}
+              onChangeText={setDescription}
+            />
+          </View>
+        </BottomSheetScrollView>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu giao dịch'}</Text>
@@ -303,7 +301,7 @@ const createStyles = (COLORS: {
   closeBtn: {padding: 4},
   closeText: {color: COLORS.textSecondary, fontSize: 22},
   form: {padding: 20, paddingBottom: 16, flex: 1},
-  formFields: {paddingBottom: 12},
+  formFields: {paddingBottom: 32},
   typeSwitcher: {
     flexDirection: 'row',
     backgroundColor: COLORS.card,
