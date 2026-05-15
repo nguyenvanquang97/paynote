@@ -56,9 +56,11 @@ export type BudgetAlertHistory = Record<string, BudgetAlertRecord>;
 
 export interface InAppNotificationItem {
   id: string;
-  type: 'budget_alert';
+  type: 'budget_alert' | 'periodic_reminder';
   title: string;
   message: string;
+  source?: 'budget_alert_ai' | 'budget_alert_template' | 'periodic_reminder_ai' | 'periodic_reminder_template';
+  toneTag?: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry';
   categoryId?: string;
   monthKey?: string;
   threshold?: BudgetAlertThreshold;
@@ -108,6 +110,9 @@ interface AppState {
   monthlyNotes: Record<string, string>;
   categoryExpenseByMonth: Record<string, Record<string, number>>;
   budgetAlertsEnabled: boolean;
+  aiBudgetAlertsEnabled: boolean;
+  aiToneMode: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry';
+  geminiApiKey: string;
   budgetAlertHistory: BudgetAlertHistory;
   inAppNotifications: InAppNotificationItem[];
   themeMode: ThemeMode;
@@ -135,6 +140,10 @@ interface AppState {
   setMonthlyNote: (monthKey: string, note: string) => void;
   loadBudgetAlertsEnabled: () => void;
   setBudgetAlertsEnabled: (enabled: boolean) => void;
+  loadAiAlertSettings: () => void;
+  setAiBudgetAlertsEnabled: (enabled: boolean) => void;
+  setAiToneMode: (mode: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry') => void;
+  setGeminiApiKey: (key: string) => void;
   loadBudgetAlertHistory: () => void;
   markBudgetAlertTriggered: (
     monthKey: string,
@@ -177,6 +186,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   monthlyNotes: {},
   categoryExpenseByMonth: {},
   budgetAlertsEnabled: true,
+  aiBudgetAlertsEnabled: true,
+  aiToneMode: 'sarcastic_strong',
+  geminiApiKey: '',
   budgetAlertHistory: {},
   inAppNotifications: [],
   themeMode: DEFAULT_THEME_ID,
@@ -475,6 +487,35 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({budgetAlertsEnabled: enabled});
   },
 
+  loadAiAlertSettings: () => {
+    const enabled = storage.getBoolean('ai_budget_alerts_enabled');
+    const tone = storage.getString('ai_tone_mode');
+    const apiKey = storage.getString('gemini_api_key');
+    const isValidTone = (value: unknown): value is 'gentle' | 'cute' | 'sarcastic_strong' | 'angry' =>
+      value === 'gentle' || value === 'cute' || value === 'sarcastic_strong' || value === 'angry';
+    const normalizedTone = tone === 'strict' ? 'angry' : tone;
+    set({
+      aiBudgetAlertsEnabled: typeof enabled === 'boolean' ? enabled : true,
+      aiToneMode: isValidTone(normalizedTone) ? normalizedTone : 'sarcastic_strong',
+      geminiApiKey: typeof apiKey === 'string' ? apiKey : '',
+    });
+  },
+
+  setAiBudgetAlertsEnabled: (enabled: boolean) => {
+    storage.set('ai_budget_alerts_enabled', enabled);
+    set({aiBudgetAlertsEnabled: enabled});
+  },
+
+  setAiToneMode: (mode) => {
+    storage.set('ai_tone_mode', mode);
+    set({aiToneMode: mode});
+  },
+
+  setGeminiApiKey: (key: string) => {
+    storage.set('gemini_api_key', key);
+    set({geminiApiKey: key});
+  },
+
   loadBudgetAlertHistory: () => {
     const data = storage.getString('budget_alert_history');
     if (!data) {return;}
@@ -541,7 +582,24 @@ export const useAppStore = create<AppState>((set, get) => ({
         typeof item.message === 'string' &&
         typeof item.createdAt === 'number' &&
         typeof item.isRead === 'boolean',
-      ) as InAppNotificationItem[];
+      ).map((item: any) => ({
+        ...item,
+        source:
+          item.source === 'budget_alert_ai' ||
+          item.source === 'budget_alert_template' ||
+          item.source === 'periodic_reminder_ai' ||
+          item.source === 'periodic_reminder_template'
+            ? item.source
+            : undefined,
+        toneTag:
+          item.toneTag === 'gentle' ||
+          item.toneTag === 'cute' ||
+          item.toneTag === 'sarcastic_strong' ||
+          item.toneTag === 'angry' ||
+          item.toneTag === 'strict'
+            ? (item.toneTag === 'strict' ? 'angry' : item.toneTag)
+            : undefined,
+      })) as InAppNotificationItem[];
       set({inAppNotifications: sanitized.slice(0, 100)});
       storage.set('in_app_notifications', JSON.stringify(sanitized.slice(0, 100)));
     } catch (e) {
@@ -627,6 +685,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     storage.remove('monthly_notes');
     storage.remove('budget_alert_history');
     storage.remove('budget_alerts_enabled');
+    storage.remove('ai_budget_alerts_enabled');
+    storage.remove('ai_tone_mode');
+    storage.remove('gemini_api_key');
     storage.remove('in_app_notifications');
     storage.remove('theme_mode');
     set({
@@ -640,6 +701,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       monthlyNotes: {},
       categoryExpenseByMonth: {},
       budgetAlertsEnabled: true,
+      aiBudgetAlertsEnabled: true,
+      aiToneMode: 'sarcastic_strong',
+      geminiApiKey: '',
       budgetAlertHistory: {},
       inAppNotifications: [],
       themeMode: DEFAULT_THEME_ID,

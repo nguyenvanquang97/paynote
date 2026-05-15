@@ -54,6 +54,12 @@ const getAdaptiveDuration = (from: number, to: number, fallback: number): number
   return clamp(fallback + 180, 320, 700);
 };
 
+const FlowEasing = {
+  smooth: (t: number): number => 1 - (1 - t) * (1 - t) * (1 - t),
+  standard: (t: number): number => t * t * (3 - 2 * t),
+  decelerate: (t: number): number => 1 - (1 - t) * (1 - t),
+} as const;
+
 const getNumberFormat = (format: AnimatedNumberFormat): Intl.NumberFormatOptions => {
   switch (format) {
     case 'currency':
@@ -153,15 +159,15 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
         mask
         spinTiming={{
           duration: timingDuration,
-          easing: AnimationEasing.smooth,
+          easing: FlowEasing.smooth,
         }}
         transformTiming={{
           duration: timingDuration,
-          easing: AnimationEasing.standard,
+          easing: FlowEasing.standard,
         }}
         opacityTiming={{
           duration: Math.min(timingDuration, 260),
-          easing: AnimationEasing.decelerate,
+          easing: FlowEasing.decelerate,
         }}
       />
     </Animated.View>

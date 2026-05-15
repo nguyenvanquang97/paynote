@@ -21,7 +21,7 @@ import BubbleTabBar from './src/shared/components/BubbleTabBar';
 import {getThemeColors} from './src/shared/theme';
 import {DialogContainer} from './src/shared/components/Dialog';
 import {ToastContainer} from './src/shared/components/Toast';
-import {useBankNotifications} from './src/native';
+import {configurePeriodicRoast, startPeriodicRoastReminder, useBankNotifications} from './src/native';
 import {processNotification} from './src/modules/banking';
 import {useAppStore} from './src/app/store';
 import type {BankNotification} from './src/shared/types';
@@ -30,6 +30,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {triggerBudgetAlertsForTransaction} from './src/services/budgetAlerts';
 import {useThemeTransition} from './src/animations';
 import Animated from 'react-native-reanimated';
+import {getGeminiApiKeyFromEnv} from './src/config/env';
 
 const storage = createMMKV();
 const Tab = createBottomTabNavigator();
@@ -38,6 +39,8 @@ const Stack = createNativeStackNavigator();
 function MainTabs() {
   const insets = useSafeAreaInsets();
   const themeMode = useAppStore(s => s.themeMode);
+  const aiBudgetAlertsEnabled = useAppStore(s => s.aiBudgetAlertsEnabled);
+  const geminiApiKey = useAppStore(s => s.geminiApiKey);
   const colors = getThemeColors(themeMode);
   return (
     <Tab.Navigator
@@ -72,9 +75,13 @@ export default function App() {
   const loadFavoriteCategories = useAppStore(s => s.loadFavoriteCategories);
   const loadMonthlyNotes = useAppStore(s => s.loadMonthlyNotes);
   const loadBudgetAlertsEnabled = useAppStore(s => s.loadBudgetAlertsEnabled);
+  const loadAiAlertSettings = useAppStore(s => s.loadAiAlertSettings);
   const loadBudgetAlertHistory = useAppStore(s => s.loadBudgetAlertHistory);
   const loadInAppNotifications = useAppStore(s => s.loadInAppNotifications);
   const loadThemeMode = useAppStore(s => s.loadThemeMode);
+  const aiBudgetAlertsEnabled = useAppStore(s => s.aiBudgetAlertsEnabled);
+  const aiToneMode = useAppStore(s => s.aiToneMode);
+  const geminiApiKey = useAppStore(s => s.geminiApiKey);
   const themeMode = useAppStore(s => s.themeMode);
   const colors = getThemeColors(themeMode);
   const { fadeStyle } = useThemeTransition();
@@ -98,6 +105,7 @@ export default function App() {
       loadFavoriteCategories();
       loadMonthlyNotes();
       loadBudgetAlertsEnabled();
+      loadAiAlertSettings();
       loadBudgetAlertHistory();
       loadInAppNotifications();
       loadThemeMode();
@@ -118,6 +126,7 @@ export default function App() {
     loadFavoriteCategories,
     loadMonthlyNotes,
     loadBudgetAlertsEnabled,
+    loadAiAlertSettings,
     loadBudgetAlertHistory,
     loadInAppNotifications,
     loadThemeMode,
@@ -138,6 +147,16 @@ export default function App() {
   }, [addTransaction, loadStats]);
 
   useBankNotifications(handleNotification);
+
+  useEffect(() => {
+    const resolvedKey = geminiApiKey.trim() || getGeminiApiKeyFromEnv();
+    configurePeriodicRoast(aiBudgetAlertsEnabled, resolvedKey, aiToneMode);
+  }, [aiBudgetAlertsEnabled, geminiApiKey, aiToneMode]);
+
+  useEffect(() => {
+    if (!isReady) {return;}
+    startPeriodicRoastReminder();
+  }, [isReady]);
 
   const handleOnboardingComplete = () => {
     storage.set('onboarded', true);

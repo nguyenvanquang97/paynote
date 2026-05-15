@@ -115,7 +115,14 @@ const NotificationsScreen: React.FC = () => {
                 </View>
                 <View style={{flex: 1}}>
                   <View style={s.titleRow}>
-                    <Text style={s.title}>{item.title}</Text>
+                    <View style={s.titleWrap}>
+                      <Text style={s.title}>{item.title}</Text>
+                      {(item.source === 'budget_alert_ai' || item.source === 'periodic_reminder_ai') && (
+                        <View style={s.aiBadge}>
+                          <Text style={s.aiBadgeTxt}>AI</Text>
+                        </View>
+                      )}
+                    </View>
                     {!item.isRead && <View style={s.dot} />}
                   </View>
                   <Text style={s.message}>{item.message}</Text>
@@ -221,7 +228,17 @@ const createStyles = (C: {
   },
   emoji: {fontSize: 18},
   titleRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
+  titleWrap: {flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1},
   title: {color: C.txt, fontSize: 15, fontWeight: '700'},
+  aiBadge: {
+    borderWidth: 1,
+    borderColor: C.acc,
+    backgroundColor: C.soft,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  aiBadgeTxt: {color: C.acc, fontSize: 10, fontWeight: '800'},
   dot: {width: 8, height: 8, borderRadius: 4, backgroundColor: C.warn},
   message: {color: C.txt, fontSize: 13, marginTop: 4, lineHeight: 18},
   meta: {color: C.sub, fontSize: 12, marginTop: 6},

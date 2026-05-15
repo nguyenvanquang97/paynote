@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   Switch,
+  TextInput,
 } from 'react-native';
 import dayjs from 'dayjs';
 import {useAppStore} from '../../app/store';
@@ -14,6 +15,15 @@ import {useThemeColors} from '../../shared/theme';
 import NumericInput from '../../shared/components/NumericInput';
 import {CATEGORY_EMOJI, CATEGORY_ICONS, CATEGORY_LABELS} from '../../shared/constants';
 import {toast} from '../../shared/components/Toast';
+import {generateBudgetRoast} from '../../services/geminiRoastService';
+import {getGeminiApiKeyFromEnv} from '../../config/env';
+import {
+  startPeriodicRoastReminder,
+  stopPeriodicRoastReminder,
+  triggerPeriodicRoastReminderNow,
+  requestPostNotificationsPermission,
+  configurePeriodicRoast,
+} from '../../native';
 
 const BudgetSettingsScreen: React.FC = () => {
   const t = useThemeColors();
@@ -35,10 +45,17 @@ const BudgetSettingsScreen: React.FC = () => {
   const {
     customCategories,
     budgetAlertsEnabled,
+    aiBudgetAlertsEnabled,
+    aiToneMode,
+    geminiApiKey,
     setBudgetAlertsEnabled,
+    setAiBudgetAlertsEnabled,
+    setAiToneMode,
+    setGeminiApiKey,
     setCategoryBudget,
     removeCategoryBudget,
     getBudgetStatus,
+    pushInAppNotification,
   } = useAppStore();
 
   const [isBudgetModalVisible, setIsBudgetModalVisible] = useState(false);
@@ -102,6 +119,58 @@ const BudgetSettingsScreen: React.FC = () => {
     toast.success('Đã lưu hạn mức');
   };
 
+  const resolveApiKey = (): string => {
+    const userKey = geminiApiKey.trim();
+    if (userKey.length > 0) {return userKey;}
+    return getGeminiApiKeyFromEnv();
+  };
+
+  const handleTestAiAlert = async () => {
+    const categoryId = 'food';
+    const categoryLabel = CATEGORY_LABELS[categoryId] || 'Ăn uống';
+    const spent = 1320000;
+    const limit = 1000000;
+    const threshold: 80 | 100 | 120 = 120;
+    const progress = spent / limit;
+    const aiEnabled = aiBudgetAlertsEnabled;
+
+    let title = 'Cảnh báo chi tiêu (test)';
+    let message = `Danh mục ${categoryLabel} đã dùng ${Math.round(progress * 100)}% ngân sách tháng (${formatCurrency(spent)} / ${formatCurrency(limit)}).`;
+    let source: 'budget_alert_ai' | 'budget_alert_template' = 'budget_alert_template';
+    let toneTag: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry' | undefined;
+
+    if (aiEnabled) {
+      const roast = await generateBudgetRoast({
+        apiKey: resolveApiKey(),
+        categoryId,
+        categoryLabel,
+        spent,
+        limit,
+        progress,
+        threshold,
+        monthKey,
+        toneMode: aiToneMode,
+      });
+      title = roast.title || title;
+      message = roast.message || message;
+      source = roast.fallbackUsed ? 'budget_alert_template' : 'budget_alert_ai';
+      toneTag = roast.toneTag;
+    }
+
+    pushInAppNotification({
+      type: 'budget_alert',
+      title,
+      message,
+      source,
+      toneTag,
+      categoryId,
+      monthKey,
+      threshold,
+    });
+    toast.warning(message.length > 155 ? `${message.slice(0, 154).trim()}…` : message, 4500);
+
+  };
+
   return (
     <React.Fragment>
       <ScrollView style={s.container} contentContainerStyle={s.content}>
@@ -123,6 +192,91 @@ const BudgetSettingsScreen: React.FC = () => {
             <Text style={s.thresholdPill}>80%</Text>
             <Text style={s.thresholdPill}>100%</Text>
             <Text style={s.thresholdPill}>120%</Text>
+          </View>
+        </View>
+        <View style={s.card}>
+          <View style={[s.row, {justifyContent: 'space-between'}]}>
+            <View style={{flex: 1}}>
+              <Text style={s.label}>Bật cảnh báo AI </Text>
+              <Text style={s.desc}>Nếu tắt, app dùng mẫu cảnh báo tĩnh như trước.</Text>
+            </View>
+            <Switch
+              value={aiBudgetAlertsEnabled}
+              onValueChange={setAiBudgetAlertsEnabled}
+              trackColor={{false: '#d8ddd4', true: C.pri}}
+              thumbColor="#ffffff"
+            />
+          </View>
+          <Text style={[s.desc, {marginTop: 10}]}>Gemini API Key (demo nội bộ)</Text>
+          <TextInput
+            value={geminiApiKey}
+            onChangeText={setGeminiApiKey}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="AIza..."
+            placeholderTextColor={C.sub}
+            style={s.aiKeyInput}
+          />
+          <Text style={s.keyHint}>
+            Không hardcode key khi build production. Bản phát hành chính thức cần chuyển qua backend proxy.
+          </Text>
+          <Text style={[s.desc, {marginTop: 10}]}>Phong cách thông báo</Text>
+          <View style={s.toneRow}>
+            <TouchableOpacity
+              style={[s.toneChip, aiToneMode === 'gentle' && s.toneChipActive]}
+              onPress={() => setAiToneMode('gentle')}>
+              <Text style={[s.toneChipTxt, aiToneMode === 'gentle' && s.toneChipTxtActive]}>Nhẹ nhàng</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.toneChip, aiToneMode === 'cute' && s.toneChipActive]}
+              onPress={() => setAiToneMode('cute')}>
+              <Text style={[s.toneChipTxt, aiToneMode === 'cute' && s.toneChipTxtActive]}>Dễ thương</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.toneChip, aiToneMode === 'sarcastic_strong' && s.toneChipActive]}
+              onPress={() => setAiToneMode('sarcastic_strong')}>
+              <Text style={[s.toneChipTxt, aiToneMode === 'sarcastic_strong' && s.toneChipTxtActive]}>Xéo xắc</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.toneChip, aiToneMode === 'angry' && s.toneChipActive]}
+              onPress={() => setAiToneMode('angry')}>
+              <Text style={[s.toneChipTxt, aiToneMode === 'angry' && s.toneChipTxtActive]}>{"Cáu gắt(Ai thích tự ngược thì chọn:)))"}</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={[s.secondaryBtn, {marginTop: 12, alignSelf: 'flex-start'}]} onPress={handleTestAiAlert}>
+            <Text style={s.secondaryBtnTxt}>Test AI alert</Text>
+          </TouchableOpacity>
+          <View style={[s.row, {marginTop: 10}]}>
+            <TouchableOpacity
+              style={s.secondaryBtn}
+              onPress={() => {
+                configurePeriodicRoast(aiBudgetAlertsEnabled, resolveApiKey(), aiToneMode);
+                startPeriodicRoastReminder();
+                toast.success('Đã bật periodic native mỗi 1 giờ');
+              }}>
+              <Text style={s.secondaryBtnTxt}>Bật periodic 1h</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.secondaryBtn}
+              onPress={() => {
+                stopPeriodicRoastReminder();
+                toast.success('Đã tắt periodic native');
+              }}>
+              <Text style={s.secondaryBtnTxt}>Tắt periodic</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.secondaryBtn}
+              onPress={async () => {
+                const granted = await requestPostNotificationsPermission();
+                if (!granted) {
+                  toast.error('Chưa cấp quyền thông báo cho app');
+                  return;
+                }
+                triggerPeriodicRoastReminderNow();
+                toast.success('Đã bắn test periodic ngay');
+              }}>
+              <Text style={s.secondaryBtnTxt}>Test periodic now</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -245,6 +399,33 @@ const createStyles = (C: {
   modalCard: {backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, padding: 16},
   modalTitle: {color: C.txt, fontSize: 16, fontWeight: '700', marginBottom: 10},
   modalInput: {borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: C.txt, fontSize: 15, backgroundColor: C.muted},
+  aiKeyInput: {
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 10,
+    backgroundColor: C.muted,
+    color: C.txt,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  keyHint: {marginTop: 8, color: C.sub, fontSize: 11, lineHeight: 16},
+  toneRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8},
+  toneChip: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 999,
+    backgroundColor: C.muted,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  toneChipActive: {
+    borderColor: C.pri,
+    backgroundColor: C.soft,
+  },
+  toneChipTxt: {color: C.txt, fontSize: 12, fontWeight: '600'},
+  toneChipTxtActive: {color: C.pri},
 });
 
 export default BudgetSettingsScreen;

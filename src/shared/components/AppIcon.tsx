@@ -28,7 +28,10 @@ type IconName =
   | 'health'
   | 'education'
   | 'bills'
-  | 'other';
+  | 'other'
+  | 'check-circle'
+  | 'x-circle'
+  | 'info';
 
 interface AppIconProps {
   name: IconName;
@@ -238,6 +241,29 @@ export default function AppIcon({name, size = 20, color = '#888', strokeWidth = 
         <Svg width={s} height={s} viewBox="0 0 24 24" fill="none">
           <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={sw} />
           <Circle cx="12" cy="12" r="1.5" fill={color} />
+        </Svg>
+      );
+    case 'check-circle':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+          <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={sw} />
+          <Path d="m8.5 12.4 2.3 2.3 4.7-4.8" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      );
+    case 'x-circle':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+          <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={sw} />
+          <Line x1="9" y1="9" x2="15" y2="15" stroke={color} strokeWidth={sw} strokeLinecap="round" />
+          <Line x1="15" y1="9" x2="9" y2="15" stroke={color} strokeWidth={sw} strokeLinecap="round" />
+        </Svg>
+      );
+    case 'info':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+          <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={sw} />
+          <Line x1="12" y1="11" x2="12" y2="16" stroke={color} strokeWidth={sw} strokeLinecap="round" />
+          <Circle cx="12" cy="8" r="1.2" fill={color} />
         </Svg>
       );
     default:

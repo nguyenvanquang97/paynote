@@ -1,5 +1,6 @@
 export const CATEGORY_ICONS: Record<string, string> = {
   food: 'food',
+  cafe: 'coffee',
   rent: 'bills',
   transport: 'transport',
   shopping: 'shopping',
@@ -11,6 +12,7 @@ export const CATEGORY_ICONS: Record<string, string> = {
 
 export const CATEGORY_EMOJI: Record<string, string> = {
   food: '🍔',
+  cafe: '☕',
   rent: '🏠',
   transport: '🚗',
   shopping: '🛒',
@@ -22,6 +24,7 @@ export const CATEGORY_EMOJI: Record<string, string> = {
 
 export const CATEGORY_LABELS: Record<string, string> = {
   food: 'Ăn uống',
+  cafe: 'Cà phê',
   rent: 'Tiền thuê nhà',
   transport: 'Di chuyển',
   shopping: 'Mua sắm',
@@ -30,7 +33,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   bills: 'Hóa đơn',
   other: 'Khác',
   // Legacy labels (để hiển thị dữ liệu cũ rõ ràng)
-  cafe: 'Cà phê',
   subscription: 'Đăng ký',
   entertainment: 'Giải trí',
   health: 'Sức khỏe',
@@ -44,10 +46,13 @@ export const getCategoryLabel = (categoryId?: string | null): string => {
 
 export const KEYWORD_CATEGORIES: Record<string, string> = {
   // Cafe
-  highlands: 'food',
-  starbucks: 'food',
-  'the coffee house': 'food',
-  phuc: 'food',
+  highlands: 'cafe',
+  starbucks: 'cafe',
+  'the coffee house': 'cafe',
+  phuc: 'cafe',
+  cafe: 'cafe',
+  'cà phê': 'cafe',
+  coffee: 'cafe',
 
   // Transport
   grab: 'transport',

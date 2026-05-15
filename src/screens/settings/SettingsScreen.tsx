@@ -102,7 +102,7 @@ const SettingsScreen: React.FC = () => {
         <View style={s.card}>
           <Text style={s.label}>Chế độ</Text>
           <View style={s.modeRow}>
-            {THEME_REGISTRY.map(t => renderModeButton(t.id, t.label, t.emoji))}
+            {THEME_REGISTRY.map(t => renderModeButton(t.id, t.label))}
           </View>
         </View>
 

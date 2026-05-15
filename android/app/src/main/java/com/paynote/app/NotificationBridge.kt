@@ -2,10 +2,14 @@ package com.paynote.app
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Intent
 import android.content.Context
 import android.os.Build
 import android.util.Log
 import android.os.PowerManager
+import android.content.SharedPreferences
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.facebook.react.bridge.Arguments
@@ -22,11 +26,52 @@ class NotificationBridge(
         private const val TAG = "NotificationBridge"
         private const val EVENT_NAME = "BANK_NOTIFICATION"
         private const val BUDGET_ALERT_CHANNEL_ID = "budget_alerts"
+        const val PERIODIC_REMINDER_ACTION = "com.paynote.app.PERIODIC_ROAST_REMINDER"
+        const val PERIODIC_REMINDER_INTERVAL_MS = 60 * 60 * 1000L
+        const val PERIODIC_PREFS = "periodic_roast_prefs"
+        const val PERIODIC_PREF_AI_ENABLED = "ai_enabled"
+        const val PERIODIC_PREF_API_KEY = "api_key"
+        const val PERIODIC_PREF_TONE_MODE = "tone_mode"
 
         private var instance: NotificationBridge? = null
 
         fun send(packageName: String, title: String?, text: String?) {
             instance?.sendEvent(packageName, title, text)
+        }
+
+        fun getPeriodicReminderPendingIntent(context: Context): PendingIntent {
+            val intent = Intent(context, PeriodicRoastReceiver::class.java).apply {
+                action = PERIODIC_REMINDER_ACTION
+            }
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            return PendingIntent.getBroadcast(context, 77421, intent, flags)
+        }
+
+        fun schedulePeriodicRoastReminder(context: Context, triggerAtMillis: Long = System.currentTimeMillis() + PERIODIC_REMINDER_INTERVAL_MS) {
+            try {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+                val pendingIntent = getPeriodicReminderPendingIntent(context)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAtMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to schedule periodic reminder", e)
+            }
+        }
+
+        fun cancelPeriodicRoastReminder(context: Context) {
+            try {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+                alarmManager.cancel(getPeriodicReminderPendingIntent(context))
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to cancel periodic reminder", e)
+            }
         }
     }
 
@@ -145,7 +190,7 @@ class NotificationBridge(
         try {
             ensureBudgetAlertChannel()
             val notification = NotificationCompat.Builder(reactContext, BUDGET_ALERT_CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_stat_paynote)
                 .setContentTitle(title.ifBlank { "Cảnh báo chi tiêu" })
                 .setContentText(message)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(message))
@@ -158,6 +203,43 @@ class NotificationBridge(
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error showing budget alert notification", e)
+        }
+    }
+
+    @ReactMethod
+    fun startPeriodicRoastReminder() {
+        schedulePeriodicRoastReminder(reactContext)
+    }
+
+    @ReactMethod
+    fun stopPeriodicRoastReminder() {
+        cancelPeriodicRoastReminder(reactContext)
+    }
+
+    @ReactMethod
+    fun triggerPeriodicRoastReminderNow() {
+        try {
+            val intent = Intent(reactContext, PeriodicRoastReceiver::class.java).apply {
+                action = PERIODIC_REMINDER_ACTION
+                setPackage(reactContext.packageName)
+            }
+            reactContext.sendBroadcast(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to trigger periodic reminder now", e)
+        }
+    }
+
+    @ReactMethod
+    fun configurePeriodicRoast(aiEnabled: Boolean, apiKey: String, toneMode: String) {
+        try {
+            val prefs: SharedPreferences = reactContext.getSharedPreferences(PERIODIC_PREFS, Context.MODE_PRIVATE)
+            prefs.edit()
+                .putBoolean(PERIODIC_PREF_AI_ENABLED, aiEnabled)
+                .putString(PERIODIC_PREF_API_KEY, apiKey.trim())
+                .putString(PERIODIC_PREF_TONE_MODE, toneMode)
+                .apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save periodic roast config", e)
         }
     }
 }

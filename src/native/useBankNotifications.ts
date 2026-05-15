@@ -2,6 +2,8 @@ import {useEffect, useCallback} from 'react';
 import {
   NativeEventEmitter,
   NativeModules,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import type {BankNotification} from '../shared/types';
 import {NOTIFICATION_EVENT} from '../shared/constants';
@@ -57,4 +59,37 @@ export const checkBatteryOptimizationDisabled = (): Promise<boolean> => {
 export const showBudgetAlertNotification = (title: string, message: string): void => {
   if (!NotificationBridge?.showBudgetAlertNotification) {return;}
   NotificationBridge.showBudgetAlertNotification(title, message);
+};
+
+export const startPeriodicRoastReminder = (): void => {
+  if (!NotificationBridge?.startPeriodicRoastReminder) {return;}
+  NotificationBridge.startPeriodicRoastReminder();
+};
+
+export const stopPeriodicRoastReminder = (): void => {
+  if (!NotificationBridge?.stopPeriodicRoastReminder) {return;}
+  NotificationBridge.stopPeriodicRoastReminder();
+};
+
+export const triggerPeriodicRoastReminderNow = (): void => {
+  if (!NotificationBridge?.triggerPeriodicRoastReminderNow) {return;}
+  NotificationBridge.triggerPeriodicRoastReminderNow();
+};
+
+export const configurePeriodicRoast = (
+  aiEnabled: boolean,
+  apiKey: string,
+  toneMode: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry',
+): void => {
+  if (!NotificationBridge?.configurePeriodicRoast) {return;}
+  NotificationBridge.configurePeriodicRoast(aiEnabled, apiKey, toneMode);
+};
+
+export const requestPostNotificationsPermission = async (): Promise<boolean> => {
+  if (Platform.OS !== 'android') {return true;}
+  if (Platform.Version < 33) {return true;}
+  const granted = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+  );
+  return granted === PermissionsAndroid.RESULTS.GRANTED;
 };
