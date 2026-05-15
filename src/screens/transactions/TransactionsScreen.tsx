@@ -14,14 +14,15 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {useAppStore} from '../../app/store';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, SUPPORTED_BANKS, getCategoryLabel} from '../../shared/constants';
 import type {Transaction} from '../../shared/types';
-import {deleteTransaction} from '../../database';
+import {deleteTransaction, markAsSuspectedGap} from '../../database';
 import dayjs from 'dayjs';
 import AddTransactionModal from './AddTransactionModal';
 import SwipeableRow from '../../shared/components/SwipeableRow';
 import {useThemeColors} from '../../shared/theme';
-import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
+import AppIcon from '../../shared/components/AppIcon';
 import {dialog} from '../../shared/components/Dialog';
 import {useRoute} from '@react-navigation/native';
+import {TransactionAppearCard, AnimatedPressable, AnimatedEmptyState} from '../../animations';
 
 const {width} = Dimensions.get('window');
 
@@ -53,6 +54,10 @@ const TransactionsScreen: React.FC = () => {
   const [grouping, setGrouping] = useState<'day' | 'week' | 'month'>('day');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [pendingJump, setPendingJump] = useState<{year: number; month: number} | null>(null);
+  const [pendingTransactionId, setPendingTransactionId] = useState<string | null>(null);
+  const [focusedTransactionId, setFocusedTransactionId] = useState<string | null>(null);
+  // Track ID of newly added/synced transaction for animation
+  const [newTransactionId, setNewTransactionId] = useState<string | null>(null);
 
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const sectionListRef = useRef<SectionList<any>>(null);
@@ -86,6 +91,11 @@ const TransactionsScreen: React.FC = () => {
         },
       },
     );
+  }, [loadTransactions]);
+
+  const handleDismissSuspected = useCallback(async (id: string) => {
+    await markAsSuspectedGap(id, false);
+    loadTransactions();
   }, [loadTransactions]);
 
   const filteredTransactions = transactions.filter(tx => {
@@ -124,6 +134,12 @@ const TransactionsScreen: React.FC = () => {
     }
     setGrouping('month');
     setPendingJump({year: jump.year, month: jump.month});
+    if (jump.transactionId) {
+      setFilter('all');
+      setGrouping('day');
+      setPendingTransactionId(jump.transactionId);
+      setPendingJump(null);
+    }
   }, [route?.params]);
 
   useEffect(() => {
@@ -143,65 +159,118 @@ const TransactionsScreen: React.FC = () => {
     setPendingJump(null);
   }, [pendingJump, grouping, sections]);
 
+  useEffect(() => {
+    if (!pendingTransactionId || sections.length === 0) {return;}
+    let foundSectionIndex = -1;
+    let foundItemIndex = -1;
+
+    sections.some((section, sectionIndex) => {
+      const itemIndex = section.data.findIndex((tx: Transaction) => tx.id === pendingTransactionId);
+      if (itemIndex >= 0) {
+        foundSectionIndex = sectionIndex;
+        foundItemIndex = itemIndex;
+        return true;
+      }
+      return false;
+    });
+
+    if (foundSectionIndex >= 0 && foundItemIndex >= 0) {
+      requestAnimationFrame(() => {
+        sectionListRef.current?.scrollToLocation({
+          sectionIndex: foundSectionIndex,
+          itemIndex: foundItemIndex,
+          animated: true,
+          viewPosition: 0.2,
+        });
+        setFocusedTransactionId(pendingTransactionId);
+        setPendingTransactionId(null);
+      });
+    }
+  }, [pendingTransactionId, sections]);
+
+  useEffect(() => {
+    if (!focusedTransactionId) {return;}
+    const timer = setTimeout(() => setFocusedTransactionId(null), 1800);
+    return () => clearTimeout(timer);
+  }, [focusedTransactionId]);
+
   const renderTransaction = ({item: tx}: {item: Transaction}) => {
     const bankConfig = SUPPORTED_BANKS[tx.bank as keyof typeof SUPPORTED_BANKS];
     const emoji = CATEGORY_ICONS[tx.category || 'other']
       ? CATEGORY_EMOJI[tx.category || 'other']
       : customCategories?.[tx.category || 'other']?.icon || '📌';
 
+    const isNew = tx.id === newTransactionId;
     return (
-      <SwipeableRow onDelete={() => handleDelete(tx)}>
-        <Pressable
-          onPress={() => handleOpenEdit(tx)}
-          android_ripple={{color: 'rgba(0,0,0,0.05)'}}
-          style={[
-            styles.txCard,
-            tx.isSuspectedGap && styles.txCardSuspected,
-          ]}>
-          <View
-          style={[
-            styles.txHeader,
-          ]}>
-            <View style={styles.txLeft}>
-              <View style={styles.txIconWrap}>
-                <Text style={styles.txEmoji}>{emoji}</Text>
-              </View>
-              <View style={styles.txInfo}>
-                <Text style={styles.txDescription} numberOfLines={1}>
-                  {tx.description || 'Không có mô tả'}
-                </Text>
-                <View style={styles.txMeta}>
-                  <Text style={[styles.txBank, bankConfig && {color: bankConfig.color}]}>
-                    {bankConfig?.name || tx.bank}
+      <TransactionAppearCard
+        isNew={isNew}
+        highlightColor={tx.transactionType === 'income' ? 'rgba(47,179,78,0.1)' : 'rgba(231,100,82,0.1)'}
+        onAnimationEnd={() => setNewTransactionId(null)}>
+        <SwipeableRow onDelete={() => handleDelete(tx)}>
+          <Pressable
+            onPress={() => handleOpenEdit(tx)}
+            android_ripple={{color: 'rgba(0,0,0,0.05)'}}
+            style={[
+              styles.txCard,
+              tx.isSuspectedGap && styles.txCardSuspected,
+              focusedTransactionId === tx.id && styles.txCardFocused,
+            ]}>
+            <View
+            style={[
+              styles.txHeader,
+            ]}>
+              <View style={styles.txLeft}>
+                <View style={styles.txIconWrap}>
+                  <Text style={styles.txEmoji}>{emoji}</Text>
+                </View>
+                <View style={styles.txInfo}>
+                  <Text style={styles.txDescription} numberOfLines={1}>
+                    {tx.description || 'Không có mô tả'}
                   </Text>
-                  <Text style={styles.txDot}>•</Text>
-                  <Text style={styles.txDate}>
-                    {dayjs(tx.timestamp).format('HH:mm DD/MM/YYYY')}
-                  </Text>
+                  <View style={styles.txMeta}>
+                    <Text style={[styles.txBank, bankConfig && {color: bankConfig.color}]}>
+                      {bankConfig?.name || tx.bank}
+                    </Text>
+                    <Text style={styles.txDot}>•</Text>
+                    <Text style={styles.txDate}>
+                      {dayjs(tx.timestamp).format('HH:mm DD/MM/YYYY')}
+                    </Text>
+                  </View>
                 </View>
               </View>
+              <Text style={[styles.txAmount, {color: tx.transactionType === 'income' ? COLORS.income : COLORS.expense}]}>
+                {tx.transactionType === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+              </Text>
             </View>
-            <Text style={[styles.txAmount, {color: tx.transactionType === 'income' ? COLORS.income : COLORS.expense}]}>
-              {tx.transactionType === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
-            </Text>
-          </View>
 
-          {tx.isSuspectedGap && (
-            <View style={styles.warningBadge}>
-              <View style={styles.warningRow}>
-                <AppIcon name="warning" size={14} color="#8a5a0e" />
-                <Text style={styles.warningText}>Có thể thiếu giao dịch trước đó</Text>
+            {tx.isSuspectedGap && (
+              <View style={styles.warningBadge}>
+                <View style={styles.warningRow}>
+                  <View style={styles.warningLeft}>
+                    <AppIcon name="warning" size={14} color="#8a5a0e" />
+                    <Text style={styles.warningText}>Có thể thiếu giao dịch trước đó</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleDismissSuspected(tx.id);
+                    }}
+                    hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}
+                    style={styles.warningCloseBtn}>
+                    <AppIcon name="close" size={14} color="#8a5a0e" />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {tx.category && (
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{getCategoryLabel(tx.category)}</Text>
-            </View>
-          )}
-        </Pressable>
-      </SwipeableRow>
+            {tx.category && (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryText}>{getCategoryLabel(tx.category)}</Text>
+              </View>
+            )}
+          </Pressable>
+        </SwipeableRow>
+      </TransactionAppearCard>
     );
   };
 
@@ -247,17 +316,20 @@ const TransactionsScreen: React.FC = () => {
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={loadTransactions} />}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <AppIcon name="list" size={42} color={COLORS.textSecondary} />
-            <Text style={styles.emptyText}>Không có giao dịch</Text>
-          </View>
+          <AnimatedEmptyState
+            icon="📋"
+            title="Không có giao dịch"
+            subtitle={filter !== 'all' ? 'Thử đổi bộ lọc để xem tất cả giao dịch' : 'Giao dịch sẽ xuất hiện tự động khi bạn nhận thông báo ngân hàng'}
+            titleStyle={{color: COLORS.text}}
+            subtitleStyle={{color: COLORS.textSecondary}}
+          />
         }
         onScrollToIndexFailed={() => {}}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={handleOpenAdd}>
+      <AnimatedPressable style={styles.fab} onPress={handleOpenAdd}>
         <AppIcon name="plus" size={30} color={COLORS.onDark} />
-      </TouchableOpacity>
+      </AnimatedPressable>
 
       <AddTransactionModal
         bottomSheetRef={bottomSheetRef}
@@ -322,6 +394,11 @@ const createStyles = (COLORS: {
     borderColor: COLORS.cardBorder,
   },
   txCardSuspected: {borderColor: COLORS.warning, borderWidth: 2},
+  txCardFocused: {
+    borderColor: COLORS.primary,
+    borderWidth: 2,
+    backgroundColor: COLORS.primarySoft,
+  },
   txHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
   txLeft: {flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1},
   txIconWrap: {
@@ -347,8 +424,16 @@ const createStyles = (COLORS: {
     paddingVertical: 6,
     paddingHorizontal: 10,
   },
-  warningRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  warningRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8},
+  warningLeft: {flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1},
   warningText: {color: '#8a5a0e', fontSize: 12},
+  warningCloseBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   categoryBadge: {
     marginTop: 8,
     alignSelf: 'flex-start',

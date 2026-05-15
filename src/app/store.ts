@@ -14,6 +14,7 @@ const storage = createMMKV();
 
 export interface Profile {
   name: string;
+  nickname: string;
   avatarUrl: string;
 }
 
@@ -170,7 +171,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedMonth: dayjs().month() + 1,
   hasNotificationAccess: false,
   customCategories: {},
-  profile: { name: 'Người dùng', avatarUrl: '' },
+  profile: { name: 'Người dùng', nickname: '', avatarUrl: '' },
   categoryBudgets: {},
   favoriteCategories: [],
   monthlyNotes: {},
@@ -302,7 +303,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     const data = storage.getString('profile');
     if (data) {
       try {
-        set({profile: JSON.parse(data)});
+        const parsed = JSON.parse(data) as Partial<Profile>;
+        set({
+          profile: {
+            name: typeof parsed?.name === 'string' && parsed.name.trim().length > 0
+              ? parsed.name
+              : 'Người dùng',
+            nickname: typeof parsed?.nickname === 'string' ? parsed.nickname : '',
+            avatarUrl: typeof parsed?.avatarUrl === 'string' ? parsed.avatarUrl : '',
+          },
+        });
       } catch (e) {
         console.error('Failed to parse profile', e);
       }

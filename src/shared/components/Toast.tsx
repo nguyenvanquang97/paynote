@@ -3,6 +3,7 @@ import {
   Animated,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { create } from 'zustand';
@@ -116,6 +117,12 @@ const ToastItem: React.FC<{ item: ToastItem }> = ({ item }) => {
       ]}>
       <AppIcon name={config.icon as any} size={20} color={config.iconColor} />
       <Text style={styles.msg} numberOfLines={3}>{item.message}</Text>
+      <TouchableOpacity
+        onPress={dismiss}
+        hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}
+        style={styles.closeBtn}>
+        <AppIcon name="close" size={16} color={C.text} />
+      </TouchableOpacity>
     </Animated.View>
   );
 };
@@ -143,7 +150,7 @@ export const ToastContainer: React.FC = () => {
   const toasts = useToastStore(s => s.toasts);
   if (toasts.length === 0) { return null; }
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View style={styles.container} pointerEvents="box-none">
       {toasts.map(item => <ToastItem key={item.id} item={item} />)}
     </View>
   );
@@ -192,5 +199,12 @@ const createStyles = (C: {
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
+  },
+  closeBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

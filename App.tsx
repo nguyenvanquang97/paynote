@@ -13,6 +13,7 @@ import ChartsScreen from './src/screens/charts/ChartsScreen';
 import CategoriesScreen from './src/screens/categories/CategoriesScreen';
 import SettingsScreen from './src/screens/settings/SettingsScreen';
 import PersonalFinanceScreen from './src/screens/settings/PersonalFinanceScreen';
+import BudgetSettingsScreen from './src/screens/settings/BudgetSettingsScreen';
 import NotificationsScreen from './src/screens/notifications/NotificationsScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import SplashScreen from './src/screens/splash/SplashScreen';
@@ -27,6 +28,8 @@ import type {BankNotification} from './src/shared/types';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {triggerBudgetAlertsForTransaction} from './src/services/budgetAlerts';
+import {useThemeTransition} from './src/animations';
+import Animated from 'react-native-reanimated';
 
 const storage = createMMKV();
 const Tab = createBottomTabNavigator();
@@ -62,7 +65,6 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const addTransaction = useAppStore(s => s.addTransaction);
-  const loadTransactions = useAppStore(s => s.loadTransactions);
   const loadStats = useAppStore(s => s.loadStats);
   const loadCustomCategories = useAppStore(s => s.loadCustomCategories);
   const loadProfile = useAppStore(s => s.loadProfile);
@@ -75,6 +77,7 @@ export default function App() {
   const loadThemeMode = useAppStore(s => s.loadThemeMode);
   const themeMode = useAppStore(s => s.themeMode);
   const colors = getThemeColors(themeMode);
+  const { fadeStyle } = useThemeTransition();
   const navTheme = {
     ...DefaultTheme,
     colors: {
@@ -154,7 +157,8 @@ export default function App() {
                 backgroundColor="transparent"
                 translucent
               />
-              <ImageBackground
+              <Animated.View style={[styles.bg, fadeStyle]}>
+                <ImageBackground
                 source={
                   themeMode === 'dark'
                     ? require('./src/assets/images/app-bg-dark.png')
@@ -192,7 +196,12 @@ export default function App() {
                       <Stack.Screen
                         name="PersonalFinance"
                         component={PersonalFinanceScreen}
-                        options={{title: 'Ngân sách & Cá nhân'}}
+                        options={{title: 'Sao lưu & Tiện ích'}}
+                      />
+                      <Stack.Screen
+                        name="BudgetSettings"
+                        component={BudgetSettingsScreen}
+                        options={{title: 'Cài đặt ngân sách'}}
                       />
                       <Stack.Screen
                         name="Notifications"
@@ -203,6 +212,7 @@ export default function App() {
                   )}
                 </NavigationContainer>
               </ImageBackground>
+            </Animated.View>
             </React.Fragment>
           )}
         </BottomSheetModalProvider>

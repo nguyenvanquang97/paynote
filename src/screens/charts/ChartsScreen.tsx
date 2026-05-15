@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback, useMemo} from 'react';
+import React, {useEffect, useState, useCallback, useMemo, useRef} from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,29 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import {PieChart, BarChart} from 'react-native-gifted-charts';
 import {useAppStore} from '../../app/store';
 import {getTransactionsByDateRange} from '../../database';
 import dayjs from 'dayjs';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import {useThemeColors} from '../../shared/theme';
-import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
+import AppIcon from '../../shared/components/AppIcon';
+import {
+  AnimatedNumber,
+  FadeSlideView,
+  ChartAnimationDelay,
+  ChartAnimationDuration,
+  shouldReduceMotion,
+} from '../../animations';
 
 const {width} = Dimensions.get('window');
+
+type ChartPhase = 'loading' | 'settling' | 'ready';
 
 const CHART_COLORS = [
   '#e76452', '#f0ae3e', '#57a2e8', '#f08fb1', '#9b59b6',
@@ -25,16 +39,93 @@ const CHART_COLORS = [
 ];
 
 const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+  `${new Intl.NumberFormat('vi-VN').format(amount)} ₫`;
 
 const formatCurrencyShort = (amount: number): string => {
-  if (amount >= 1_000_000) {return (amount / 1_000_000).toFixed(1) + 'M';}
-  if (amount >= 1_000) {return (amount / 1_000).toFixed(0) + 'K';}
+  if (amount >= 1_000_000) {return `${(amount / 1_000_000).toFixed(1)}M`;}
+  if (amount >= 1_000) {return `${(amount / 1_000).toFixed(0)}K`;}
   return String(amount);
+};
+
+const hashChartDataset = (
+  monthlyData: Array<{month: string; income: number; expense: number}>,
+  categoryStats: Array<{category: string; total: number; count: number}>,
+  totalIncome: number,
+  totalExpense: number,
+): string => {
+  const months = monthlyData.map(m => `${m.month}:${m.income}:${m.expense}`).join('|');
+  const cats = categoryStats.map(c => `${c.category}:${c.total}:${c.count}`).join('|');
+  return `${months}__${cats}__${totalIncome}__${totalExpense}`;
+};
+
+const ChartSkeletonCard: React.FC<{styles: any}> = ({styles}) => (
+  <View style={styles.chartCard}>
+    <View style={styles.skeletonLineLg} />
+    <View style={styles.skeletonLineMd} />
+    <View style={styles.skeletonBlock} />
+  </View>
+);
+
+const ProgressBarAnimated: React.FC<{
+  ratio: number;
+  color: string;
+  duration: number;
+}> = ({ratio, color, duration}) => {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withTiming(Math.max(0, Math.min(1, ratio)), {duration});
+  }, [duration, progress, ratio]);
+
+  const barStyle = useAnimatedStyle(() => ({
+    transform: [{scaleX: progress.value}],
+  }));
+
+  return (
+    <View style={stylesGlobal.progressBarBg}>
+      <Animated.View
+        style={[
+          stylesGlobal.progressBarFill,
+          {backgroundColor: color},
+          barStyle,
+        ]}
+      />
+    </View>
+  );
+};
+
+const OverBudgetBadgeAnimated: React.FC<{
+  visible: boolean;
+  color: string;
+}> = ({visible, color}) => {
+  const scale = useSharedValue(visible ? 1 : 0.9);
+  const opacity = useSharedValue(visible ? 1 : 0);
+
+  useEffect(() => {
+    opacity.value = withTiming(visible ? 1 : 0, {duration: 220});
+    scale.value = withTiming(visible ? 1 : 0.9, {duration: 220});
+  }, [opacity, scale, visible]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{scale: scale.value}],
+  }));
+
+  if (!visible) {return null;}
+
+  return (
+    <Animated.View style={style}>
+      <View style={stylesGlobal.overBadge}>
+        <AppIcon name="warning" size={12} color={color} />
+        <Text style={[stylesGlobal.overBadgeText, {color}]}>Vượt</Text>
+      </View>
+    </Animated.View>
+  );
 };
 
 const ChartsScreen: React.FC = () => {
   const t = useThemeColors();
+  const reduceMotion = shouldReduceMotion();
   const COLORS = useMemo(() => ({
     bg: t.appBg,
     card: t.surface,
@@ -49,6 +140,7 @@ const ChartsScreen: React.FC = () => {
     soft: t.primarySoft,
   }), [t]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
   const {
     categoryStats,
     totalIncome,
@@ -63,9 +155,14 @@ const ChartsScreen: React.FC = () => {
     getBudgetStatus,
   } = useAppStore();
 
-  const [monthlyData, setMonthlyData] = useState<
-    Array<{month: string; income: number; expense: number}>
-  >([]);
+  const [monthlyData, setMonthlyData] = useState<Array<{month: string; income: number; expense: number}>>([]);
+  const [chartPhase, setChartPhase] = useState<ChartPhase>('loading');
+  const [transitionKey, setTransitionKey] = useState(0);
+  const [shouldAnimateCharts, setShouldAnimateCharts] = useState(!reduceMotion);
+  const [showBarChart, setShowBarChart] = useState(false);
+  const [displayMaxBarValue, setDisplayMaxBarValue] = useState(1);
+
+  const lastStableDatasetHash = useRef('');
 
   const fetchMonthlyData = useCallback(async () => {
     const months = [];
@@ -77,19 +174,15 @@ const ChartsScreen: React.FC = () => {
       try {
         const txs = await getTransactionsByDateRange(startDate, endDate);
         const income = txs
-          .filter(t => t.transactionType === 'income')
-          .reduce((sum, t) => sum + t.amount, 0);
+          .filter(tx => tx.transactionType === 'income')
+          .reduce((sum, tx) => sum + tx.amount, 0);
         const expense = txs
-          .filter(t => t.transactionType === 'expense')
-          .reduce((sum, t) => sum + t.amount, 0);
+          .filter(tx => tx.transactionType === 'expense')
+          .reduce((sum, tx) => sum + tx.amount, 0);
 
-        months.push({
-          month: d.format('MM/YY'),
-          income,
-          expense,
-        });
-      } catch (e) {
-        months.push({month: d.format('MM/YY'), income: 0, expense: 0});
+        months.push({month: d.format('[Th] M'), income, expense});
+      } catch {
+        months.push({month: d.format('[Th] M'), income: 0, expense: 0});
       }
     }
     setMonthlyData(months);
@@ -101,21 +194,57 @@ const ChartsScreen: React.FC = () => {
   }, [loadStats, fetchMonthlyData, selectedYear, selectedMonth]);
 
   const onRefresh = useCallback(() => {
+    setChartPhase('loading');
     loadStats();
     fetchMonthlyData();
   }, [loadStats, fetchMonthlyData]);
 
+  useEffect(() => {
+    if (isLoading) {
+      setChartPhase('loading');
+      return;
+    }
+
+    const hash = hashChartDataset(monthlyData, categoryStats, totalIncome, totalExpense);
+    if (!hash || hash === lastStableDatasetHash.current) {
+      setChartPhase('ready');
+      setShowBarChart(true);
+      return;
+    }
+
+    setTransitionKey(prev => prev + 1);
+    setShouldAnimateCharts(!reduceMotion);
+    setChartPhase('settling');
+    setShowBarChart(false);
+
+    const barTimer = setTimeout(() => {
+      setShowBarChart(true);
+    }, ChartAnimationDelay.barRender);
+
+    const readyTimer = setTimeout(() => {
+      setChartPhase('ready');
+    }, ChartAnimationDuration.pie + ChartAnimationDuration.settle);
+
+    lastStableDatasetHash.current = hash;
+
+    return () => {
+      clearTimeout(barTimer);
+      clearTimeout(readyTimer);
+    };
+  }, [categoryStats, isLoading, monthlyData, reduceMotion, totalExpense, totalIncome]);
+
   const goToPrevMonth = () => {
-    if (selectedMonth === 1) {setSelectedMonth(selectedYear - 1, 12);}
-    else {setSelectedMonth(selectedYear, selectedMonth - 1);}
+    setChartPhase('loading');
+    if (selectedMonth === 1) {setSelectedMonth(selectedYear - 1, 12);} else {setSelectedMonth(selectedYear, selectedMonth - 1);}
   };
 
   const goToNextMonth = () => {
-    if (selectedMonth === 12) {setSelectedMonth(selectedYear + 1, 1);}
-    else {setSelectedMonth(selectedYear, selectedMonth + 1);}
+    setChartPhase('loading');
+    if (selectedMonth === 12) {setSelectedMonth(selectedYear + 1, 1);} else {setSelectedMonth(selectedYear, selectedMonth + 1);}
   };
 
   const goToCurrentMonth = () => {
+    setChartPhase('loading');
     setSelectedMonth(dayjs().year(), dayjs().month() + 1);
   };
 
@@ -126,41 +255,64 @@ const ChartsScreen: React.FC = () => {
     .month(selectedMonth - 1)
     .format('MMMM YYYY');
 
-  // Pie chart data from category stats
-  const pieData = categoryStats
-    .filter(s => s.total > 0)
-    .slice(0, 10)
-    .map((stat, i) => ({
-      value: stat.total,
-      color: CHART_COLORS[i % CHART_COLORS.length],
-      categoryId: stat.category,
-      emoji: CATEGORY_ICONS[stat.category]
-        ? CATEGORY_EMOJI[stat.category]
-        : customCategories?.[stat.category]?.icon || '📌',
-      label: getCategoryLabel(stat.category),
-      text: `${((stat.total / totalExpense) * 100).toFixed(1)}%`,
-    }));
-
-  // Bar chart data for 6 months
-  const barData: any[] = [];
-  monthlyData.forEach((m, i) => {
-    barData.push({
-      value: m.income,
-      label: m.month,
-      frontColor: COLORS.income,
-      spacing: 4,
-    });
-    barData.push({
-      value: m.expense,
-      frontColor: COLORS.expense,
-      spacing: i < monthlyData.length - 1 ? 16 : 4,
-    });
-  });
-
-  const maxBarValue = Math.max(
-    ...monthlyData.map(m => Math.max(m.income, m.expense)),
-    1,
+  const pieData = useMemo(
+    () => categoryStats
+      .filter(s => s.total > 0)
+      .slice(0, 10)
+      .map((stat, i) => ({
+        value: stat.total,
+        color: CHART_COLORS[i % CHART_COLORS.length],
+        categoryId: stat.category,
+        emoji: CATEGORY_ICONS[stat.category]
+          ? CATEGORY_EMOJI[stat.category]
+          : customCategories?.[stat.category]?.icon || '📌',
+        label: getCategoryLabel(stat.category),
+        text: `${((stat.total / Math.max(totalExpense, 1)) * 100).toFixed(1)}%`,
+      })),
+    [categoryStats, customCategories, totalExpense],
   );
+
+  const barData = useMemo(() => {
+    const bars: any[] = [];
+    monthlyData.forEach((m, i) => {
+      bars.push({
+        value: m.income,
+        label: m.month,
+        frontColor: COLORS.income,
+        spacing: 4,
+      });
+      bars.push({
+        value: m.expense,
+        frontColor: COLORS.expense,
+        spacing: i < monthlyData.length - 1 ? 16 : 4,
+      });
+    });
+    return bars;
+  }, [COLORS.expense, COLORS.income, monthlyData]);
+
+  const maxBarValue = useMemo(
+    () => Math.max(...monthlyData.map(m => Math.max(m.income, m.expense)), 1),
+    [monthlyData],
+  );
+
+  useEffect(() => {
+    const target = maxBarValue * 1.2;
+    const from = displayMaxBarValue;
+    const start = Date.now();
+    const duration = ChartAnimationDuration.bar;
+
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const p = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setDisplayMaxBarValue(from + (target - from) * eased);
+      if (p < 1) {requestAnimationFrame(tick);}
+    };
+
+    requestAnimationFrame(tick);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxBarValue]);
+
   const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
   const budgetsInMonth = Object.values(categoryBudgets).filter(item => item.monthKey === monthKey);
   const budgetSummary = budgetsInMonth.reduce(
@@ -179,8 +331,6 @@ const ChartsScreen: React.FC = () => {
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} />}>
-
-      {/* Month Selector */}
       <View style={styles.monthSelector}>
         <TouchableOpacity onPress={goToPrevMonth} style={styles.monthButton}>
           <AppIcon name="chevron-left" size={18} color={COLORS.accent} />
@@ -198,24 +348,29 @@ const ChartsScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Summary Cards */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, {borderLeftColor: COLORS.income}]}>
+      <FadeSlideView style={styles.statsRow} delay={60}>
+        <View style={[styles.statCard, {borderLeftColor: COLORS.income}]}> 
           <Text style={styles.statLabel}>Thu nhập</Text>
-          <Text style={[styles.statAmount, {color: COLORS.income}]}>
-            +{formatCurrency(totalIncome)}
-          </Text>
+          <AnimatedNumber
+            value={totalIncome}
+            format="currency"
+            prefix="+"
+            style={[styles.statAmount, {color: COLORS.income}]}
+          />
         </View>
-        <View style={[styles.statCard, {borderLeftColor: COLORS.expense}]}>
+        <View style={[styles.statCard, {borderLeftColor: COLORS.expense}]}> 
           <Text style={styles.statLabel}>Chi tiêu</Text>
-          <Text style={[styles.statAmount, {color: COLORS.expense}]}>
-            -{formatCurrency(totalExpense)}
-          </Text>
+          <AnimatedNumber
+            value={totalExpense}
+            format="currency"
+            prefix="-"
+            style={[styles.statAmount, {color: COLORS.expense}]}
+          />
         </View>
-      </View>
+      </FadeSlideView>
 
       {budgetsInMonth.length > 0 && (
-        <View style={[styles.chartCard, {marginBottom: 20}]}>
+        <View style={[styles.chartCard, {marginBottom: 20}]}> 
           <Text style={styles.sectionTitle}>Ngân sách tháng</Text>
           <Text style={styles.legendLabel}>
             {formatCurrency(budgetSummary.totalSpent)} / {formatCurrency(budgetSummary.totalLimit)}
@@ -224,8 +379,58 @@ const ChartsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Pie Chart - Category breakdown */}
-      {pieData.length > 0 ? (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Thu nhập vs Chi tiêu (5 tháng)</Text>
+        {chartPhase === 'loading' || !showBarChart ? (
+          <ChartSkeletonCard styles={styles} />
+        ) : (
+          <View style={styles.chartCard}>
+            <View style={styles.barLegendRow}>
+              <View style={styles.barLegendItem}>
+                <View style={[styles.legendDot, {backgroundColor: COLORS.income}]} />
+                <Text style={styles.legendLabel}>Thu nhập</Text>
+              </View>
+              <View style={styles.barLegendItem}>
+                <View style={[styles.legendDot, {backgroundColor: COLORS.expense}]} />
+                <Text style={styles.legendLabel}>Chi tiêu</Text>
+              </View>
+            </View>
+            {monthlyData.some(m => m.income > 0 || m.expense > 0) ? (
+              <BarChart
+                data={barData}
+                barWidth={22}
+                spacing={4}
+                roundedTop
+                roundedBottom
+                hideRules
+                isAnimated={shouldAnimateCharts}
+                animationDuration={ChartAnimationDuration.bar}
+                xAxisThickness={1}
+                yAxisThickness={0}
+                xAxisColor={COLORS.cardBorder}
+                yAxisTextStyle={{color: COLORS.textSecondary, fontSize: 10}}
+                xAxisLabelTextStyle={{color: COLORS.textSecondary, fontSize: 10}}
+                noOfSections={4}
+                maxValue={displayMaxBarValue}
+                width={width - 80}
+                formatYLabel={(label: string) => formatCurrencyShort(Number(label))}
+                barBorderRadius={6}
+              />
+            ) : (
+              <View style={styles.emptyBar}>
+                <Text style={styles.emptyText}>Chưa có giao dịch trong 6 tháng qua</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      {chartPhase === 'loading' ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Chi tiêu theo danh mục</Text>
+          <ChartSkeletonCard styles={styles} />
+        </View>
+      ) : pieData.length > 0 ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Chi tiêu theo danh mục</Text>
           <View style={styles.chartCard}>
@@ -235,28 +440,33 @@ const ChartsScreen: React.FC = () => {
                 donut
                 innerRadius={70}
                 radius={100}
+                isAnimated={shouldAnimateCharts}
+                animationDuration={ChartAnimationDuration.pie}
                 centerLabelComponent={() => (
                   <View style={styles.pieCenter}>
                     <Text style={styles.pieCenterLabel}>Tổng</Text>
-                    <Text style={styles.pieCenterAmount}>
-                      {formatCurrencyShort(totalExpense)}
-                    </Text>
+                    <Text style={styles.pieCenterAmount}>{formatCurrencyShort(totalExpense)}</Text>
                   </View>
                 )}
                 showText={false}
               />
             </View>
 
-            {/* Legend */}
             <View style={styles.legend}>
               {pieData.map((item, i) => (
-                <View key={i} style={styles.legendItem}>
-                  <View style={[styles.legendDot, {backgroundColor: item.color}]} />
-                  <Text style={styles.legendLabel} numberOfLines={1}>
-                    {item.emoji} {item.label}
-                  </Text>
-                  <Text style={styles.legendPercent}>{item.text}</Text>
-                </View>
+                <FadeSlideView
+                  key={`${transitionKey}-${item.categoryId}`}
+                  delay={ChartAnimationDelay.legendBase + i * ChartAnimationDelay.legendStep}
+                  duration={ChartAnimationDuration.skeletonFade}
+                  fromY={6}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, {backgroundColor: item.color}]} />
+                    <Text style={styles.legendLabel} numberOfLines={1}>
+                      {item.emoji} {item.label}
+                    </Text>
+                    <Text style={styles.legendPercent}>{item.text}</Text>
+                  </View>
+                </FadeSlideView>
               ))}
             </View>
           </View>
@@ -268,48 +478,6 @@ const ChartsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Bar Chart - 5 months income vs expense */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Thu nhập vs Chi tiêu (5 tháng)</Text>
-        <View style={styles.chartCard}>
-          <View style={styles.barLegendRow}>
-            <View style={styles.barLegendItem}>
-              <View style={[styles.legendDot, {backgroundColor: COLORS.income}]} />
-              <Text style={styles.legendLabel}>Thu nhập</Text>
-            </View>
-            <View style={styles.barLegendItem}>
-              <View style={[styles.legendDot, {backgroundColor: COLORS.expense}]} />
-              <Text style={styles.legendLabel}>Chi tiêu</Text>
-            </View>
-          </View>
-          {monthlyData.some(m => m.income > 0 || m.expense > 0) ? (
-            <BarChart
-              data={barData}
-              barWidth={22}
-              spacing={4}
-              roundedTop
-              roundedBottom
-              hideRules
-              xAxisThickness={1}
-              yAxisThickness={0}
-              xAxisColor={COLORS.cardBorder}
-              yAxisTextStyle={{color: COLORS.textSecondary, fontSize: 10}}
-              xAxisLabelTextStyle={{color: COLORS.textSecondary, fontSize: 10}}
-              noOfSections={4}
-              maxValue={maxBarValue * 1.2}
-              width={width - 80}
-              formatYLabel={(label: string) => formatCurrencyShort(Number(label))}
-              barBorderRadius={6}
-            />
-          ) : (
-            <View style={styles.emptyBar}>
-              <Text style={styles.emptyText}>Chưa có giao dịch trong 6 tháng qua</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Top Expenses List */}
       {categoryStats.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Chi tiết theo danh mục</Text>
@@ -323,35 +491,38 @@ const ChartsScreen: React.FC = () => {
               : customCategories?.[stat.category]?.icon || '📌';
             const budgetStatus = getBudgetStatus(stat.category, selectedYear, selectedMonth);
             const isOverBudget = budgetStatus.exists && budgetStatus.isOver;
-            const barWidth = totalExpense > 0
-              ? (stat.total / totalExpense) * (width - 80)
-              : 0;
+            const ratio = totalExpense > 0 ? stat.total / totalExpense : 0;
 
             return (
-              <View key={stat.category} style={[styles.statRow, isOverBudget && styles.statRowOver]}>
-                <View style={styles.statRowHeader}>
-                  <View style={styles.statRowLeft}>
-                    <Text style={{fontSize: 16}}>{emoji}</Text>
-                    <Text style={styles.statName}>{getCategoryLabel(stat.category)}</Text>
-                    <Text style={styles.statCount}>{stat.count} GD</Text>
+              <FadeSlideView
+                key={`${transitionKey}-${stat.category}`}
+                delay={40 + i * 20}
+                duration={ChartAnimationDuration.skeletonFade}
+                fromY={8}>
+                <View style={[styles.statRow, isOverBudget && styles.statRowOver]}>
+                  <View style={styles.statRowHeader}>
+                    <View style={styles.statRowLeft}>
+                      <Text style={styles.categoryEmoji}>{emoji}</Text>
+                      <Text style={styles.statName}>{getCategoryLabel(stat.category)}</Text>
+                      <Text style={styles.statCount}>{stat.count} GD</Text>
+                    </View>
+                    <View style={styles.statRowRight}>
+                      <OverBudgetBadgeAnimated visible={isOverBudget} color={COLORS.expense} />
+                      <AnimatedNumber
+                        value={stat.total}
+                        format="currency"
+                        style={[styles.statRowAmount, {color: COLORS.expense}]}
+                      />
+                      <Text style={styles.statRowPercent}>{percentage}%</Text>
+                    </View>
                   </View>
-                  <View style={styles.statRowRight}>
-                    {isOverBudget && (
-                      <View style={styles.overBadge}>
-                        <AppIcon name="warning" size={12} color={COLORS.expense} />
-                        <Text style={styles.overBadgeText}>Vượt</Text>
-                      </View>
-                    )}
-                    <Text style={[styles.statRowAmount, {color: COLORS.expense}]}>
-                      {formatCurrency(stat.total)}
-                    </Text>
-                    <Text style={styles.statRowPercent}>{percentage}%</Text>
-                  </View>
+                  <ProgressBarAnimated
+                    ratio={ratio}
+                    color={color}
+                    duration={ChartAnimationDuration.progress}
+                  />
                 </View>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBar, {width: barWidth, backgroundColor: color}]} />
-                </View>
-              </View>
+              </FadeSlideView>
             );
           })}
         </View>
@@ -383,28 +554,9 @@ const createStyles = (COLORS: {
     gap: 16,
   },
   monthButton: {padding: 12, backgroundColor: COLORS.card, borderRadius: 16, borderWidth: 1, borderColor: COLORS.cardBorder},
-  monthButtonText: {color: COLORS.accent, fontSize: 16},
-  monthLabel: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: '700',
-    minWidth: 160,
-    textAlign: 'center',
-  },
-  monthLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 160,
-    gap: 8,
-  },
-  todayButton: {
-    padding: 6,
-    backgroundColor: COLORS.soft,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
+  monthLabel: {color: COLORS.text, fontSize: 18, fontWeight: '700', minWidth: 160, textAlign: 'center'},
+  monthLabelContainer: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minWidth: 160, gap: 8},
+  todayButton: {padding: 6, backgroundColor: COLORS.soft, borderRadius: 8, borderWidth: 1, borderColor: COLORS.cardBorder},
   statsRow: {flexDirection: 'row', gap: 12, marginBottom: 20},
   statCard: {
     flex: 1,
@@ -429,13 +581,9 @@ const createStyles = (COLORS: {
   pieContainer: {alignItems: 'center', marginBottom: 16},
   pieCenter: {alignItems: 'center'},
   pieCenterLabel: {color: COLORS.textSecondary, fontSize: 12},
-  pieCenterAmount: {color: COLORS.text, fontSize: 16, fontWeight: '700'},
+  pieCenterAmount: {color: COLORS.text, fontSize: 15, fontWeight: '700'},
   legend: {gap: 8},
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  legendItem: {flexDirection: 'row', alignItems: 'center', gap: 8},
   legendDot: {width: 10, height: 10, borderRadius: 5},
   legendLabel: {color: COLORS.text, fontSize: 13, flex: 1},
   legendPercent: {color: COLORS.textSecondary, fontSize: 13, fontWeight: '600'},
@@ -461,16 +609,33 @@ const createStyles = (COLORS: {
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  statRowOver: {
-    borderColor: '#f4c7bd',
-    backgroundColor: '#fff4f1',
-  },
+  statRowOver: {borderColor: '#f4c7bd', backgroundColor: '#fff4f1'},
   statRowHeader: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8},
   statRowLeft: {flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1},
-  statIcon: {fontSize: 20},
+  categoryEmoji: {fontSize: 16},
   statName: {color: COLORS.text, fontSize: 14, fontWeight: '500'},
   statCount: {color: COLORS.textSecondary, fontSize: 12},
   statRowRight: {alignItems: 'flex-end'},
+  statRowAmount: {fontSize: 14, fontWeight: '600'},
+  statRowPercent: {color: COLORS.textSecondary, fontSize: 12},
+  skeletonLineLg: {height: 14, width: '46%', borderRadius: 8, backgroundColor: COLORS.surfaceMuted, marginBottom: 10},
+  skeletonLineMd: {height: 12, width: '34%', borderRadius: 8, backgroundColor: COLORS.surfaceMuted, marginBottom: 14},
+  skeletonBlock: {height: 180, borderRadius: 16, backgroundColor: COLORS.surfaceMuted},
+});
+
+const stylesGlobal = StyleSheet.create({
+  progressBarBg: {
+    height: 4,
+    backgroundColor: '#e6e8ec',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: 4,
+    width: '100%',
+    borderRadius: 2,
+    transformOrigin: 'left center',
+  } as any,
   overBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -482,19 +647,9 @@ const createStyles = (COLORS: {
     marginBottom: 4,
   },
   overBadgeText: {
-    color: COLORS.expense,
     fontSize: 11,
     fontWeight: '700',
   },
-  statRowAmount: {fontSize: 14, fontWeight: '600'},
-  statRowPercent: {color: COLORS.textSecondary, fontSize: 12},
-  progressBarBg: {
-    height: 4,
-    backgroundColor: COLORS.cardBorder,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressBar: {height: 4, borderRadius: 2},
 });
 
 export default ChartsScreen;

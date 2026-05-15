@@ -3770,6 +3770,7 @@ __metadata:
     dayjs: ^1.11.20
     eslint: ^8.19.0
     jest: ^29.6.3
+    number-flow-react-native: ^0.4.2
     patch-package: ^8.0.1
     prettier: 2.8.8
     react: 19.2.3
@@ -7218,6 +7219,17 @@ __metadata:
   version: 1.1.1
   resolution: "nullthrows@npm:1.1.1"
   checksum: 10806b92121253eb1b08ecf707d92480f5331ba8ae5b23fa3eb0548ad24196eb797ed47606153006568a5733ea9e528a3579f21421f7828e09e7756f4bdd386f
+  languageName: node
+  linkType: hard
+
+"number-flow-react-native@npm:^0.4.2":
+  version: 0.4.2
+  resolution: "number-flow-react-native@npm:0.4.2"
+  peerDependencies:
+    react: ">=18"
+    react-native: ">=0.73"
+    react-native-reanimated: ">=3.0.0"
+  checksum: b43ab83e3dfb6c25af9a21bb33609c9e20d42ba2621f4f346a85c5062533b2c33f8ba66591b990cce1ab9a31b691e0cba47c747b7093979a61cba9cbd91cbed4
   languageName: node
   linkType: hard
 

@@ -36,11 +36,13 @@ const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
 
   const {profile, setProfile} = useAppStore();
   const [name, setName] = useState(profile.name);
+  const [nickname, setNickname] = useState(profile.nickname || '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl);
 
   useEffect(() => {
     if (visible) {
       setName(profile.name);
+      setNickname(profile.nickname || '');
       setAvatarUrl(profile.avatarUrl);
     }
   }, [visible, profile]);
@@ -58,6 +60,7 @@ const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
   const handleSave = () => {
     setProfile({
       name: name.trim() || 'Người dùng',
+      nickname: nickname.trim(),
       avatarUrl,
     });
     onClose();
@@ -104,6 +107,17 @@ const ProfileModal: React.FC<Props> = ({visible, onClose}) => {
                 placeholderTextColor={C.textSecondary}
                 value={name}
                 onChangeText={setName}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Biệt danh</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="VD: Quang, Mèo Lười..."
+                placeholderTextColor={C.textSecondary}
+                value={nickname}
+                onChangeText={setNickname}
               />
             </View>
 

@@ -1,46 +1,40 @@
 export const CATEGORY_ICONS: Record<string, string> = {
   food: 'food',
-  cafe: 'cafe',
+  rent: 'bills',
   transport: 'transport',
   shopping: 'shopping',
-  subscription: 'subscription',
   transfer: 'transfer',
   salary: 'salary',
-  entertainment: 'entertainment',
-  health: 'health',
-  education: 'education',
   bills: 'bills',
   other: 'other',
 };
 
 export const CATEGORY_EMOJI: Record<string, string> = {
   food: '🍔',
-  cafe: '☕',
+  rent: '🏠',
   transport: '🚗',
   shopping: '🛒',
-  subscription: '📱',
   transfer: '💸',
   salary: '💰',
-  entertainment: '🎬',
-  health: '🏥',
-  education: '📚',
   bills: '📄',
   other: '📌',
 };
 
 export const CATEGORY_LABELS: Record<string, string> = {
   food: 'Ăn uống',
-  cafe: 'Cà phê',
+  rent: 'Tiền thuê nhà',
   transport: 'Di chuyển',
   shopping: 'Mua sắm',
-  subscription: 'Đăng ký',
   transfer: 'Chuyển khoản',
   salary: 'Lương',
+  bills: 'Hóa đơn',
+  other: 'Khác',
+  // Legacy labels (để hiển thị dữ liệu cũ rõ ràng)
+  cafe: 'Cà phê',
+  subscription: 'Đăng ký',
   entertainment: 'Giải trí',
   health: 'Sức khỏe',
   education: 'Giáo dục',
-  bills: 'Hóa đơn',
-  other: 'Khác',
 };
 
 export const getCategoryLabel = (categoryId?: string | null): string => {
@@ -50,10 +44,10 @@ export const getCategoryLabel = (categoryId?: string | null): string => {
 
 export const KEYWORD_CATEGORIES: Record<string, string> = {
   // Cafe
-  highlands: 'cafe',
-  starbucks: 'cafe',
-  'the coffee house': 'cafe',
-  phuc: 'cafe',
+  highlands: 'food',
+  starbucks: 'food',
+  'the coffee house': 'food',
+  phuc: 'food',
 
   // Transport
   grab: 'transport',
@@ -64,15 +58,23 @@ export const KEYWORD_CATEGORIES: Record<string, string> = {
   'circle k': 'food',
   'family mart': 'food',
   baemin: 'food',
-  shopee: 'food',
+  shopeefood: 'food',
   'now.vn': 'food',
 
-  // Subscription
-  spotify: 'subscription',
-  netflix: 'subscription',
-  youtube: 'subscription',
-  apple: 'subscription',
-  google: 'subscription',
+  // Rent / Bills
+  'tien nha': 'rent',
+  'thuê nhà': 'rent',
+  'thue nha': 'rent',
+  'can ho': 'rent',
+  apartment: 'rent',
+  rent: 'rent',
+
+  // Subscriptions -> Bills
+  spotify: 'bills',
+  netflix: 'bills',
+  youtube: 'bills',
+  apple: 'bills',
+  google: 'bills',
 
   // Shopping
   lazada: 'shopping',

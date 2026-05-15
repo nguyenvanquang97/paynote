@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  ScrollView,
 } from 'react-native';
+import {ScrollView} from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
@@ -24,6 +24,7 @@ import AppIcon from '../../shared/components/AppIcon';
 import {toast} from '../../shared/components/Toast';
 import NumericInput from '../../shared/components/NumericInput';
 import {triggerBudgetAlertsForTransaction} from '../../services/budgetAlerts';
+import {SuccessCheck, AnimatedPressable} from '../../animations';
 
 interface Props {
   bottomSheetRef: React.RefObject<BottomSheetModal | null>;
@@ -62,6 +63,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const {loadTransactions, loadStats, customCategories} = useAppStore();
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const allCategories = [
     ...Object.keys(CATEGORY_ICONS).map(id => ({id, name: getCategoryLabel(id), icon: CATEGORY_ICONS[id]})),
@@ -151,7 +153,12 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
         isSuspectedGap: false,
         createdAt: editTransaction?.createdAt || Date.now(),
       });
-      handleClose();
+      // Show success animation, then close
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        handleClose();
+      }, 900);
     } catch (error) {
       console.error('Error saving transaction:', error);
       toast.error('Không thể lưu giao dịch');
@@ -234,7 +241,12 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Danh mục</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <ScrollView
+                horizontal
+                nestedScrollEnabled
+                directionalLockEnabled
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoryScrollContent}>
                 <View style={styles.categoryList}>
                   {categories.map(cat => (
                     <TouchableOpacity
@@ -269,10 +281,14 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
             </View>
         </BottomSheetScrollView>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <AnimatedPressable style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu giao dịch'}</Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
+      <SuccessCheck
+        visible={showSuccess}
+        color={type === 'income' ? COLORS.income : COLORS.expense}
+      />
     </BottomSheetModal>
   );
 };
@@ -337,6 +353,7 @@ const createStyles = (COLORS: {
     borderColor: COLORS.cardBorder,
   },
   dateText: {color: COLORS.text, fontSize: 16},
+  categoryScrollContent: {paddingRight: 8},
   categoryList: {flexDirection: 'row', gap: 12},
   categoryItem: {
     alignItems: 'center',

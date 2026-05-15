@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 import {useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
 import {useNavigation} from '@react-navigation/native';
+import {AnimatedNumber, FadeSlideView, AnimatedPressable, AnimatedEmptyState} from '../../animations';
 
 const {width} = Dimensions.get('window');
 
@@ -123,6 +124,18 @@ const DashboardScreen: React.FC = () => {
     });
   };
 
+  const openTransactionDetailInTab = (transactionId: string) => {
+    navigation.navigate('Transactions', {
+      fromDashboard: {
+        filter: 'all',
+        year: selectedYear,
+        month: selectedMonth,
+        transactionId,
+        ts: Date.now(),
+      },
+    });
+  };
+
   return (
     <ScrollView
       style={styles.container}
@@ -171,37 +184,42 @@ const DashboardScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.balanceCard}>
+      <FadeSlideView style={styles.balanceCard} delay={60}>
         <Text style={styles.balanceLabel}>Số dư</Text>
-        <Text
+        <AnimatedNumber
+          value={balance}
+          format="currency"
           style={[
             styles.balanceAmount,
             {color: balance >= 0 ? COLORS.income : COLORS.expense},
-          ]}>
-          {formatCurrency(balance)}
-        </Text>
-      </View>
+          ]}
+        />
+      </FadeSlideView>
 
-      <View style={styles.statsRow}>
-        <TouchableOpacity
-          activeOpacity={0.9}
+      <FadeSlideView style={styles.statsRow} delay={120}>
+        <AnimatedPressable
           onPress={() => openTransactionsFor('income')}
           style={[styles.statCard, {borderLeftColor: COLORS.income}]}>
           <Text style={styles.statLabel}>Thu nhập</Text>
-          <Text style={[styles.statAmount, {color: COLORS.income}]}>
-            +{formatCurrency(totalIncome)}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.9}
+          <AnimatedNumber
+            value={totalIncome}
+            format="currency"
+            prefix="+"
+            style={[styles.statAmount, {color: COLORS.income}]}
+          />
+        </AnimatedPressable>
+        <AnimatedPressable
           onPress={() => openTransactionsFor('expense')}
           style={[styles.statCard, {borderLeftColor: COLORS.expense}]}>
           <Text style={styles.statLabel}>Chi tiêu</Text>
-          <Text style={[styles.statAmount, {color: COLORS.expense}]}>
-            -{formatCurrency(totalExpense)}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <AnimatedNumber
+            value={totalExpense}
+            format="currency"
+            prefix="-"
+            style={[styles.statAmount, {color: COLORS.expense}]}
+          />
+        </AnimatedPressable>
+      </FadeSlideView>
 
       {budgetsInMonth.length > 0 && (
         <View style={[styles.balanceCard, {marginBottom: 24, paddingVertical: 16}]}>
@@ -263,16 +281,20 @@ const DashboardScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
         {recentTransactions.length === 0 ? (
-          <View style={styles.emptyState}>
-            <AppIcon name="inbox" size={44} color={COLORS.textSecondary} />
-            <Text style={styles.emptyText}>Chưa có giao dịch nào</Text>
-            <Text style={styles.emptySubtext}>
-              Giao dịch sẽ tự động hiển thị khi bạn nhận được notification ngân hàng
-            </Text>
-          </View>
+          <AnimatedEmptyState
+            icon="📥"
+            title="Chưa có giao dịch nào"
+            subtitle="Giao dịch sẽ tự động hiển thị khi bạn nhận được notification ngân hàng"
+            titleStyle={{color: COLORS.text}}
+            subtitleStyle={{color: COLORS.textSecondary}}
+          />
         ) : (
           recentTransactions.map(tx => (
-            <View key={tx.id} style={styles.transactionItem}>
+            <TouchableOpacity
+              key={tx.id}
+              activeOpacity={0.88}
+              onPress={() => openTransactionDetailInTab(tx.id)}
+              style={styles.transactionItem}>
               <View style={styles.txLeft}>
                 <View style={styles.txIconWrap}>
                   <Text style={styles.txEmoji}>
@@ -303,7 +325,7 @@ const DashboardScreen: React.FC = () => {
                 {tx.transactionType === 'income' ? '+' : '-'}
                 {formatCurrency(tx.amount)}
               </Text>
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </View>

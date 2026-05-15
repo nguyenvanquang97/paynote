@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -52,6 +52,11 @@ const SettingsScreen: React.FC = () => {
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
   const [isBatteryOptimizationDisabled, setIsBatteryOptimizationDisabled] = useState(false);
 
+  const checkAccess = useCallback(async () => {
+    setNotificationAccess(await checkNotificationAccess());
+    setIsBatteryOptimizationDisabled(await checkBatteryOptimizationDisabled());
+  }, [setNotificationAccess]);
+
   useEffect(() => {
     checkAccess();
 
@@ -62,14 +67,9 @@ const SettingsScreen: React.FC = () => {
     });
 
     return () => sub.remove();
-  }, []);
+  }, [checkAccess]);
 
-  const checkAccess = async () => {
-    setNotificationAccess(await checkNotificationAccess());
-    setIsBatteryOptimizationDisabled(await checkBatteryOptimizationDisabled());
-  };
-
-  const renderModeButton = (mode: string, label: string, emoji?: string) => (
+  const renderModeButton = (mode: string, label: string) => (
     <TouchableOpacity
       key={mode}
       style={[s.modePill, themeMode === mode && s.modePillActive]}
@@ -91,7 +91,7 @@ const SettingsScreen: React.FC = () => {
           </View>
           <View style={s.profileInfo}>
             <Text style={s.profileName}>{profile.name}</Text>
-            <Text style={s.profileDesc}>Người dùng PayNote</Text>
+            <Text style={s.profileDesc}>{profile.nickname?.trim() || 'Người dùng PayNote'}</Text>
           </View>
           <TouchableOpacity style={s.profileEditBtn} onPress={() => setIsProfileModalVisible(true)}>
             <Text style={s.profileEditTxt}>Sửa</Text>
@@ -107,12 +107,22 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         <Text style={s.sec}>Tài chính cá nhân</Text>
+        <TouchableOpacity style={s.card} onPress={() => navigation.navigate('BudgetSettings')}>
+          <View style={s.row}>
+            <View style={s.iconWrap}><AppIcon name="list" size={20} color={C.acc} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>Cài đặt ngân sách</Text>
+              <Text style={s.desc}>Hạn mức theo danh mục và cảnh báo ngưỡng chi tiêu</Text>
+            </View>
+            <AppIcon name="chevron-right" size={16} color={C.sub} />
+          </View>
+        </TouchableOpacity>
         <TouchableOpacity style={s.card} onPress={() => navigation.navigate('PersonalFinance')}>
           <View style={s.row}>
             <View style={s.iconWrap}><AppIcon name="list" size={20} color={C.acc} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>Ngân sách, sao lưu và tiện ích cá nhân</Text>
-              <Text style={s.desc}>Quản lý hạn mức theo danh mục, ghi chú tháng, import/export dữ liệu</Text>
+              <Text style={s.label}>Sao lưu & tiện ích cá nhân</Text>
+              <Text style={s.desc}>Danh mục ưa thích, ghi chú tháng, import/export và reset dữ liệu</Text>
             </View>
             <AppIcon name="chevron-right" size={16} color={C.sub} />
           </View>
