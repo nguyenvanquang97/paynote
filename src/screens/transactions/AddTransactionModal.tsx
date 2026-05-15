@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
@@ -16,7 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
 import type {Transaction} from '../../shared/types';
 import {useThemeColors} from '../../shared/theme';
-import AppIcon from '../../shared/components/AppIcon';
+import AppIcon, {categoryIconName} from '../../shared/components/AppIcon';
 import {toast} from '../../shared/components/Toast';
 import NumericInput from '../../shared/components/NumericInput';
 import {triggerBudgetAlertsForTransaction} from '../../services/budgetAlerts';
@@ -72,6 +73,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
     return true;
   });
 
+  // Pre-fill form when editing
   useEffect(() => {
     if (editTransaction) {
       setType(editTransaction.transactionType);
@@ -181,10 +183,14 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
         </TouchableOpacity>
       </View>
 
-      <View style={styles.form}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+        style={styles.form}>
         <BottomSheetScrollView
           contentContainerStyle={styles.formFields}
           keyboardShouldPersistTaps="handled">
+          {/* Type Switcher */}
           <View style={styles.typeSwitcher}>
             <TouchableOpacity
               style={[styles.typeButton, type === 'expense' && {backgroundColor: COLORS.expense}]}
@@ -198,6 +204,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
             </TouchableOpacity>
           </View>
 
+          {/* Amount */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Số tiền (₫)</Text>
             <NumericInput
@@ -209,6 +216,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
             />
           </View>
 
+          {/* Date */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Ngày giao dịch</Text>
             <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
@@ -227,6 +235,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
             )}
           </View>
 
+          {/* Category */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Danh mục</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -252,6 +261,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
             </ScrollView>
           </View>
 
+          {/* Description */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Mô tả (Tuỳ chọn)</Text>
             <TextInput
@@ -267,7 +277,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu giao dịch'}</Text>
         </TouchableOpacity>
-      </View>
+      </KeyboardAvoidingView>
     </BottomSheetModal>
   );
 };
