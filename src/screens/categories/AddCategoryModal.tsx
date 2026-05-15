@@ -5,6 +5,8 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
 import {useAppStore, type CustomCategory} from '../../app/store';
@@ -129,49 +131,54 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
         </TouchableOpacity>
       </View>
 
-      <View style={styles.form}>
-        <BottomSheetScrollView
-          contentContainerStyle={styles.formFields}
-          keyboardShouldPersistTaps="handled">
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Tên danh mục</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="VD: Du lịch"
-              placeholderTextColor={COLORS.textSecondary}
-              value={name}
-              onChangeText={setName}
-            />
-          </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+        style={styles.keyboardAvoiding}>
+        <View style={styles.form}>
+          <BottomSheetScrollView
+            contentContainerStyle={styles.formFields}
+            keyboardShouldPersistTaps="handled">
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Tên danh mục</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="VD: Du lịch"
+                placeholderTextColor={COLORS.textSecondary}
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Biểu tượng (Emoji)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="VD: ✈️"
-              placeholderTextColor={COLORS.textSecondary}
-              value={icon}
-              onChangeText={setIcon}
-              maxLength={4}
-            />
-          </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Biểu tượng (Emoji)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="VD: ✈️"
+                placeholderTextColor={COLORS.textSecondary}
+                value={icon}
+                onChangeText={setIcon}
+                maxLength={4}
+              />
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Từ khóa tự động (Cách nhau bởi dấu phẩy)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="VD: traveloka, agoda, ve may bay"
-              placeholderTextColor={COLORS.textSecondary}
-              value={keywords}
-              onChangeText={setKeywords}
-            />
-          </View>
-        </BottomSheetScrollView>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Từ khóa tự động (Cách nhau bởi dấu phẩy)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="VD: traveloka, agoda, ve may bay"
+                placeholderTextColor={COLORS.textSecondary}
+                value={keywords}
+                onChangeText={setKeywords}
+              />
+            </View>
+          </BottomSheetScrollView>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu danh mục'}</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu danh mục'}</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </BottomSheetModal>
   );
 };
@@ -199,6 +206,7 @@ const createStyles = (COLORS: {
   },
   title: {color: COLORS.text, fontSize: 18, fontWeight: '700'},
   closeBtn: {padding: 8, zIndex: 10},
+  keyboardAvoiding: {flex: 1},
   form: {padding: 20, flex: 1},
   formFields: {paddingBottom: 32},
   inputGroup: {marginBottom: 20},
