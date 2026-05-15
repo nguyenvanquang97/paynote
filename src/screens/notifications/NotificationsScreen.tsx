@@ -18,6 +18,8 @@ const NotificationsScreen: React.FC = () => {
     acc: t.primaryDeep,
     muted: t.surfaceMuted,
     soft: t.primarySoft,
+    unreadBg: t.surfaceMuted,
+    unreadBorder: t.expense,
   }), [t]);
   const s = useMemo(() => createStyles(C), [C]);
   const {
@@ -141,6 +143,8 @@ const createStyles = (C: {
   acc: string;
   muted: string;
   soft: string;
+  unreadBg: string;
+  unreadBorder: string;
 }) => StyleSheet.create({
   container: {flex: 1, backgroundColor: C.bg},
   content: {padding: 16, paddingBottom: 30},
@@ -183,8 +187,8 @@ const createStyles = (C: {
     marginBottom: 10,
   },
   cardUnread: {
-    borderColor: '#f4c7bd',
-    backgroundColor: '#fff6f3',
+    borderColor: C.unreadBorder,
+    backgroundColor: C.unreadBg,
   },
   cardSelected: {
     borderColor: C.acc,
