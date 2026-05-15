@@ -5,7 +5,6 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import {BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView} from '@gorhom/bottom-sheet';
@@ -117,7 +116,7 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
       snapPoints={SNAP_POINTS}
       enableDynamicSizing={false}
       enablePanDownToClose
-      keyboardBehavior="interactive"
+      keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'fillParent'}
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
       backdropComponent={renderBackdrop}
@@ -131,11 +130,7 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
-        style={styles.keyboardAvoiding}>
-        <View style={styles.form}>
+      <View style={styles.form}>
           <BottomSheetScrollView
             contentContainerStyle={styles.formFields}
             keyboardShouldPersistTaps="handled">
@@ -177,8 +172,7 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
             <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu danh mục'}</Text>
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+      </View>
     </BottomSheetModal>
   );
 };
@@ -206,7 +200,6 @@ const createStyles = (COLORS: {
   },
   title: {color: COLORS.text, fontSize: 18, fontWeight: '700'},
   closeBtn: {padding: 8, zIndex: 10},
-  keyboardAvoiding: {flex: 1},
   form: {padding: 20, flex: 1},
   formFields: {paddingBottom: 32},
   inputGroup: {marginBottom: 20},
