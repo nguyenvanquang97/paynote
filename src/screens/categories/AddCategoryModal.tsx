@@ -115,6 +115,9 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
       snapPoints={SNAP_POINTS}
       enableDynamicSizing={false}
       enablePanDownToClose
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBg}
       handleIndicatorStyle={styles.handle}
@@ -127,7 +130,9 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
       </View>
 
       <View style={styles.form}>
-        <BottomSheetScrollView contentContainerStyle={styles.formFields} keyboardShouldPersistTaps="handled">
+        <BottomSheetScrollView
+          contentContainerStyle={styles.formFields}
+          keyboardShouldPersistTaps="handled">
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Tên danh mục</Text>
             <TextInput
@@ -161,8 +166,8 @@ const AddCategoryModal: React.FC<Props> = ({bottomSheetRef, onClose, editCategor
               onChangeText={setKeywords}
             />
           </View>
-
         </BottomSheetScrollView>
+
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>{isEditing ? 'Cập nhật' : 'Lưu danh mục'}</Text>
         </TouchableOpacity>
@@ -195,7 +200,7 @@ const createStyles = (COLORS: {
   title: {color: COLORS.text, fontSize: 18, fontWeight: '700'},
   closeBtn: {padding: 8, zIndex: 10},
   form: {padding: 20, flex: 1},
-  formFields: {paddingBottom: 12},
+  formFields: {paddingBottom: 32},
   inputGroup: {marginBottom: 20},
   label: {color: COLORS.textSecondary, fontSize: 14, marginBottom: 8},
   input: {
