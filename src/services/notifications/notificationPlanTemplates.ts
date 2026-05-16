@@ -1153,7 +1153,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "{categoryLabel} vượt quá xa rồi, mày đang tự phá kế hoạch.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_120:vietnamese_parent:2"
@@ -1198,7 +1199,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Tao nói thẳng: mục này phải phanh lại ngay.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_120:vietnamese_parent:5"
@@ -1753,7 +1755,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Hôm nay mày chi {categoryLabel} hơi nhiều rồi đấy.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_today:vietnamese_parent:2"
@@ -2068,7 +2071,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Mày phải cắt tần suất {categoryLabel} đi.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_week:vietnamese_parent:3"

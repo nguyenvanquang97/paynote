@@ -70,21 +70,6 @@ const defaultSeverityForTrigger = (trigger: NotificationTrigger): NotificationSe
   }
 };
 
-const applyStrongLanguage = (
-  text: string,
-  persona: NotificationPersona,
-  allowStrongLanguage: boolean,
-): string => {
-  if (persona !== 'vietnamese_parent' || !allowStrongLanguage) {
-    return text;
-  }
-  return text
-    .replace(/đừng/gi, 'mày đừng')
-    .replace(/Dừng\.?/g, 'Dừng ngay.')
-    .replace(/liệu mà/gi, 'liệu mà')
-    .replace(/bớt/gi, 'bớt ngay');
-};
-
 const getOpeningPhrase = (message: string): string => message
   .trim()
   .toLowerCase()
@@ -142,14 +127,14 @@ export const generateNotificationMessage = (input: GenerateInput): GeneratedNoti
     context: input.context,
     memory,
     now,
+    allowStrongLanguage: input.allowStrongLanguage,
   });
 
   if (!picked) {
     return null;
   }
 
-  const formatted = formatNotificationTemplate(picked.body, input.context);
-  const message = applyStrongLanguage(formatted, input.persona, Boolean(input.allowStrongLanguage));
+  const message = formatNotificationTemplate(picked.body, input.context);
 
   if (input.markShown !== false) {
     const openingPhrase = getOpeningPhrase(message);

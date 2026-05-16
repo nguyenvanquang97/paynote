@@ -46,6 +46,14 @@ const CONTEXT_TRIGGER = {
 const PERSONAS = new Set(['advisor', 'wallet_pet', 'toxic_friend', 'vietnamese_parent']);
 const CONTEXTS = new Set(['food', 'cafe', 'shopping', 'transport', 'bill', 'rent']);
 
+const isStrongLanguageMessage = message => {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('mày') ||
+    lower.includes('tao')
+  );
+};
+
 const slug = value => value
   .toLowerCase()
   .normalize('NFD')
@@ -107,7 +115,11 @@ const flush = () => {
         tier: tierForIndex(index),
         context: scope.context,
         body: message,
-        tags: ['plan', `tier_${tierForIndex(index)}`],
+        tags: [
+          'plan',
+          `tier_${tierForIndex(index)}`,
+          ...(currentPersona === 'vietnamese_parent' && isStrongLanguageMessage(message) ? ['strong_language'] : []),
+        ],
         origin: 'plan',
         planRef: `14:${currentSection}:${currentPersona}:${index + 1}`,
       });
@@ -232,7 +244,7 @@ ${kotlinList(nativePools.toxic_friend)}
     )
 
     private val vietnameseParentSoft = listOf(
-${kotlinList(nativePools.vietnamese_parent.filter(item => !/\\bmày\\b|\\btao\\b/i.test(item.body)))}
+${kotlinList(nativePools.vietnamese_parent.filter(item => !isStrongLanguageMessage(item.body)))}
     )
 
     private val vietnameseParentStrong = listOf(
@@ -243,8 +255,9 @@ ${kotlinList(nativePools.vietnamese_parent)}
         val pool = when (toneMode) {
             "gentle", "advisor" -> advisor
             "cute", "wallet_pet" -> walletPet
+            "sarcastic_strong", "toxic_friend" -> toxicFriend
             "angry", "strict", "vietnamese_parent" -> if (allowStrongLanguage) vietnameseParentStrong else vietnameseParentSoft
-            else -> toxicFriend
+            else -> advisor
         }
         if (pool.isEmpty()) {
             return PeriodicFallbackTemplates.pick(toneMode, allowStrongLanguage, tier)

@@ -23,6 +23,7 @@ export interface PickTemplateInput {
   context: NotificationTemplateContext;
   memory: NotificationMemory;
   now: number;
+  allowStrongLanguage?: boolean;
 }
 
 export const pickNotificationTemplate = (
@@ -40,6 +41,7 @@ export const pickNotificationTemplate = (
   const candidates = NOTIFICATION_TEMPLATES.filter(template => {
     if (template.trigger !== input.trigger) {return false;}
     if (template.persona !== input.persona) {return false;}
+    if (template.tags?.includes('strong_language') && !input.allowStrongLanguage) {return false;}
     return template.context === input.categoryContext || template.context === 'any' || template.context === 'generic';
   });
   const exactContextPool = candidates.filter(item => item.context === input.categoryContext);

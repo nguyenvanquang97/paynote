@@ -212,7 +212,6 @@ object PeriodicPlanFallbackTemplates {
         NativePlanTemplate("Vượt 80% rồi. Dừng ngay.", 1),
         NativePlanTemplate("100% rồi mà còn tiêu nữa thì cuối tháng tự chịu.", 2),
         NativePlanTemplate("Ăn ngoài ít thôi. Ví không chịu nổi đâu.", 2),
-        NativePlanTemplate("chi tiêu vượt quá xa rồi, mày đang tự phá kế hoạch.", 2),
         NativePlanTemplate("Còn vài ngày nữa, đừng tiêu bậy.", 2),
         NativePlanTemplate("Cuốc nào không cần thì bớt.", 2),
         NativePlanTemplate("Cuối ngày rồi, xem lại tiền đi đâu.", 2),
@@ -225,7 +224,6 @@ object PeriodicPlanFallbackTemplates {
         NativePlanTemplate("Giờ này mà còn mua với bán gì nữa?", 2),
         NativePlanTemplate("Giữ được như hôm nay thì ví mới sống nổi.", 2),
         NativePlanTemplate("Giữ như này thì cuối tháng mới đỡ khổ.", 2),
-        NativePlanTemplate("Hôm nay mày chi chi tiêu hơi nhiều rồi đấy.", 2),
         NativePlanTemplate("Khóa chi linh tinh ngay. Không thương lượng.", 2),
         NativePlanTemplate("Nhìn lại đi, chi tiêu đang cháy ngân sách đấy.", 2),
         NativePlanTemplate("Sắp hết tháng rồi mà còn vung tay là tự chịu.", 2),
@@ -256,7 +254,6 @@ object PeriodicPlanFallbackTemplates {
         NativePlanTemplate("Mấy ngày cuối phải biết giữ ví.", 4),
         NativePlanTemplate("Ngày nào cũng cafe thì ví nào chịu.", 4),
         NativePlanTemplate("Ngủ đi, ví cũng cần nghỉ.", 4),
-        NativePlanTemplate("Tao nói thẳng: mục này phải phanh lại ngay.", 4),
         NativePlanTemplate("Tốt. Tiền phải giữ từ những ngày như này.", 4)
     )
 
@@ -327,8 +324,9 @@ object PeriodicPlanFallbackTemplates {
         val pool = when (toneMode) {
             "gentle", "advisor" -> advisor
             "cute", "wallet_pet" -> walletPet
+            "sarcastic_strong", "toxic_friend" -> toxicFriend
             "angry", "strict", "vietnamese_parent" -> if (allowStrongLanguage) vietnameseParentStrong else vietnameseParentSoft
-            else -> toxicFriend
+            else -> advisor
         }
         if (pool.isEmpty()) {
             return PeriodicFallbackTemplates.pick(toneMode, allowStrongLanguage, tier)
