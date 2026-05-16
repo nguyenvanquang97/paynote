@@ -31,23 +31,58 @@ export const generateTransactionHash = (
 };
 
 export const isDuplicate = async (
+  bank: string,
   amount: number,
   timestamp: number,
+  transactionType: 'income' | 'expense',
   description?: string,
+  balanceAfter?: number,
+  rawText?: string,
 ): Promise<boolean> => {
   const db = await getDatabase();
 
-  // Check for transactions within 2 minutes with same amount
+  const normalizedDescription = (description || '').trim().toLowerCase();
+
+  // Strong check: same bank + same raw notification text means duplicate.
+  if (rawText && rawText.trim().length > 0) {
+    const [rawTextResults] = await db.executeSql(
+      `SELECT COUNT(*) as count FROM transactions
+       WHERE bank = ?
+       AND raw_text = ?`,
+      [bank, rawText],
+    );
+
+    if (rawTextResults.rows.item(0).count > 0) {
+      return true;
+    }
+  }
+
+  // Fallback check: match key fields within a short time window.
   const timeWindow = 120000; // 2 minutes
   const startTime = timestamp - timeWindow;
   const endTime = timestamp + timeWindow;
 
   const [results] = await db.executeSql(
     `SELECT COUNT(*) as count FROM transactions
-     WHERE amount = ?
+     WHERE bank = ?
+     AND transaction_type = ?
+     AND amount = ?
      AND timestamp >= ? AND timestamp <= ?
-     AND (description = ? OR (description IS NULL AND ? IS NULL))`,
-    [amount, startTime, endTime, description || null, description || null],
+     AND lower(trim(COALESCE(description, ''))) = ?
+     AND (
+       (balance_after = ?)
+       OR (balance_after IS NULL AND ? IS NULL)
+     )`,
+    [
+      bank,
+      transactionType,
+      amount,
+      startTime,
+      endTime,
+      normalizedDescription,
+      balanceAfter ?? null,
+      balanceAfter ?? null,
+    ],
   );
 
   return results.rows.item(0).count > 0;

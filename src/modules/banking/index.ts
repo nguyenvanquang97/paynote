@@ -50,9 +50,13 @@ export const processNotification = async (
 
   // Step 3: Check for duplicates
   const duplicate = await isDuplicate(
+    bank,
     parsed.amount,
     parsed.timestamp,
+    parsed.transactionType,
     parsed.description,
+    parsed.balanceAfter,
+    parsed.rawText,
   );
 
   if (duplicate) {
