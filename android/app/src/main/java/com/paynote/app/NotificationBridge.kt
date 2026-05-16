@@ -27,7 +27,7 @@ class NotificationBridge(
         private const val EVENT_NAME = "BANK_NOTIFICATION"
         private const val BUDGET_ALERT_CHANNEL_ID = "budget_alerts"
         const val PERIODIC_REMINDER_ACTION = "com.paynote.app.PERIODIC_ROAST_REMINDER"
-        const val PERIODIC_REMINDER_INTERVAL_MS = 60 * 60 * 1000L
+        const val PERIODIC_REMINDER_INTERVAL_MS = 6 * 60 * 60 * 1000L
         const val PERIODIC_PREFS = "periodic_roast_prefs"
         const val PERIODIC_PREF_AI_ENABLED = "ai_enabled"
         const val PERIODIC_PREF_API_KEY = "api_key"
@@ -47,6 +47,14 @@ class NotificationBridge(
             }
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             return PendingIntent.getBroadcast(context, 77421, intent, flags)
+        }
+
+        fun getOpenAppPendingIntent(context: Context): PendingIntent {
+            val launchIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            return PendingIntent.getActivity(context, 99117, launchIntent, flags)
         }
 
         fun schedulePeriodicRoastReminder(context: Context, triggerAtMillis: Long = System.currentTimeMillis() + PERIODIC_REMINDER_INTERVAL_MS) {
@@ -196,6 +204,7 @@ class NotificationBridge(
                 .setContentTitle(title.ifBlank { "Cảnh báo chi tiêu" })
                 .setContentText(message)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                .setContentIntent(getOpenAppPendingIntent(reactContext))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .build()

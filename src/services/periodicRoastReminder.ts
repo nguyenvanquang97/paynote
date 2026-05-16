@@ -7,7 +7,7 @@ import {getGeminiApiKeyFromEnv} from '../config/env';
 import {detectCategoryContext, generateNotificationMessage} from './notifications';
 import {runPhase2PeriodicSweep} from './notificationPhase2';
 
-const PERIOD_MS = 60 * 60 * 1000;
+const PERIOD_MS = 6 * 60 * 60 * 1000;
 let lastReminderAt = 0;
 
 type LimitWindow = 'day' | 'month';

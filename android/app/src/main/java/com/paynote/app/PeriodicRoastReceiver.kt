@@ -95,6 +95,7 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
                     .setContentTitle("Nhắc nhở chi tiêu định kỳ")
                     .setContentText(message)
                     .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                    .setContentIntent(NotificationBridge.getOpenAppPendingIntent(context))
                     .setAutoCancel(true)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                     .build()
