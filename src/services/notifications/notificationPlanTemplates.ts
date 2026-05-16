@@ -229,76 +229,82 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "planRef": "14:budget_50:toxic_friend:5"
   },
   {
-    "id": "plan_budget_50_vietnamese_parent_any_categorylabel_a_percent_roi_lieu_ma__1",
+    "id": "plan_budget_50_vietnamese_parent_any_categorylabel_a_percent_roi_giu_tay__1",
     "trigger": "budget_50",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 1,
     "context": "any",
-    "body": "{categoryLabel} đã {percent}% rồi, liệu mà giữ tay.",
+    "body": "{categoryLabel} đã {percent}% rồi, Giữ tay lại ngay.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_50:vietnamese_parent:1"
   },
   {
-    "id": "plan_budget_50_vietnamese_parent_any_moi_nua_thang_nua_ngan_sach_a_the_na_2",
+    "id": "plan_budget_50_vietnamese_parent_any_moi_nua_thang_ma_tieu_kieu_nay_la_cu_2",
     "trigger": "budget_50",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 2,
     "context": "any",
-    "body": "Mới nửa tháng/nửa ngân sách đã thế này rồi đấy.",
+    "body": "Mới nửa tháng mà tiêu kiểu này là cuối tháng nhịn.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_50:vietnamese_parent:2"
   },
   {
-    "id": "plan_budget_50_vietnamese_parent_any_tu_gio_bot_khoan_khong_can_lai_3",
+    "id": "plan_budget_50_vietnamese_parent_any_khong_can_thi_cat_ngay_3",
     "trigger": "budget_50",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 2,
     "context": "any",
-    "body": "Từ giờ bớt khoản không cần lại.",
+    "body": "Không cần thì cắt ngay.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_50:vietnamese_parent:3"
   },
   {
-    "id": "plan_budget_50_vietnamese_parent_any_ung_e_en_cuoi_thang_roi_lai_keu_4",
+    "id": "plan_budget_50_vietnamese_parent_any_cuoi_thang_ung_than_het_tien_nua_4",
     "trigger": "budget_50",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 3,
     "context": "any",
-    "body": "Đừng để đến cuối tháng rồi lại kêu.",
+    "body": "Cuối tháng đừng than hết tiền nữa.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_50:vietnamese_parent:4"
   },
   {
-    "id": "plan_budget_50_vietnamese_parent_any_tieu_thi_nhin_ngan_sach_mot_chut_5",
+    "id": "plan_budget_50_vietnamese_parent_any_tien_moc_tren_cay_a_nhin_ngan_sach_r_5",
     "trigger": "budget_50",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 4,
     "context": "any",
-    "body": "Tiêu thì nhìn ngân sách một chút.",
+    "body": "Tiền mọc trên cây à? Nhìn ngân sách rồi hẵng tiêu.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_50:vietnamese_parent:5"
@@ -538,7 +544,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "{categoryLabel} đã {percent}% rồi. Bớt tiêu theo hứng ngay.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_80:vietnamese_parent:1"
@@ -553,7 +560,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Nhìn lại đi, {categoryLabel} đang cháy ngân sách đấy.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_80:vietnamese_parent:2"
@@ -568,7 +576,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Từ giờ khoản nào không cần thì cắt.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_80:vietnamese_parent:3"
@@ -583,22 +592,26 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "{categoryLabel} dùng {spentText}/{limitText} rồi. Đừng có chủ quan.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_80:vietnamese_parent:4"
   },
   {
-    "id": "plan_budget_80_vietnamese_parent_any_ung_e_me_vi_phai_mang_them_lan_nua_5",
+    "id": "plan_budget_80_vietnamese_parent_any_ung_co_e_me_vi_phai_mang_them_lan_nu_5",
     "trigger": "budget_80",
     "persona": "vietnamese_parent",
     "severity": "medium",
     "tier": 4,
     "context": "any",
-    "body": "Đừng để mẹ ví phải mắng thêm lần nữa.",
+    "body": "đừng có để mẹ ví phải mắng thêm lần nữa.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_80:vietnamese_parent:5"
@@ -838,7 +851,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "{categoryLabel} hết ngân sách rồi. Dừng.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_100:vietnamese_parent:1"
@@ -853,22 +867,26 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "100% rồi mà còn tiêu nữa thì cuối tháng tự chịu.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_100:vietnamese_parent:2"
   },
   {
-    "id": "plan_budget_100_vietnamese_parent_any_ung_vien_co_nua_muc_nay_het_tien_roi_3",
+    "id": "plan_budget_100_vietnamese_parent_any_ung_co_vien_co_nua_muc_nay_het_tien__3",
     "trigger": "budget_100",
     "persona": "vietnamese_parent",
     "severity": "high",
     "tier": 2,
     "context": "any",
-    "body": "Đừng viện cớ nữa. Mục này hết tiền rồi.",
+    "body": "đừng có viện cớ nữa. Mục này hết tiền rồi.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_100:vietnamese_parent:3"
@@ -883,7 +901,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Từ giờ không có 'nốt lần này'.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_100:vietnamese_parent:4"
@@ -898,7 +917,9 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Hết là hết. Không thương lượng.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_100:vietnamese_parent:5"
@@ -1138,7 +1159,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Vượt {percent}% rồi. Dừng ngay.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:budget_120:vietnamese_parent:1"
@@ -1154,6 +1176,7 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "tags": [
       "plan",
       "tier_2",
+      "mom_tone",
       "strong_language"
     ],
     "origin": "plan",
@@ -1169,22 +1192,26 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Khóa chi linh tinh ngay. Không thương lượng.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_120:vietnamese_parent:3"
   },
   {
-    "id": "plan_budget_120_vietnamese_parent_any_ung_tieu_kieu_nay_nua_cuoi_thang_kho_4",
+    "id": "plan_budget_120_vietnamese_parent_any_ung_co_tieu_kieu_nay_nua_cuoi_thang__4",
     "trigger": "budget_120",
     "persona": "vietnamese_parent",
     "severity": "critical",
     "tier": 3,
     "context": "any",
-    "body": "Đừng tiêu kiểu này nữa, cuối tháng khổ là tự chịu.",
+    "body": "đừng có tiêu kiểu này nữa, cuối tháng khổ là tự chịu.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:budget_120:vietnamese_parent:4"
@@ -1200,6 +1227,7 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "tags": [
       "plan",
       "tier_4",
+      "mom_tone",
       "strong_language"
     ],
     "origin": "plan",
@@ -1440,7 +1468,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "{amountText} không nhỏ đâu. Nghĩ kỹ chưa?",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:large_transaction:vietnamese_parent:1"
@@ -1455,7 +1484,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Chi mạnh tay thế, cuối tháng đừng than.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:large_transaction:vietnamese_parent:2"
@@ -1470,7 +1500,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Khoản này không cần thiết thì tự biết phải làm gì rồi đấy.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:large_transaction:vietnamese_parent:3"
@@ -1485,7 +1516,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Tiền có phải lá mít đâu mà vung vậy.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:large_transaction:vietnamese_parent:4"
@@ -1500,7 +1532,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Mua gì thì mua, nhớ nhìn lại số dư.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:large_transaction:vietnamese_parent:5"
@@ -1740,7 +1773,9 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Lại {categoryLabel}? Tiền mọc trên cây à?",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_today:vietnamese_parent:1"
@@ -1756,6 +1791,7 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "tags": [
       "plan",
       "tier_2",
+      "mom_tone",
       "strong_language"
     ],
     "origin": "plan",
@@ -1771,7 +1807,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Dừng cái kiểu thích là mua lại ngay.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_today:vietnamese_parent:3"
@@ -1786,7 +1823,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "{categoryLabel} đủ rồi. Đừng thêm nữa.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_today:vietnamese_parent:4"
@@ -1801,7 +1839,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Cả ngày cứ {categoryLabel}, ví nào chịu nổi.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_today:vietnamese_parent:5"
@@ -2041,7 +2080,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Tuần này {categoryLabel} nhiều quá rồi. Bớt lại.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_week:vietnamese_parent:1"
@@ -2056,7 +2096,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Cứ lặp lại thế này thì tiền nào chịu nổi.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_week:vietnamese_parent:2"
@@ -2072,6 +2113,7 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "tags": [
       "plan",
       "tier_2",
+      "mom_tone",
       "strong_language"
     ],
     "origin": "plan",
@@ -2087,7 +2129,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Đừng biến {categoryLabel} thành thói quen đốt tiền.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_week:vietnamese_parent:4"
@@ -2102,7 +2145,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Tuần này đủ rồi, nghỉ đi.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:repeat_category_week:vietnamese_parent:5"
@@ -2342,7 +2386,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Đêm hôm còn tiêu tiền. Đi ngủ đi.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:late_night_spending:vietnamese_parent:1"
@@ -2357,7 +2402,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Giờ này mà còn mua với bán gì nữa?",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:late_night_spending:vietnamese_parent:2"
@@ -2372,7 +2418,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Để sáng mai tỉnh táo rồi tính.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:late_night_spending:vietnamese_parent:3"
@@ -2387,7 +2434,9 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Đừng có thức khuya rồi tiêu linh tinh.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:late_night_spending:vietnamese_parent:4"
@@ -2402,7 +2451,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Ngủ đi, ví cũng cần nghỉ.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:late_night_spending:vietnamese_parent:5"
@@ -2858,31 +2908,35 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "planRef": "14:salary_received / income_received:toxic_friend:5"
   },
   {
-    "id": "plan_salary_received_vietnamese_parent_any_luong_ve_thi_chia_tien_truoc_ung_tie_1",
+    "id": "plan_salary_received_vietnamese_parent_any_luong_ve_thi_chia_tien_truoc_ung_co__1",
     "trigger": "salary_received",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 1,
     "context": "any",
-    "body": "Lương về thì chia tiền trước, đừng tiêu trước tính sau.",
+    "body": "Lương về thì chia tiền trước, đừng có tiêu trước tính sau.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:1"
   },
   {
-    "id": "plan_income_received_vietnamese_parent_any_luong_ve_thi_chia_tien_truoc_ung_tie_1",
+    "id": "plan_income_received_vietnamese_parent_any_luong_ve_thi_chia_tien_truoc_ung_co__1",
     "trigger": "income_received",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 1,
     "context": "any",
-    "body": "Lương về thì chia tiền trước, đừng tiêu trước tính sau.",
+    "body": "Lương về thì chia tiền trước, đừng có tiêu trước tính sau.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:1"
@@ -2897,7 +2951,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Có tiền không có nghĩa là được phá ngân sách.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:2"
@@ -2912,7 +2967,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Có tiền không có nghĩa là được phá ngân sách.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:2"
@@ -2927,7 +2983,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Giữ tiền ngay từ đầu tháng, đừng vài ngày sau lại kêu nghèo.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:3"
@@ -2942,7 +2999,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Giữ tiền ngay từ đầu tháng, đừng vài ngày sau lại kêu nghèo.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:3"
@@ -2957,7 +3015,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Trả khoản cần trả trước, mua sắm để sau.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:4"
@@ -2972,37 +3031,42 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Trả khoản cần trả trước, mua sắm để sau.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:4"
   },
   {
-    "id": "plan_salary_received_vietnamese_parent_any_ung_e_luong_vua_ve_a_bay_sach_5",
+    "id": "plan_salary_received_vietnamese_parent_any_ung_co_e_luong_vua_ve_a_bay_sach_5",
     "trigger": "salary_received",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 4,
     "context": "any",
-    "body": "Đừng để lương vừa về đã bay sạch.",
+    "body": "đừng có để lương vừa về đã bay sạch.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:5"
   },
   {
-    "id": "plan_income_received_vietnamese_parent_any_ung_e_luong_vua_ve_a_bay_sach_5",
+    "id": "plan_income_received_vietnamese_parent_any_ung_co_e_luong_vua_ve_a_bay_sach_5",
     "trigger": "income_received",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 4,
     "context": "any",
-    "body": "Đừng để lương vừa về đã bay sạch.",
+    "body": "đừng có để lương vừa về đã bay sạch.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:salary_received / income_received:vietnamese_parent:5"
@@ -3242,7 +3306,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Hôm nay không tiêu linh tinh, thế mới giống người biết nghĩ.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:no_spend_day:vietnamese_parent:1"
@@ -3257,7 +3322,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Giữ được như hôm nay thì ví mới sống nổi.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:no_spend_day:vietnamese_parent:2"
@@ -3272,7 +3338,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Tốt. Mai cũng đừng phá.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:no_spend_day:vietnamese_parent:3"
@@ -3287,7 +3354,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Không tiêu bậy là đúng, không phải thành tích để chủ quan.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:no_spend_day:vietnamese_parent:4"
@@ -3302,7 +3370,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Hôm nay ổn. Cứ thế mà làm.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:no_spend_day:vietnamese_parent:5"
@@ -3542,7 +3611,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "{days} ngày giữ được tiền. Tốt, tiếp tục.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:saving_streak:vietnamese_parent:1"
@@ -3557,7 +3627,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Đấy, biết nghĩ thì vẫn làm được.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:saving_streak:vietnamese_parent:2"
@@ -3572,22 +3643,25 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Giữ như này thì cuối tháng mới đỡ khổ.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:saving_streak:vietnamese_parent:3"
   },
   {
-    "id": "plan_saving_streak_vietnamese_parent_any_ung_chu_quan_roi_pha_chuoi_4",
+    "id": "plan_saving_streak_vietnamese_parent_any_ung_co_chu_quan_roi_pha_chuoi_4",
     "trigger": "saving_streak",
     "persona": "vietnamese_parent",
     "severity": "medium",
     "tier": 3,
     "context": "any",
-    "body": "Đừng chủ quan rồi phá chuỗi.",
+    "body": "đừng có chủ quan rồi phá chuỗi.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:saving_streak:vietnamese_parent:4"
@@ -3602,7 +3676,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Tốt. Tiền phải giữ từ những ngày như này.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:saving_streak:vietnamese_parent:5"
@@ -3842,7 +3917,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Giao dịch này hình như trùng rồi, kiểm tra lại.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:duplicate_transaction:vietnamese_parent:1"
@@ -3857,7 +3933,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Đừng lưu bừa, sai ngân sách đấy.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:duplicate_transaction:vietnamese_parent:2"
@@ -3872,7 +3949,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Khoản này có dấu hiệu ghi hai lần.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:duplicate_transaction:vietnamese_parent:3"
@@ -3887,22 +3965,25 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Xem lại trước khi ví bị tính oan.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:duplicate_transaction:vietnamese_parent:4"
   },
   {
-    "id": "plan_duplicate_transaction_vietnamese_parent_any_trung_thi_xoa_bot_ung_e_so_lieu_loan_5",
+    "id": "plan_duplicate_transaction_vietnamese_parent_any_trung_thi_xoa_bot_ung_co_e_so_lieu_l_5",
     "trigger": "duplicate_transaction",
     "persona": "vietnamese_parent",
     "severity": "low",
     "tier": 4,
     "context": "any",
-    "body": "Trùng thì xóa bớt, đừng để số liệu loạn.",
+    "body": "Trùng thì xóa bớt, đừng có để số liệu loạn.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:duplicate_transaction:vietnamese_parent:5"
@@ -4142,22 +4223,25 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Có khoản chưa ghi kìa, kiểm tra lại.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:missed_transaction:vietnamese_parent:1"
   },
   {
-    "id": "plan_missed_transaction_vietnamese_parent_any_ung_e_thieu_giao_dich_roi_cuoi_thang_2",
+    "id": "plan_missed_transaction_vietnamese_parent_any_ung_co_e_thieu_giao_dich_roi_cuoi_th_2",
     "trigger": "missed_transaction",
     "persona": "vietnamese_parent",
     "severity": "high",
     "tier": 2,
     "context": "any",
-    "body": "Đừng để thiếu giao dịch rồi cuối tháng sai hết.",
+    "body": "đừng có để thiếu giao dịch rồi cuối tháng sai hết.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:missed_transaction:vietnamese_parent:2"
@@ -4172,7 +4256,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Soi lại ngân hàng đi, số liệu đang lệch.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:missed_transaction:vietnamese_parent:3"
@@ -4187,7 +4272,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Ghi cho đủ, không thì ngân sách loạn.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:missed_transaction:vietnamese_parent:4"
@@ -4202,7 +4288,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Có vẻ bỏ sót giao dịch rồi đấy.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:missed_transaction:vietnamese_parent:5"
@@ -4442,7 +4529,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Hôm nay tiêu thế nào thì tự nhìn lại đi.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:end_of_day_summary:vietnamese_parent:1"
@@ -4457,7 +4545,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "{count} giao dịch rồi đấy, mai bớt lại.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:end_of_day_summary:vietnamese_parent:2"
@@ -4472,7 +4561,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Cuối ngày rồi, xem lại tiền đi đâu.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:end_of_day_summary:vietnamese_parent:3"
@@ -4487,7 +4577,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Biết ghi lại là tốt, nhưng phải biết sửa nữa.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:end_of_day_summary:vietnamese_parent:4"
@@ -4502,7 +4593,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Mai tiêu có nghĩ hơn hôm nay.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:end_of_day_summary:vietnamese_parent:5"
@@ -4742,22 +4834,25 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Cuối tháng rồi, giữ tiền lại.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:end_of_month_warning:vietnamese_parent:1"
   },
   {
-    "id": "plan_end_of_month_warning_vietnamese_parent_any_con_daysleft_ngay_nua_ung_tieu_bay_2",
+    "id": "plan_end_of_month_warning_vietnamese_parent_any_con_daysleft_ngay_nua_ung_co_tieu_ba_2",
     "trigger": "end_of_month_warning",
     "persona": "vietnamese_parent",
     "severity": "high",
     "tier": 2,
     "context": "any",
-    "body": "Còn {daysLeft} ngày nữa, đừng tiêu bậy.",
+    "body": "Còn {daysLeft} ngày nữa, đừng có tiêu bậy.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:end_of_month_warning:vietnamese_parent:2"
@@ -4772,7 +4867,9 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Sắp hết tháng rồi mà còn vung tay là tự chịu.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:end_of_month_warning:vietnamese_parent:3"
@@ -4787,7 +4884,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Khoản nào không cần thì cắt hết.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:end_of_month_warning:vietnamese_parent:4"
@@ -4802,7 +4900,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Mấy ngày cuối phải biết giữ ví.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:end_of_month_warning:vietnamese_parent:5"
@@ -5042,7 +5141,9 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Bếp ở nhà để trưng à?",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:food context:vietnamese_parent:1"
@@ -5057,7 +5158,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Đừng lấy lý do stress để đốt tiền ăn uống.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:food context:vietnamese_parent:2"
@@ -5072,7 +5174,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Ăn ngoài ít thôi. Ví không chịu nổi đâu.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:food context:vietnamese_parent:3"
@@ -5087,7 +5190,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Cơm nhà không có tội.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:food context:vietnamese_parent:4"
@@ -5102,7 +5206,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Ăn uống kiểu này thì tiền nào cho đủ.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:food context:vietnamese_parent:5"
@@ -5342,7 +5447,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Cắt bớt cafe ngoài quán ngay.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:cafe context:vietnamese_parent:1"
@@ -5357,7 +5463,9 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Đừng có 'ly cuối', câu đấy nghe nhiều rồi.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:cafe context:vietnamese_parent:2"
@@ -5372,7 +5480,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Uống ít lại. Tiền không tự mọc lại đâu.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:cafe context:vietnamese_parent:3"
@@ -5387,7 +5496,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Tự pha ở nhà đi.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:cafe context:vietnamese_parent:4"
@@ -5402,7 +5512,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Ngày nào cũng cafe thì ví nào chịu.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:cafe context:vietnamese_parent:5"
@@ -5642,7 +5753,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Không cần thì đừng mua.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:shopping context:vietnamese_parent:1"
@@ -5657,7 +5769,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Sale không phải giấy phép đốt tiền.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:shopping context:vietnamese_parent:2"
@@ -5672,7 +5785,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Bỏ ngay kiểu thấy rẻ là chốt.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:shopping context:vietnamese_parent:3"
@@ -5687,22 +5801,25 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Tủ còn đồ không mà mua nữa?",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:shopping context:vietnamese_parent:4"
   },
   {
-    "id": "plan_large_transaction_vietnamese_parent_shopping_ung_e_chu_sale_dat_mui_5",
+    "id": "plan_large_transaction_vietnamese_parent_shopping_ung_co_e_chu_sale_dat_mui_5",
     "trigger": "large_transaction",
     "persona": "vietnamese_parent",
     "severity": "high",
     "tier": 4,
     "context": "shopping",
-    "body": "Đừng để chữ sale dắt mũi.",
+    "body": "đừng có để chữ sale dắt mũi.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:shopping context:vietnamese_parent:5"
@@ -5942,7 +6059,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Đi lại nhiều quá rồi, tính lại đi.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:transport context:vietnamese_parent:1"
@@ -5957,7 +6075,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Cuốc nào không cần thì bớt.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:transport context:vietnamese_parent:2"
@@ -5972,7 +6091,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Tiền xe cũng là tiền, đừng coi nhẹ.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:transport context:vietnamese_parent:3"
@@ -5987,7 +6107,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Gộp việc lại rồi đi một lần thôi.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:transport context:vietnamese_parent:4"
@@ -6002,7 +6123,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Không phải cứ lười là gọi xe.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:transport context:vietnamese_parent:5"
@@ -6242,22 +6364,25 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Hóa đơn thì phải trả, nhưng nhớ trừ vào ngân sách.",
     "tags": [
       "plan",
-      "tier_1"
+      "tier_1",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:bill context:vietnamese_parent:1"
   },
   {
-    "id": "plan_bank_transaction_detected_vietnamese_parent_bill_khoan_co_inh_ay_ung_tieu_lan_lung_tu_2",
+    "id": "plan_bank_transaction_detected_vietnamese_parent_bill_khoan_co_inh_ay_ung_co_tieu_lan_lung_2",
     "trigger": "bank_transaction_detected",
     "persona": "vietnamese_parent",
     "severity": "medium",
     "tier": 2,
     "context": "bill",
-    "body": "Khoản cố định đấy, đừng tiêu lẫn lung tung.",
+    "body": "Khoản cố định đấy, đừng có tiêu lẫn lung tung.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone",
+      "strong_language"
     ],
     "origin": "plan",
     "planRef": "14:bill context:vietnamese_parent:2"
@@ -6272,7 +6397,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Trả xong rồi thì bớt khoản khác lại.",
     "tags": [
       "plan",
-      "tier_2"
+      "tier_2",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:bill context:vietnamese_parent:3"
@@ -6287,7 +6413,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Điện nước không đùa được đâu.",
     "tags": [
       "plan",
-      "tier_3"
+      "tier_3",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:bill context:vietnamese_parent:4"
@@ -6302,7 +6429,8 @@ export const PLAN_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
     "body": "Chi phí cố định phải để riêng từ đầu tháng.",
     "tags": [
       "plan",
-      "tier_4"
+      "tier_4",
+      "mom_tone"
     ],
     "origin": "plan",
     "planRef": "14:bill context:vietnamese_parent:5"

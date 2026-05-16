@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,14 @@ import {
   TextInput,
 } from 'react-native';
 import dayjs from 'dayjs';
-import {useAppStore} from '../../app/store';
-import {useThemeColors} from '../../shared/theme';
+import { useAppStore } from '../../app/store';
+import { useThemeColors } from '../../shared/theme';
 import NumericInput from '../../shared/components/NumericInput';
-import {CATEGORY_EMOJI, CATEGORY_ICONS, CATEGORY_LABELS} from '../../shared/constants';
-import {toast} from '../../shared/components/Toast';
-import {generateBudgetRoast} from '../../services/geminiRoastService';
-import {getGeminiApiKeyFromEnv} from '../../config/env';
-import {PERSONA_OPTIONS} from '../../services/notifications';
+import { CATEGORY_EMOJI, CATEGORY_ICONS, CATEGORY_LABELS } from '../../shared/constants';
+import { toast } from '../../shared/components/Toast';
+import { generateBudgetRoast } from '../../services/geminiRoastService';
+import { getGeminiApiKeyFromEnv } from '../../config/env';
+import { PERSONA_OPTIONS } from '../../services/notifications';
 import {
   startPeriodicRoastReminder,
   stopPeriodicRoastReminder,
@@ -95,13 +95,13 @@ const BudgetSettingsScreen: React.FC = () => {
 
   const budgetSummary = budgetRows.reduce(
     (acc, row) => {
-      if (!row.status.exists) {return acc;}
+      if (!row.status.exists) { return acc; }
       acc.totalLimit += row.status.limit;
       acc.totalSpent += row.status.spent;
-      if (row.status.isOver) {acc.overCount += 1;}
+      if (row.status.isOver) { acc.overCount += 1; }
       return acc;
     },
-    {totalLimit: 0, totalSpent: 0, overCount: 0},
+    { totalLimit: 0, totalSpent: 0, overCount: 0 },
   );
 
   const formatCurrency = (amount: number): string =>
@@ -112,10 +112,10 @@ const BudgetSettingsScreen: React.FC = () => {
     [inAppNotifications],
   );
 
-  const getBudgetBadge = (progress: number, isOver: boolean): {text: string; bg: string; color: string} => {
-    if (isOver) {return {text: 'Vượt', bg: '#fde7e3', color: C.err};}
-    if (progress >= 0.8) {return {text: 'Gần chạm', bg: '#fff1d7', color: '#b86f00'};}
-    return {text: 'An toàn', bg: C.soft, color: C.ok};
+  const getBudgetBadge = (progress: number, isOver: boolean): { text: string; bg: string; color: string } => {
+    if (isOver) { return { text: 'Vượt', bg: '#fde7e3', color: C.err }; }
+    if (progress >= 0.8) { return { text: 'Gần chạm', bg: '#fff1d7', color: '#b86f00' }; }
+    return { text: 'An toàn', bg: C.soft, color: C.ok };
   };
 
   const handleOpenBudgetModal = (categoryId: string, currentLimit: number) => {
@@ -137,7 +137,7 @@ const BudgetSettingsScreen: React.FC = () => {
 
   const resolveApiKey = (): string => {
     const userKey = geminiApiKey.trim();
-    if (userKey.length > 0) {return userKey;}
+    if (userKey.length > 0) { return userKey; }
     return getGeminiApiKeyFromEnv();
   };
 
@@ -215,15 +215,15 @@ const BudgetSettingsScreen: React.FC = () => {
       <ScrollView style={s.container} contentContainerStyle={s.content}>
         <Text style={s.sec}>Cảnh báo tiêu nhiều</Text>
         <View style={s.card}>
-          <View style={[s.row, {justifyContent: 'space-between'}]}>
-            <View style={{flex: 1}}>
+          <View style={[s.row, { justifyContent: 'space-between' }]}>
+            <View style={{ flex: 1 }}>
               <Text style={s.label}>Bật cảnh báo theo ngân sách danh mục</Text>
               <Text style={s.desc}>Mỗi mốc sẽ cảnh báo 1 lần/tháng cho từng danh mục.</Text>
             </View>
             <Switch
               value={budgetAlertsEnabled}
               onValueChange={setBudgetAlertsEnabled}
-              trackColor={{false: '#d8ddd4', true: C.pri}}
+              trackColor={{ false: '#d8ddd4', true: C.pri }}
               thumbColor="#ffffff"
             />
           </View>
@@ -235,19 +235,19 @@ const BudgetSettingsScreen: React.FC = () => {
           </View>
         </View>
         <View style={s.card}>
-          <View style={[s.row, {justifyContent: 'space-between'}]}>
-            <View style={{flex: 1}}>
+          <View style={[s.row, { justifyContent: 'space-between' }]}>
+            <View style={{ flex: 1 }}>
               <Text style={s.label}>Bật cảnh báo AI </Text>
               <Text style={s.desc}>Nếu tắt, app luôn dùng template persona nội bộ. Nếu bật, Gemini chỉ dùng khi fallback.</Text>
             </View>
             <Switch
               value={aiBudgetAlertsEnabled}
               onValueChange={setAiBudgetAlertsEnabled}
-              trackColor={{false: '#d8ddd4', true: C.pri}}
+              trackColor={{ false: '#d8ddd4', true: C.pri }}
               thumbColor="#ffffff"
             />
           </View>
-          <Text style={[s.desc, {marginTop: 10}]}>Gemini API Key (demo nội bộ)</Text>
+          <Text style={[s.desc, { marginTop: 10 }]}>Gemini API Key (demo nội bộ)</Text>
           <TextInput
             value={geminiApiKey}
             onChangeText={setGeminiApiKey}
@@ -260,7 +260,7 @@ const BudgetSettingsScreen: React.FC = () => {
           <Text style={s.keyHint}>
             Không hardcode key khi build production. Bản phát hành chính thức cần chuyển qua backend proxy.
           </Text>
-          <Text style={[s.desc, {marginTop: 10}]}>Persona thông báo</Text>
+          <Text style={[s.desc, { marginTop: 10 }]}>Persona thông báo</Text>
           <View style={s.toneRow}>
             {PERSONA_OPTIONS.map(option => (
               <TouchableOpacity
@@ -273,12 +273,12 @@ const BudgetSettingsScreen: React.FC = () => {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={[s.desc, {marginTop: 10}]}>Cường độ hội thoại</Text>
+          <Text style={[s.desc, { marginTop: 10 }]}>Cường độ hội thoại</Text>
           <View style={s.toneRow}>
             {[
-              {id: 'soft', label: 'Nhẹ'},
-              {id: 'normal', label: 'Cân bằng'},
-              {id: 'sharp', label: 'Sắc'},
+              { id: 'soft', label: 'Nhẹ' },
+              { id: 'normal', label: 'Cân bằng' },
+              { id: 'sharp', label: 'Sắc' },
             ].map(option => (
               <TouchableOpacity
                 key={option.id}
@@ -291,11 +291,11 @@ const BudgetSettingsScreen: React.FC = () => {
             ))}
           </View>
           {selectedPersonaMeta && (
-            <View style={[s.card, {marginTop: 10, marginBottom: 0}]}>
+            <View style={[s.card, { marginTop: 10, marginBottom: 0 }]}>
               <Text style={s.label}>{selectedPersonaMeta.title}</Text>
               <Text style={s.desc}>{selectedPersonaMeta.description}</Text>
-              <Text style={[s.desc, {fontStyle: 'italic', marginTop: 4}]}>Nhẹ: “{selectedPersonaMeta.preview}”</Text>
-              <Text style={[s.desc, {fontStyle: 'italic', marginTop: 4}]}>
+              <Text style={[s.desc, { fontStyle: 'italic', marginTop: 4 }]}>Nhẹ: “{selectedPersonaMeta.preview}”</Text>
+              <Text style={[s.desc, { fontStyle: 'italic', marginTop: 4 }]}>
                 Tái phạm: “{selectedPersonaMeta.id === 'advisor'
                   ? 'Nhịp này lặp lại nhiều rồi, mình phanh sớm để đỡ áp lực cuối tháng nhé.'
                   : selectedPersonaMeta.id === 'wallet_pet'
@@ -306,20 +306,20 @@ const BudgetSettingsScreen: React.FC = () => {
               </Text>
             </View>
           )}
-          <Text style={[s.desc, {marginTop: 8}]}>Ngôn từ gắt hơn (chỉ áp dụng cho “Mẹ Việt Nam”)</Text>
-          <View style={[s.row, {justifyContent: 'space-between'}]}>
+          <Text style={[s.desc, { marginTop: 8 }]}>Ngôn từ gắt hơn (chỉ áp dụng cho “Mẹ Việt Nam”)</Text>
+          <View style={[s.row, { justifyContent: 'space-between' }]}>
             <Text style={s.desc}>Cho phép xưng hô gắt hơn</Text>
             <Switch
               value={allowStrongLanguage}
               onValueChange={setAllowStrongLanguage}
-              trackColor={{false: '#d8ddd4', true: C.pri}}
+              trackColor={{ false: '#d8ddd4', true: C.pri }}
               thumbColor="#ffffff"
             />
           </View>
-          <TouchableOpacity style={[s.secondaryBtn, {marginTop: 12, alignSelf: 'flex-start'}]} onPress={handleTestAiAlert}>
+          <TouchableOpacity style={[s.secondaryBtn, { marginTop: 12, alignSelf: 'flex-start' }]} onPress={handleTestAiAlert}>
             <Text style={s.secondaryBtnTxt}>Test AI alert</Text>
           </TouchableOpacity>
-          <View style={[s.row, {marginTop: 10}]}>
+          <View style={[s.row, { marginTop: 10, flexWrap: 'wrap' }]}>
             <TouchableOpacity
               style={s.secondaryBtn}
               onPress={() => {
@@ -364,32 +364,32 @@ const BudgetSettingsScreen: React.FC = () => {
           <Text style={s.desc}>
             Tháng {dayjs().format('MM/YYYY')} • Đã chi {formatCurrency(budgetSummary.totalSpent)} / Hạn mức {formatCurrency(budgetSummary.totalLimit)}
           </Text>
-          <Text style={[s.desc, {marginTop: 4}]}>Danh mục vượt: {budgetSummary.overCount}</Text>
+          <Text style={[s.desc, { marginTop: 4 }]}>Danh mục vượt: {budgetSummary.overCount}</Text>
         </View>
         {budgetRows.map(row => {
           const badge = getBudgetBadge(row.status.progress, row.status.isOver);
           return (
             <View key={row.categoryId} style={s.card}>
               <View style={s.row}>
-                <View style={[s.emojiWrap, row.status.isOver && {backgroundColor: '#fde7e3'}]}>
+                <View style={[s.emojiWrap, row.status.isOver && { backgroundColor: '#fde7e3' }]}>
                   <Text style={s.emoji}>{row.emoji}</Text>
                 </View>
-                <View style={{flex: 1}}>
+                <View style={{ flex: 1 }}>
                   <Text style={s.label}>{row.label}</Text>
                   <Text style={s.desc}>
                     Đã chi: {formatCurrency(row.status.spent)} {row.status.exists ? `• Hạn mức: ${formatCurrency(row.status.limit)}` : '• Chưa đặt hạn mức'}
                   </Text>
                 </View>
-                <View style={[s.badge, {backgroundColor: badge.bg}]}>
-                  <Text style={{color: badge.color, fontSize: 12, fontWeight: '700'}}>{badge.text}</Text>
+                <View style={[s.badge, { backgroundColor: badge.bg }]}>
+                  <Text style={{ color: badge.color, fontSize: 12, fontWeight: '700' }}>{badge.text}</Text>
                 </View>
               </View>
-              <View style={[s.row, {marginTop: 10, justifyContent: 'flex-end'}]}>
+              <View style={[s.row, { marginTop: 10, justifyContent: 'flex-end' }]}>
                 {row.status.exists && (
                   <TouchableOpacity
-                    style={[s.secondaryBtn, {marginRight: 8}]}
+                    style={[s.secondaryBtn, { marginRight: 8 }]}
                     onPress={() => removeCategoryBudget(row.categoryId, monthKey)}>
-                    <Text style={[s.secondaryBtnTxt, {color: C.err}]}>Xóa hạn mức</Text>
+                    <Text style={[s.secondaryBtnTxt, { color: C.err }]}>Xóa hạn mức</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
@@ -404,13 +404,13 @@ const BudgetSettingsScreen: React.FC = () => {
 
         <Text style={s.sec}>Debug Notification Engine</Text>
         <View style={s.card}>
-          <View style={[s.row, {justifyContent: 'space-between'}]}>
+          <View style={[s.row, { justifyContent: 'space-between' }]}>
             <Text style={s.label}>Memory + Recent events</Text>
             <TouchableOpacity style={s.secondaryBtn} onPress={() => setShowDebugPanel(v => !v)}>
               <Text style={s.secondaryBtnTxt}>{showDebugPanel ? 'Ẩn' : 'Hiện'}</Text>
             </TouchableOpacity>
           </View>
-          <View style={[s.row, {marginTop: 10}]}> 
+          <View style={[s.row, { marginTop: 10 }]}>
             <TouchableOpacity
               style={s.secondaryBtn}
               onPress={() => {
@@ -422,7 +422,7 @@ const BudgetSettingsScreen: React.FC = () => {
           </View>
 
           {showDebugPanel && (
-            <View style={{marginTop: 12}}>
+            <View style={{ marginTop: 12 }}>
               <Text style={s.debugLine}>recentTemplateIds: {notificationMemory.recentTemplateIds.length}</Text>
               <Text style={s.debugLine}>recentTexts: {notificationMemory.recentTexts.length}</Text>
               <Text style={s.debugLine}>countTodayByTrigger: {Object.keys(notificationMemory.countTodayByTrigger).length}</Text>
@@ -430,7 +430,7 @@ const BudgetSettingsScreen: React.FC = () => {
               <Text style={s.debugLine}>warningCountByCategory: {Object.keys(notificationMemory.warningCountByCategory).length}</Text>
               <Text style={s.debugLine}>lastResetDate: {notificationMemory.lastResetDate || '-'}</Text>
 
-              <Text style={[s.label, {marginTop: 12}]}>10 thông báo gần nhất</Text>
+              <Text style={[s.label, { marginTop: 12 }]}>10 thông báo gần nhất</Text>
               {recentNotifications.length === 0 ? (
                 <Text style={s.desc}>Chưa có thông báo nào.</Text>
               ) : (
@@ -477,8 +477,8 @@ const BudgetSettingsScreen: React.FC = () => {
               placeholderTextColor={C.sub}
               style={s.modalInput}
             />
-            <View style={[s.row, {justifyContent: 'flex-end', marginTop: 14}]}>
-              <TouchableOpacity style={[s.secondaryBtn, {marginRight: 8}]} onPress={() => setIsBudgetModalVisible(false)}>
+            <View style={[s.row, { justifyContent: 'flex-end', marginTop: 14 }]}>
+              <TouchableOpacity style={[s.secondaryBtn, { marginRight: 8 }]} onPress={() => setIsBudgetModalVisible(false)}>
                 <Text style={s.secondaryBtnTxt}>Hủy</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.btnSmall} onPress={handleSaveBudget}>
@@ -505,21 +505,21 @@ const createStyles = (C: {
   soft: string;
   onDark: string;
 }) => StyleSheet.create({
-  container: {flex: 1, backgroundColor: C.bg},
-  content: {padding: 16, paddingBottom: 40},
-  sec: {color: C.txt, fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginTop: 20, marginBottom: 10, marginLeft: 4},
-  card: {backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: C.border},
-  row: {flexDirection: 'row', alignItems: 'center', gap: 12},
-  emojiWrap: {width: 34, height: 34, borderRadius: 17, backgroundColor: C.muted, alignItems: 'center', justifyContent: 'center'},
-  emoji: {fontSize: 18},
-  label: {color: C.txt, fontSize: 15, fontWeight: '600'},
-  desc: {color: C.sub, fontSize: 12, marginTop: 2},
-  badge: {borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10},
-  btnSmall: {backgroundColor: C.pri, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center'},
-  btnTxt: {color: C.onDark, fontSize: 14, fontWeight: '700'},
-  secondaryBtn: {backgroundColor: C.muted, borderRadius: 10, borderWidth: 1, borderColor: C.border, paddingVertical: 8, paddingHorizontal: 10},
-  secondaryBtnTxt: {color: C.txt, fontSize: 13, fontWeight: '600'},
-  thresholdRow: {flexDirection: 'row', gap: 8, marginTop: 10},
+  container: { flex: 1, backgroundColor: C.bg },
+  content: { padding: 16, paddingBottom: 40 },
+  sec: { color: C.txt, fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginTop: 20, marginBottom: 10, marginLeft: 4 },
+  card: { backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: C.border },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  emojiWrap: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.muted, alignItems: 'center', justifyContent: 'center' },
+  emoji: { fontSize: 18 },
+  label: { color: C.txt, fontSize: 15, fontWeight: '600' },
+  desc: { color: C.sub, fontSize: 12, marginTop: 2 },
+  badge: { borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10 },
+  btnSmall: { backgroundColor: C.pri, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center' },
+  btnTxt: { color: C.onDark, fontSize: 14, fontWeight: '700' },
+  secondaryBtn: { backgroundColor: C.muted, borderRadius: 10, borderWidth: 1, borderColor: C.border, paddingVertical: 8, paddingHorizontal: 10 },
+  secondaryBtnTxt: { color: C.txt, fontSize: 13, fontWeight: '600' },
+  thresholdRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   thresholdPill: {
     borderWidth: 1,
     borderColor: C.border,
@@ -531,10 +531,10 @@ const createStyles = (C: {
     borderRadius: 999,
     backgroundColor: C.muted,
   },
-  modalOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 20},
-  modalCard: {backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, padding: 16},
-  modalTitle: {color: C.txt, fontSize: 16, fontWeight: '700', marginBottom: 10},
-  modalInput: {borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: C.txt, fontSize: 15, backgroundColor: C.muted},
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 20 },
+  modalCard: { backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, padding: 16 },
+  modalTitle: { color: C.txt, fontSize: 16, fontWeight: '700', marginBottom: 10 },
+  modalInput: { borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: C.txt, fontSize: 15, backgroundColor: C.muted },
   aiKeyInput: {
     marginTop: 6,
     borderWidth: 1,
@@ -546,8 +546,8 @@ const createStyles = (C: {
     paddingVertical: 10,
     fontSize: 14,
   },
-  keyHint: {marginTop: 8, color: C.sub, fontSize: 11, lineHeight: 16},
-  toneRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8},
+  keyHint: { marginTop: 8, color: C.sub, fontSize: 11, lineHeight: 16 },
+  toneRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   toneChip: {
     borderWidth: 1,
     borderColor: C.border,
@@ -560,9 +560,9 @@ const createStyles = (C: {
     borderColor: C.pri,
     backgroundColor: C.soft,
   },
-  toneChipTxt: {color: C.txt, fontSize: 12, fontWeight: '600'},
-  toneChipTxtActive: {color: C.pri},
-  debugLine: {color: C.sub, fontSize: 12, marginTop: 4},
+  toneChipTxt: { color: C.txt, fontSize: 12, fontWeight: '600' },
+  toneChipTxtActive: { color: C.pri },
+  debugLine: { color: C.sub, fontSize: 12, marginTop: 4 },
   debugItem: {
     marginTop: 8,
     borderWidth: 1,
@@ -571,8 +571,8 @@ const createStyles = (C: {
     padding: 10,
     backgroundColor: C.muted,
   },
-  debugTitle: {color: C.txt, fontSize: 13, fontWeight: '700'},
-  debugMeta: {color: C.sub, fontSize: 11, marginTop: 3},
+  debugTitle: { color: C.txt, fontSize: 13, fontWeight: '700' },
+  debugMeta: { color: C.sub, fontSize: 11, marginTop: 3 },
 });
 
 export default BudgetSettingsScreen;

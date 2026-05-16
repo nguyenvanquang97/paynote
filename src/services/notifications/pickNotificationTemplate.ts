@@ -86,6 +86,12 @@ export const pickNotificationTemplate = (
     const bTierPenalty = Math.abs((b.tier || 1) - input.escalationTier);
     if (aTierPenalty !== bTierPenalty) {return aTierPenalty - bTierPenalty;}
 
+    if (input.persona === 'vietnamese_parent') {
+      const aMomPenalty = a.tags?.includes('mom_tone') ? 0 : 1;
+      const bMomPenalty = b.tags?.includes('mom_tone') ? 0 : 1;
+      if (aMomPenalty !== bMomPenalty) {return aMomPenalty - bMomPenalty;}
+    }
+
     const aOriginPenalty = a.origin === 'plan' ? 0 : 1;
     const bOriginPenalty = b.origin === 'plan' ? 0 : 1;
     if (aOriginPenalty !== bOriginPenalty) {return aOriginPenalty - bOriginPenalty;}

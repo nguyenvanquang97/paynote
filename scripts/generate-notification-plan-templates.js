@@ -46,12 +46,45 @@ const CONTEXT_TRIGGER = {
 const PERSONAS = new Set(['advisor', 'wallet_pet', 'toxic_friend', 'vietnamese_parent']);
 const CONTEXTS = new Set(['food', 'cafe', 'shopping', 'transport', 'bill', 'rent']);
 
+const STRONG_LANGUAGE_MARKERS = [
+  'mày',
+  'tao',
+  'đừng có',
+  'không thương lượng',
+  'tự chịu',
+  'tiền mọc trên cây',
+  'bếp ở nhà để trưng',
+];
+
 const isStrongLanguageMessage = message => {
   const lower = message.toLowerCase();
-  return (
-    lower.includes('mày') ||
-    lower.includes('tao')
-  );
+  return STRONG_LANGUAGE_MARKERS.some(marker => lower.includes(marker));
+};
+
+const sharpenVietnameseParentMessage = message => {
+  let out = message.trim();
+  const replacements = [
+    [/tiêu thì nhìn ngân sách một chút\./gi, 'Tiền mọc trên cây à? Nhìn ngân sách rồi hẵng tiêu.'],
+    [/từ giờ bớt khoản không cần lại\./gi, 'Không cần thì cắt ngay.'],
+    [/liệu mà giữ tay\./gi, 'Giữ tay lại ngay.'],
+    [/đừng để đến cuối tháng rồi lại kêu\./gi, 'Cuối tháng đừng than hết tiền nữa.'],
+    [/mới nửa tháng\/nửa ngân sách đã thế này rồi đấy\./gi, 'Mới nửa tháng mà tiêu kiểu này là cuối tháng nhịn.'],
+    [/đừng viện cớ/gi, 'đừng có viện cớ'],
+    [/đừng để /gi, 'đừng có để '],
+    [/đừng tiêu /gi, 'đừng có tiêu '],
+    [/đừng chủ quan/gi, 'đừng có chủ quan'],
+    [/ nhỉ\./gi, '.'],
+    [/ nhé\./gi, '.'],
+    [/ một chút\./gi, ' ngay.'],
+  ];
+  for (const [pattern, replacement] of replacements) {
+    out = out.replace(pattern, replacement);
+  }
+  out = out
+    .replace(/Đừng có có/g, 'Đừng có')
+    .replace(/đừng có có/g, 'đừng có')
+    .replace(/Cuối tháng Đừng có/g, 'Cuối tháng đừng có');
+  return out;
 };
 
 const slug = value => value
@@ -107,18 +140,22 @@ const flush = () => {
       const key = `${trigger}:${currentPersona}:${scope.context}:${message}`;
       if (seen.has(key)) return;
       seen.add(key);
+      const normalizedMessage = currentPersona === 'vietnamese_parent'
+        ? sharpenVietnameseParentMessage(message)
+        : message;
       templates.push({
-        id: `plan_${trigger}_${currentPersona}_${scope.context}_${slug(message).slice(0, 36)}_${index + 1}`,
+        id: `plan_${trigger}_${currentPersona}_${scope.context}_${slug(normalizedMessage).slice(0, 36)}_${index + 1}`,
         trigger,
         persona: currentPersona,
         severity: SEVERITY_BY_TRIGGER[trigger],
         tier: tierForIndex(index),
         context: scope.context,
-        body: message,
+        body: normalizedMessage,
         tags: [
           'plan',
           `tier_${tierForIndex(index)}`,
-          ...(currentPersona === 'vietnamese_parent' && isStrongLanguageMessage(message) ? ['strong_language'] : []),
+          ...(currentPersona === 'vietnamese_parent' ? ['mom_tone'] : []),
+          ...(currentPersona === 'vietnamese_parent' && isStrongLanguageMessage(normalizedMessage) ? ['strong_language'] : []),
         ],
         origin: 'plan',
         planRef: `14:${currentSection}:${currentPersona}:${index + 1}`,
