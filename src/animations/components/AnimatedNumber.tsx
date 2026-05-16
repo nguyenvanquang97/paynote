@@ -5,6 +5,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Text, StyleSheet, type StyleProp, type TextStyle} from 'react-native';
 import Animated, {
+  Easing,
   useSharedValue,
   useAnimatedStyle,
   withSequence,
@@ -55,10 +56,13 @@ const getAdaptiveDuration = (from: number, to: number, fallback: number): number
 };
 
 const FlowEasing = {
-  smooth: (t: number): number => 1 - (1 - t) * (1 - t) * (1 - t),
-  standard: (t: number): number => t * t * (3 - 2 * t),
-  decelerate: (t: number): number => 1 - (1 - t) * (1 - t),
+  smooth: Easing.bezier(0.22, 1, 0.36, 1),
+  standard: Easing.bezier(0.4, 0, 0.2, 1),
+  decelerate: Easing.out(Easing.quad),
 } as const;
+
+const toFlowEasing = (fn: unknown): ((t: number) => number) =>
+  fn as (t: number) => number;
 
 const getNumberFormat = (format: AnimatedNumberFormat): Intl.NumberFormatOptions => {
   switch (format) {
@@ -159,15 +163,15 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
         mask
         spinTiming={{
           duration: timingDuration,
-          easing: FlowEasing.smooth,
+          easing: toFlowEasing(FlowEasing.smooth),
         }}
         transformTiming={{
           duration: timingDuration,
-          easing: FlowEasing.standard,
+          easing: toFlowEasing(FlowEasing.standard),
         }}
         opacityTiming={{
           duration: Math.min(timingDuration, 260),
-          easing: FlowEasing.decelerate,
+          easing: toFlowEasing(FlowEasing.decelerate),
         }}
       />
     </Animated.View>

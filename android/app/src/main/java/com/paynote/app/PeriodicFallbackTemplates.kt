@@ -3,6 +3,15 @@ package com.paynote.app
 import kotlin.random.Random
 
 object PeriodicFallbackTemplates {
+    private fun poolByTier(base: List<String>, tier: Int): List<String> {
+        if (base.isEmpty()) return base
+        return when {
+            tier >= 4 -> base.takeLast(10).ifEmpty { base }
+            tier == 3 -> base.drop(10).take(10).ifEmpty { base }
+            tier == 2 -> base.drop(5).take(10).ifEmpty { base }
+            else -> base.take(10).ifEmpty { base }
+        }
+    }
     private val gentle = listOf(
         "Mình nhắc nhẹ thôi, hôm nay tiêu chậm một nhịp thì cuối tháng sẽ dễ thở hơn nhiều.",
         "Bạn vẫn đang kiểm soát được, chỉ cần bớt vài khoản cảm xúc để ví ổn định lại.",
@@ -135,13 +144,27 @@ object PeriodicFallbackTemplates {
         "Tao chốt hạ: mày muốn ổn thì phải kỷ luật, không có con đường tắt nào hết."
     )
 
-    fun pick(toneMode: String): String {
-        val pool = when (toneMode) {
+    private val parentSoft = listOf(
+        "Tiền không tự sinh ra đâu, khoản nào không cần thì dừng lại nhé.",
+        "Giữ kỷ luật chi tiêu một chút, cuối tháng sẽ đỡ căng hơn nhiều.",
+        "Mình nhắc nghiêm túc: ưu tiên khoản cần trước, khoản vui để sau.",
+        "Chi tiêu có kế hoạch đi, đừng để cuối tháng lại mệt vì số dư.",
+        "Đến lúc siết lại nhịp chi rồi, mua theo hứng sẽ trả giá bằng áp lực.",
+        "Phần nào không thật sự cần thì tạm hoãn, ví đang cần được bảo toàn.",
+        "Đừng quyết định quá nhanh khi chưa nhìn lại ngân sách hiện tại.",
+        "Cắt bớt vài khoản linh tinh hôm nay sẽ cứu cả phần còn lại của tháng.",
+        "Tiêu ít lại một nhịp không thiệt đâu, đó là cách giữ tài chính ổn định.",
+        "Lần này mình dừng đúng lúc nhé, để kế hoạch tài chính còn hiệu lực."
+    )
+
+    fun pick(toneMode: String, allowStrongLanguage: Boolean, tier: Int): String {
+        val basePool = when (toneMode) {
             "gentle" -> gentle
             "cute" -> cute
-            "angry", "strict" -> angry
+            "angry", "strict" -> if (allowStrongLanguage) angry else parentSoft
             else -> sarcastic
         }
+        val pool = poolByTier(basePool, tier)
         return pool[Random.nextInt(pool.size)]
     }
 }

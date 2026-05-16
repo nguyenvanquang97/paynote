@@ -32,7 +32,7 @@ interface ToastStore {
 
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
-  show: (message, type = 'info', duration = 3000) => {
+  show: (message, type = 'info', duration = 6000) => {
     const id = `toast_${Date.now()}_${Math.random()}`;
     set(s => ({ toasts: [...s.toasts.slice(-2), { id, message, type, duration }] }));
   },
@@ -96,7 +96,7 @@ const ToastItem: React.FC<{ item: ToastItem }> = ({ item }) => {
     ]).start();
 
     // auto dismiss
-    const timer = setTimeout(() => dismiss(), item.duration ?? 3000);
+    const timer = setTimeout(() => dismiss(), item.duration ?? 6000);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -122,6 +122,7 @@ const ToastItem: React.FC<{ item: ToastItem }> = ({ item }) => {
         hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}
         style={styles.closeBtn}>
         <AppIcon name="close" size={16} color={C.text} />
+        <Text style={styles.closeTxt}>Đóng</Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -201,10 +202,20 @@ const createStyles = (C: {
     lineHeight: 20,
   },
   closeBtn: {
-    width: 24,
-    height: 24,
+    minWidth: 52,
+    height: 28,
+    paddingHorizontal: 6,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.12)',
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: 3,
     justifyContent: 'center',
+  },
+  closeTxt: {
+    color: C.text,
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

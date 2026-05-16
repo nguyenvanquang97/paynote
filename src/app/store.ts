@@ -9,6 +9,16 @@ import {
 } from '../database';
 import dayjs from 'dayjs';
 import {createMMKV} from 'react-native-mmkv';
+import type {
+  NotificationCategoryContext,
+  NotificationEscalationTier,
+  NotificationIntensity,
+  NotificationMemory,
+  NotificationPersona,
+  NotificationSeverity,
+  NotificationTrigger,
+} from '../services/notifications';
+import {loadNotificationMemory as loadNotificationMemoryFromService, normalizePersona} from '../services/notifications';
 
 const storage = createMMKV();
 
@@ -44,7 +54,7 @@ export interface BudgetStatus {
   exists: boolean;
 }
 
-export type BudgetAlertThreshold = 80 | 100 | 120;
+export type BudgetAlertThreshold = 50 | 80 | 100 | 120;
 
 export interface BudgetAlertRecord {
   triggeredAt: number;
@@ -59,8 +69,15 @@ export interface InAppNotificationItem {
   type: 'budget_alert' | 'periodic_reminder';
   title: string;
   message: string;
-  source?: 'budget_alert_ai' | 'budget_alert_template' | 'periodic_reminder_ai' | 'periodic_reminder_template';
-  toneTag?: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry';
+  source?: 'template' | 'ai_fallback' | 'native_periodic';
+  toneTag?: NotificationPersona;
+  trigger?: NotificationTrigger;
+  severity?: NotificationSeverity;
+  categoryContext?: NotificationCategoryContext;
+  templateId?: string;
+  templateOrigin?: 'plan' | 'generated' | 'native';
+  escalationTier?: NotificationEscalationTier;
+  scoreMeta?: string;
   categoryId?: string;
   monthKey?: string;
   threshold?: BudgetAlertThreshold;
@@ -111,8 +128,11 @@ interface AppState {
   categoryExpenseByMonth: Record<string, Record<string, number>>;
   budgetAlertsEnabled: boolean;
   aiBudgetAlertsEnabled: boolean;
-  aiToneMode: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry';
+  notificationPersona: NotificationPersona;
+  notificationIntensity: NotificationIntensity;
+  allowStrongLanguage: boolean;
   geminiApiKey: string;
+  notificationMemory: NotificationMemory;
   budgetAlertHistory: BudgetAlertHistory;
   inAppNotifications: InAppNotificationItem[];
   themeMode: ThemeMode;
@@ -142,9 +162,13 @@ interface AppState {
   setBudgetAlertsEnabled: (enabled: boolean) => void;
   loadAiAlertSettings: () => void;
   setAiBudgetAlertsEnabled: (enabled: boolean) => void;
-  setAiToneMode: (mode: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry') => void;
+  setNotificationPersona: (mode: NotificationPersona) => void;
+  setNotificationIntensity: (mode: NotificationIntensity) => void;
+  setAllowStrongLanguage: (enabled: boolean) => void;
   setGeminiApiKey: (key: string) => void;
   loadBudgetAlertHistory: () => void;
+  loadNotificationMemory: () => void;
+  setNotificationMemory: (memory: NotificationMemory) => void;
   markBudgetAlertTriggered: (
     monthKey: string,
     categoryId: string,
@@ -187,8 +211,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   categoryExpenseByMonth: {},
   budgetAlertsEnabled: true,
   aiBudgetAlertsEnabled: true,
-  aiToneMode: 'sarcastic_strong',
+  notificationPersona: 'advisor',
+  notificationIntensity: 'normal',
+  allowStrongLanguage: false,
   geminiApiKey: '',
+  notificationMemory: {
+    recentTemplateIds: [],
+    recentTexts: [],
+    lastOpeningPhrases: [],
+    lastShownAtByTemplateId: {},
+    lastShownAtByTriggerCategory: {},
+    countTodayByCategory: {},
+    countTodayByTrigger: {},
+    warningCountByCategory: {},
+    violationVelocityByCategory: {},
+    recoveryStreakByCategory: {},
+    recentStructureHashes: [],
+    lastResetDate: dayjs().format('YYYY-MM-DD'),
+  },
   budgetAlertHistory: {},
   inAppNotifications: [],
   themeMode: DEFAULT_THEME_ID,
@@ -490,13 +530,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadAiAlertSettings: () => {
     const enabled = storage.getBoolean('ai_budget_alerts_enabled');
     const tone = storage.getString('ai_tone_mode');
+    const persona = storage.getString('notification_persona');
+    const strong = storage.getBoolean('allow_strong_language');
+    const intensity = storage.getString('notification_intensity');
     const apiKey = storage.getString('gemini_api_key');
-    const isValidTone = (value: unknown): value is 'gentle' | 'cute' | 'sarcastic_strong' | 'angry' =>
-      value === 'gentle' || value === 'cute' || value === 'sarcastic_strong' || value === 'angry';
-    const normalizedTone = tone === 'strict' ? 'angry' : tone;
+    const normalizedFromLegacy = normalizePersona(tone);
+    const normalizedPersona = normalizePersona(persona || normalizedFromLegacy);
     set({
       aiBudgetAlertsEnabled: typeof enabled === 'boolean' ? enabled : true,
-      aiToneMode: isValidTone(normalizedTone) ? normalizedTone : 'sarcastic_strong',
+      notificationPersona: normalizedPersona,
+      notificationIntensity:
+        intensity === 'soft' || intensity === 'sharp' || intensity === 'normal'
+          ? intensity
+          : 'normal',
+      allowStrongLanguage: typeof strong === 'boolean' ? strong : false,
       geminiApiKey: typeof apiKey === 'string' ? apiKey : '',
     });
   },
@@ -506,9 +553,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({aiBudgetAlertsEnabled: enabled});
   },
 
-  setAiToneMode: (mode) => {
-    storage.set('ai_tone_mode', mode);
-    set({aiToneMode: mode});
+  setNotificationPersona: (mode) => {
+    storage.set('notification_persona', mode);
+    set({notificationPersona: mode});
+  },
+  setNotificationIntensity: (mode) => {
+    storage.set('notification_intensity', mode);
+    set({notificationIntensity: mode});
+  },
+
+  setAllowStrongLanguage: (enabled) => {
+    storage.set('allow_strong_language', enabled);
+    set({allowStrongLanguage: enabled});
   },
 
   setGeminiApiKey: (key: string) => {
@@ -536,6 +592,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (e) {
       console.error('Failed to parse budget alert history', e);
     }
+  },
+
+  loadNotificationMemory: () => {
+    set({notificationMemory: loadNotificationMemoryFromService()});
+  },
+
+  setNotificationMemory: (memory) => {
+    set({notificationMemory: memory});
   },
 
   markBudgetAlertTriggered: (monthKey, categoryId, threshold, payload) => {
@@ -585,20 +649,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       ).map((item: any) => ({
         ...item,
         source:
-          item.source === 'budget_alert_ai' ||
-          item.source === 'budget_alert_template' ||
-          item.source === 'periodic_reminder_ai' ||
-          item.source === 'periodic_reminder_template'
+          item.source === 'template' ||
+          item.source === 'ai_fallback' ||
+          item.source === 'native_periodic'
             ? item.source
-            : undefined,
-        toneTag:
-          item.toneTag === 'gentle' ||
-          item.toneTag === 'cute' ||
-          item.toneTag === 'sarcastic_strong' ||
-          item.toneTag === 'angry' ||
-          item.toneTag === 'strict'
-            ? (item.toneTag === 'strict' ? 'angry' : item.toneTag)
-            : undefined,
+            : item.source === 'budget_alert_ai' || item.source === 'periodic_reminder_ai'
+              ? 'ai_fallback'
+              : item.source === 'budget_alert_template' || item.source === 'periodic_reminder_template'
+                ? 'template'
+                : undefined,
+        toneTag: typeof item.toneTag === 'string' ? normalizePersona(item.toneTag) : undefined,
       })) as InAppNotificationItem[];
       set({inAppNotifications: sanitized.slice(0, 100)});
       storage.set('in_app_notifications', JSON.stringify(sanitized.slice(0, 100)));
@@ -687,6 +747,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     storage.remove('budget_alerts_enabled');
     storage.remove('ai_budget_alerts_enabled');
     storage.remove('ai_tone_mode');
+    storage.remove('notification_persona');
+    storage.remove('notification_intensity');
+    storage.remove('allow_strong_language');
     storage.remove('gemini_api_key');
     storage.remove('in_app_notifications');
     storage.remove('theme_mode');
@@ -702,8 +765,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       categoryExpenseByMonth: {},
       budgetAlertsEnabled: true,
       aiBudgetAlertsEnabled: true,
-      aiToneMode: 'sarcastic_strong',
+      notificationPersona: 'advisor',
+      notificationIntensity: 'normal',
+      allowStrongLanguage: false,
       geminiApiKey: '',
+      notificationMemory: {
+        recentTemplateIds: [],
+        recentTexts: [],
+        lastOpeningPhrases: [],
+        lastShownAtByTemplateId: {},
+        lastShownAtByTriggerCategory: {},
+        countTodayByCategory: {},
+        countTodayByTrigger: {},
+        warningCountByCategory: {},
+        violationVelocityByCategory: {},
+        recoveryStreakByCategory: {},
+        recentStructureHashes: [],
+        lastResetDate: dayjs().format('YYYY-MM-DD'),
+      },
       budgetAlertHistory: {},
       inAppNotifications: [],
       themeMode: DEFAULT_THEME_ID,

@@ -22,6 +22,9 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "PeriodicRoastReceiver"
         private const val MODEL = "gemini-2.5-flash-lite"
+        private const val PREF_LAST_NATIVE_PERIODIC_AT = "last_native_periodic_at"
+        private const val PREF_NATIVE_PERIODIC_COUNT = "native_periodic_count"
+        private const val PREF_NATIVE_PERIODIC_DATE = "native_periodic_date"
     }
 
     private fun ensureBudgetAlertChannel(context: Context) {
@@ -52,11 +55,38 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
                 val prefs = context.getSharedPreferences(NotificationBridge.PERIODIC_PREFS, Context.MODE_PRIVATE)
                 val aiEnabled = prefs.getBoolean(NotificationBridge.PERIODIC_PREF_AI_ENABLED, true)
                 val apiKey = prefs.getString(NotificationBridge.PERIODIC_PREF_API_KEY, "")?.trim().orEmpty()
-                val toneModeRaw = prefs.getString(NotificationBridge.PERIODIC_PREF_TONE_MODE, "sarcastic_strong").orEmpty()
-                val toneMode = if (toneModeRaw == "strict") "angry" else toneModeRaw
+                val allowStrongLanguage = prefs.getBoolean(NotificationBridge.PERIODIC_PREF_ALLOW_STRONG, false)
+                val intensity = prefs.getString(NotificationBridge.PERIODIC_PREF_INTENSITY, "normal").orEmpty()
+                val toneModeRaw = prefs.getString(NotificationBridge.PERIODIC_PREF_TONE_MODE, "advisor").orEmpty()
+                val toneMode = when (toneModeRaw) {
+                    "advisor", "gentle" -> "gentle"
+                    "wallet_pet", "cute" -> "cute"
+                    "vietnamese_parent", "angry", "strict" -> "angry"
+                    else -> "sarcastic"
+                }
+                val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                    .format(java.util.Date())
+                val lastDate = prefs.getString(PREF_NATIVE_PERIODIC_DATE, "") ?: ""
+                val nextCount = if (lastDate == today) (prefs.getInt(PREF_NATIVE_PERIODIC_COUNT, 0) + 1) else 1
+                val tier = when {
+                    nextCount >= 7 -> 4
+                    nextCount >= 5 -> 3
+                    nextCount >= 3 -> 2
+                    else -> 1
+                }
+                val adjustedTier = when (intensity) {
+                    "sharp" -> (tier + 1).coerceAtMost(4)
+                    "soft" -> (tier - 1).coerceAtLeast(1)
+                    else -> tier
+                }
 
-                val fallbackMessage = PeriodicFallbackTemplates.pick(toneMode)
-                val aiMessage = if (aiEnabled && apiKey.isNotBlank()) requestGeminiRoast(apiKey, toneMode) else null
+                val lastAt = prefs.getLong(PREF_LAST_NATIVE_PERIODIC_AT, 0L)
+                if (System.currentTimeMillis() - lastAt < 10_000L) {
+                    return@thread
+                }
+
+                val fallbackMessage = PeriodicPlanFallbackTemplates.pick(toneMode, allowStrongLanguage, adjustedTier)
+                val aiMessage = if (aiEnabled && apiKey.isNotBlank()) requestGeminiRoast(apiKey, toneMode, allowStrongLanguage, intensity) else null
                 val message = aiMessage ?: fallbackMessage
 
                 val notification = NotificationCompat.Builder(context, "budget_alerts")
@@ -73,6 +103,11 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
                     (System.currentTimeMillis() % Int.MAX_VALUE).toInt(),
                     notification
                 )
+                prefs.edit().putLong(PREF_LAST_NATIVE_PERIODIC_AT, System.currentTimeMillis()).apply()
+                prefs.edit()
+                    .putString(PREF_NATIVE_PERIODIC_DATE, today)
+                    .putInt(PREF_NATIVE_PERIODIC_COUNT, nextCount)
+                    .apply()
 
                 NotificationBridge.schedulePeriodicRoastReminder(
                     context,
@@ -86,7 +121,7 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun requestGeminiRoast(apiKey: String, toneMode: String): String? {
+    private fun requestGeminiRoast(apiKey: String, toneMode: String, allowStrongLanguage: Boolean, intensity: String): String? {
         return try {
             val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent?key=${apiKey}")
             val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -99,12 +134,16 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
             val toneInstruction = when (toneMode) {
                 "gentle" -> "Giọng nhẹ nhàng, đồng cảm, khích lệ."
                 "cute" -> "Giọng dễ thương, dí dỏm."
-                "angry", "strict" -> "Giọng cáu gắt rất mạnh, xưng tao-mày, mắng thẳng như người thật nhưng tuyệt đối không chửi bậy."
+                "angry", "strict" -> if (allowStrongLanguage)
+                    "Giọng cáu gắt rất mạnh, có thể xưng mày, mắng thẳng như người thật nhưng tuyệt đối không chửi bậy."
+                else
+                    "Giọng phụ huynh nghiêm khắc, gắt vừa, tuyệt đối không chửi bậy hay xưng hô nặng."
                 else -> "Giọng xéo xắc mạnh, châm biếm thâm nhưng văn minh."
             }
             val prompt = """
                 Bạn là trợ lý tài chính nói tiếng Việt.
                 Tone: $toneInstruction
+                Intensity: ${if (intensity == "sharp") "gắt rõ hơn" else if (intensity == "soft") "nhẹ hơn" else "cân bằng"}.
                 Viết đúng 1 câu ngắn nhắc người dùng tiết chế chi tiêu, nêu hậu quả tài chính rõ hơn.
                 Không chửi thề, không xúc phạm cá nhân.
                 Trả về JSON: {"message":"..."}.

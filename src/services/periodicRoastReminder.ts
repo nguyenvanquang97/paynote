@@ -4,6 +4,8 @@ import {toMonthKey, useAppStore, type BudgetAlertThreshold} from '../app/store';
 import {showBudgetAlertNotification} from '../native';
 import {generateBudgetRoast} from './geminiRoastService';
 import {getGeminiApiKeyFromEnv} from '../config/env';
+import {detectCategoryContext, generateNotificationMessage} from './notifications';
+import {runPhase2PeriodicSweep} from './notificationPhase2';
 
 const PERIOD_MS = 60 * 60 * 1000;
 let lastReminderAt = 0;
@@ -25,7 +27,8 @@ const toPercent = (spent: number, limit: number): number => (limit <= 0 ? 0 : (s
 const pickThreshold = (percent: number): BudgetAlertThreshold => {
   if (percent >= 120) {return 120;}
   if (percent >= 100) {return 100;}
-  return 80;
+  if (percent >= 80) {return 80;}
+  return 50;
 };
 
 const getResolvedGeminiKey = (): string => {
@@ -119,21 +122,43 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
     }
   }
 
-  if (!winner) {return;}
+  if (!winner) {
+    await runPhase2PeriodicSweep();
+    return;
+  }
   const winnerData = winner;
 
   const threshold = pickThreshold(toPercent(winnerData.spent, winnerData.limit));
-  const aiEnabled = refreshed.aiBudgetAlertsEnabled;
   const defaultTitle = 'Nhắc nhở chi tiêu định kỳ';
-  const defaultMessage = `Danh mục ${winnerData.label} đang ở ${Math.round(winnerData.progress * 100)}% ngân sách (${new Intl.NumberFormat('vi-VN').format(winnerData.spent)} ₫ / ${new Intl.NumberFormat('vi-VN').format(winnerData.limit)} ₫). Chi vừa thôi, đừng để ví phản chủ.`;
+  const defaultMessage = `Danh mục ${winnerData.label} đang ở ${Math.round(winnerData.progress * 100)}% ngân sách (${new Intl.NumberFormat('vi-VN').format(winnerData.spent)} ₫ / ${new Intl.NumberFormat('vi-VN').format(winnerData.limit)} ₫).`;
 
   let title = defaultTitle;
   let message = defaultMessage;
-  let source: 'periodic_reminder_ai' | 'periodic_reminder_template' = 'periodic_reminder_template';
-  let toneTag: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry' | undefined;
+  let source: 'template' | 'ai_fallback' | 'native_periodic' = 'native_periodic';
+  let templateId: string | undefined;
 
-  if (aiEnabled) {
-      const roast = await generateBudgetRoast({
+  const generated = generateNotificationMessage({
+    trigger: 'bank_transaction_detected',
+    persona: refreshed.notificationPersona,
+    categoryLabel: winnerData.label,
+    severity: winnerData.progress >= 1.2 ? 'high' : 'medium',
+    context: {
+      categoryLabel: winnerData.label,
+      percent: Math.round(winnerData.progress * 100),
+      spentText: `${new Intl.NumberFormat('vi-VN').format(winnerData.spent)} ₫`,
+      limitText: `${new Intl.NumberFormat('vi-VN').format(winnerData.limit)} ₫`,
+    },
+    intensity: refreshed.notificationIntensity,
+    allowStrongLanguage: refreshed.allowStrongLanguage,
+  });
+
+  if (generated?.message) {
+    title = generated.title;
+    message = generated.message;
+    source = 'native_periodic';
+    templateId = generated.templateId;
+  } else if (refreshed.aiBudgetAlertsEnabled) {
+    const roast = await generateBudgetRoast({
       apiKey: getResolvedGeminiKey(),
       categoryId: winnerData.categoryId,
       categoryLabel: winnerData.label,
@@ -142,12 +167,12 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
       progress: winnerData.progress,
       threshold,
       monthKey,
-      toneMode: refreshed.aiToneMode,
+      persona: refreshed.notificationPersona,
+      allowStrongLanguage: refreshed.allowStrongLanguage,
     });
     title = roast.title || defaultTitle;
     message = roast.message || defaultMessage;
-    source = roast.fallbackUsed ? 'periodic_reminder_template' : 'periodic_reminder_ai';
-    toneTag = roast.toneTag;
+    source = 'ai_fallback';
   }
 
   refreshed.pushInAppNotification({
@@ -155,10 +180,18 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
     title,
     message,
     source,
-    toneTag,
+    toneTag: refreshed.notificationPersona,
+    templateId,
+    templateOrigin: generated?.templateOrigin,
+    escalationTier: generated?.escalationTier,
+    scoreMeta: generated?.scoreMeta,
+    trigger: 'bank_transaction_detected',
+    severity: winnerData.progress >= 1.2 ? 'high' : 'medium',
+    categoryContext: detectCategoryContext(winnerData.label),
     categoryId: winnerData.categoryId,
     monthKey,
     threshold,
   });
   showBudgetAlertNotification(title, message);
+  await runPhase2PeriodicSweep();
 };

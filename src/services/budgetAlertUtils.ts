@@ -1,6 +1,6 @@
 import type {BudgetAlertThreshold} from '../app/store';
 
-export const BUDGET_ALERT_THRESHOLDS: BudgetAlertThreshold[] = [80, 100, 120];
+export const BUDGET_ALERT_THRESHOLDS: BudgetAlertThreshold[] = [50, 80, 100, 120];
 
 export const pickBudgetAlertThreshold = (
   percent: number,
@@ -11,4 +11,3 @@ export const pickBudgetAlertThreshold = (
     .find(t => percent >= t && !hasTriggered(t));
   return threshold || null;
 };
-

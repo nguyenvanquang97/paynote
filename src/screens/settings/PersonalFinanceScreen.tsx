@@ -219,7 +219,7 @@ const PersonalFinanceScreen: React.FC = () => {
                   const [alertMonthKey, alertCategoryId, thresholdText] = segments;
                   const threshold = Number(thresholdText);
                   if (
-                    (threshold !== 80 && threshold !== 100 && threshold !== 120) ||
+                    (threshold !== 50 && threshold !== 80 && threshold !== 100 && threshold !== 120) ||
                     typeof value !== 'object' ||
                     value === null
                   ) {
@@ -231,7 +231,7 @@ const PersonalFinanceScreen: React.FC = () => {
                   markBudgetAlertTriggered(
                     alertMonthKey,
                     alertCategoryId,
-                    threshold as 80 | 100 | 120,
+                    threshold as 50 | 80 | 100 | 120,
                     { spent, limit },
                   );
                 });

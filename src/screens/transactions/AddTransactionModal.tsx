@@ -16,7 +16,10 @@ import {
 import {CATEGORY_ICONS, CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import {insertTransaction, updateTransaction} from '../../database';
 import {useAppStore} from '../../app/store';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerAndroid,
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
 import type {Transaction} from '../../shared/types';
 import {useThemeColors} from '../../shared/theme';
@@ -107,9 +110,38 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
   }, [type, categories, category]);
 
   const handleClose = () => {
+    setShowDatePicker(false);
     bottomSheetRef.current?.dismiss();
     resetForm();
     onClose?.();
+  };
+
+  const openAndroidDateTimePicker = () => {
+    DateTimePickerAndroid.open({
+      value: date,
+      mode: 'date',
+      is24Hour: true,
+      onChange: (event: DateTimePickerEvent, selectedDate?: Date) => {
+        if (event.type !== 'set' || !selectedDate) {
+          return;
+        }
+        const next = new Date(date);
+        next.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        DateTimePickerAndroid.open({
+          value: next,
+          mode: 'time',
+          is24Hour: true,
+          onChange: (timeEvent: DateTimePickerEvent, selectedTime?: Date) => {
+            if (timeEvent.type !== 'set' || !selectedTime) {
+              return;
+            }
+            const finalDate = new Date(next);
+            finalDate.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+            setDate(finalDate);
+          },
+        });
+      },
+    });
   };
 
   const handleSave = async () => {
@@ -121,6 +153,19 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
     }
 
     try {
+      const payload: Transaction = {
+        id: editTransaction?.id || `manual_${Date.now()}`,
+        bank: 'cash',
+        amount,
+        transactionType: type,
+        timestamp: date.getTime(),
+        rawText: `Manual entry: ${description || category}`,
+        description: description.trim() || undefined,
+        category,
+        isSuspectedGap: false,
+        createdAt: editTransaction?.createdAt || Date.now(),
+      };
+
       if (isEditing && editTransaction) {
         await updateTransaction(editTransaction.id, {
           amount,
@@ -139,26 +184,21 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
         }, category);
       }
 
-      loadTransactions();
-      loadStats();
-      await triggerBudgetAlertsForTransaction({
-        id: editTransaction?.id || `manual_${Date.now()}`,
-        bank: 'cash',
-        amount,
-        transactionType: type,
-        timestamp: date.getTime(),
-        rawText: `Manual entry: ${description || category}`,
-        description: description.trim() || undefined,
-        category,
-        isSuspectedGap: false,
-        createdAt: editTransaction?.createdAt || Date.now(),
-      });
-      // Show success animation, then close
+      // Close immediately to avoid UX lag; heavy work continues in background.
+      handleClose();
+      toast.success(isEditing ? 'Đã cập nhật giao dịch' : 'Đã tạo giao dịch');
       setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        handleClose();
-      }, 900);
+      setTimeout(() => setShowSuccess(false), 350);
+
+      void (async () => {
+        try {
+          await loadTransactions();
+          await loadStats();
+          await triggerBudgetAlertsForTransaction(payload);
+        } catch (error) {
+          console.warn('Post-save notification pipeline failed', error);
+        }
+      })();
     } catch (error) {
       console.error('Error saving transaction:', error);
       toast.error('Không thể lưu giao dịch');
@@ -223,16 +263,28 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Ngày giao dịch</Text>
-              <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => {
+                  if (Platform.OS === 'android') {
+                    openAndroidDateTimePicker();
+                    return;
+                  }
+                  setShowDatePicker(true);
+                }}>
                 <Text style={styles.dateText}>{dayjs(date).format('DD/MM/YYYY HH:mm')}</Text>
               </TouchableOpacity>
-              {showDatePicker && (
+              {Platform.OS === 'ios' && showDatePicker && (
                 <DateTimePicker
                   value={date}
                   mode="datetime"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  display="spinner"
                   onChange={(event, selectedDate) => {
-                    setShowDatePicker(Platform.OS === 'ios');
+                    if (event.type === 'dismissed') {
+                      setShowDatePicker(false);
+                      return;
+                    }
+                    setShowDatePicker(true);
                     if (selectedDate) {setDate(selectedDate);}
                   }}
                 />

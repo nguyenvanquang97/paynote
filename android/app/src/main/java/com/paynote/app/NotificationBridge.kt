@@ -32,6 +32,8 @@ class NotificationBridge(
         const val PERIODIC_PREF_AI_ENABLED = "ai_enabled"
         const val PERIODIC_PREF_API_KEY = "api_key"
         const val PERIODIC_PREF_TONE_MODE = "tone_mode"
+        const val PERIODIC_PREF_ALLOW_STRONG = "allow_strong_language"
+        const val PERIODIC_PREF_INTENSITY = "intensity"
 
         private var instance: NotificationBridge? = null
 
@@ -230,13 +232,15 @@ class NotificationBridge(
     }
 
     @ReactMethod
-    fun configurePeriodicRoast(aiEnabled: Boolean, apiKey: String, toneMode: String) {
+    fun configurePeriodicRoast(aiEnabled: Boolean, apiKey: String, toneMode: String, allowStrongLanguage: Boolean, intensity: String) {
         try {
             val prefs: SharedPreferences = reactContext.getSharedPreferences(PERIODIC_PREFS, Context.MODE_PRIVATE)
             prefs.edit()
                 .putBoolean(PERIODIC_PREF_AI_ENABLED, aiEnabled)
                 .putString(PERIODIC_PREF_API_KEY, apiKey.trim())
                 .putString(PERIODIC_PREF_TONE_MODE, toneMode)
+                .putBoolean(PERIODIC_PREF_ALLOW_STRONG, allowStrongLanguage)
+                .putString(PERIODIC_PREF_INTENSITY, intensity)
                 .apply()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save periodic roast config", e)

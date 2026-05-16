@@ -79,10 +79,12 @@ export const triggerPeriodicRoastReminderNow = (): void => {
 export const configurePeriodicRoast = (
   aiEnabled: boolean,
   apiKey: string,
-  toneMode: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry',
+  toneMode: 'advisor' | 'wallet_pet' | 'toxic_friend' | 'vietnamese_parent',
+  allowStrongLanguage: boolean,
+  intensity: 'soft' | 'normal' | 'sharp',
 ): void => {
   if (!NotificationBridge?.configurePeriodicRoast) {return;}
-  NotificationBridge.configurePeriodicRoast(aiEnabled, apiKey, toneMode);
+  NotificationBridge.configurePeriodicRoast(aiEnabled, apiKey, toneMode, allowStrongLanguage, intensity);
 };
 
 export const requestPostNotificationsPermission = async (): Promise<boolean> => {

@@ -1,7 +1,6 @@
 import type {BudgetAlertThreshold} from '../app/store';
+import {normalizePersona, PERSONA_TO_LEGACY_TONE} from './notifications';
 import {buildFallbackRoastMessage} from './roastFallbackTemplates';
-
-type AiToneMode = 'gentle' | 'cute' | 'sarcastic_strong' | 'angry';
 
 interface RoastInput {
   apiKey: string;
@@ -12,13 +11,14 @@ interface RoastInput {
   progress: number;
   threshold: BudgetAlertThreshold;
   monthKey: string;
-  toneMode?: AiToneMode;
+  persona?: 'advisor' | 'wallet_pet' | 'toxic_friend' | 'vietnamese_parent';
+  allowStrongLanguage?: boolean;
 }
 
 export interface RoastOutput {
   title: string;
   message: string;
-  toneTag: AiToneMode;
+  toneTag: 'advisor' | 'wallet_pet' | 'toxic_friend' | 'vietnamese_parent';
   fallbackUsed: boolean;
   debugReason?: string;
 }
@@ -38,18 +38,20 @@ const formatCurrency = (amount: number): string =>
 
 const fallbackTemplate = (input: RoastInput, debugReason: string): RoastOutput => {
   const percent = Math.round(input.progress * 100);
-  const tone = input.toneMode || 'sarcastic_strong';
+  const persona = normalizePersona(input.persona);
+  const tone = PERSONA_TO_LEGACY_TONE[persona];
   const message = buildFallbackRoastMessage(tone, {
     categoryLabel: input.categoryLabel,
     percent,
     spentText: formatCurrency(input.spent),
     limitText: formatCurrency(input.limit),
     threshold: input.threshold,
+    allowStrongLanguage: input.allowStrongLanguage,
   });
   return {
     title: 'Cảnh báo AI chi tiêu',
     message: clampText(`${message} (${formatCurrency(input.spent)} / ${formatCurrency(input.limit)})`),
-    toneTag: tone,
+    toneTag: persona,
     fallbackUsed: true,
     debugReason,
   };
@@ -57,14 +59,16 @@ const fallbackTemplate = (input: RoastInput, debugReason: string): RoastOutput =
 
 const buildPrompt = (input: RoastInput): string => {
   const percent = Math.round(input.progress * 100);
-  const toneMode = input.toneMode || 'sarcastic_strong';
+  const persona = normalizePersona(input.persona);
   const toneInstruction =
-    toneMode === 'gentle'
+    persona === 'advisor'
       ? 'Giọng nhẹ nhàng, đồng cảm, khích lệ.'
-      : toneMode === 'cute'
+      : persona === 'wallet_pet'
         ? 'Giọng dễ thương, dí dỏm, ngắn gọn.'
-        : toneMode === 'angry'
-          ? 'Giọng cáu gắt rất mạnh, xưng tao-mày, mắng thẳng như người thật, câu dài hơn và có sức nặng nhưng không chửi bậy.'
+        : persona === 'vietnamese_parent'
+          ? input.allowStrongLanguage
+            ? 'Giọng cáu gắt kiểu phụ huynh Việt, có thể xưng mày, gắt nhưng không chửi bậy.'
+            : 'Giọng phụ huynh Việt nghiêm khắc, gắt vừa, không xưng hô nặng.'
           : 'Giọng xéo xắc mạnh, nói thẳng kiểu người thật, có chút châm biếm sâu cay nhưng văn minh.';
   return [
     'Bạn là trợ lý tài chính nói tiếng Việt.',
@@ -73,7 +77,7 @@ const buildPrompt = (input: RoastInput): string => {
     '- Không chửi thề, không xúc phạm nhân phẩm, không body-shaming, không công kích cá nhân.',
     '- Không khuyến khích tự hại, không đe dọa.',
     '- Chỉ 1-2 câu ngắn, tự nhiên như người nói thật; nêu rõ hậu quả tài chính nếu tiếp tục tiêu quá tay.',
-    `- Trả về JSON hợp lệ: {"title":"...","message":"...","toneTag":"${toneMode}"}`,
+    `- Trả về JSON hợp lệ: {"title":"...","message":"...","toneTag":"${persona}"}`,
     `Dữ liệu: danh_muc=${input.categoryLabel}, monthKey=${input.monthKey}, nguong=${input.threshold}%, da_chi=${formatCurrency(input.spent)}, han_muc=${formatCurrency(input.limit)}, ty_le=${percent}%`,
   ].join('\n');
 };
@@ -105,9 +109,7 @@ const parseOutput = (text: string): RoastOutput | null => {
     return {
       title: clampText(parsed.title, 48) || 'Cảnh báo AI chi tiêu',
       message: clampText(parsed.message, 170),
-      toneTag: parsed?.toneTag === 'gentle' || parsed?.toneTag === 'cute' || parsed?.toneTag === 'angry' || parsed?.toneTag === 'sarcastic_strong' || parsed?.toneTag === 'strict'
-        ? (parsed.toneTag === 'strict' ? 'angry' : parsed.toneTag)
-        : 'sarcastic_strong',
+      toneTag: normalizePersona(parsed?.toneTag),
       fallbackUsed: false,
     };
   } catch {

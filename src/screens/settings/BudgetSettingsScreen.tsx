@@ -17,6 +17,7 @@ import {CATEGORY_EMOJI, CATEGORY_ICONS, CATEGORY_LABELS} from '../../shared/cons
 import {toast} from '../../shared/components/Toast';
 import {generateBudgetRoast} from '../../services/geminiRoastService';
 import {getGeminiApiKeyFromEnv} from '../../config/env';
+import {PERSONA_OPTIONS} from '../../services/notifications';
 import {
   startPeriodicRoastReminder,
   stopPeriodicRoastReminder,
@@ -46,21 +47,31 @@ const BudgetSettingsScreen: React.FC = () => {
     customCategories,
     budgetAlertsEnabled,
     aiBudgetAlertsEnabled,
-    aiToneMode,
+    notificationPersona,
+    notificationIntensity,
+    allowStrongLanguage,
     geminiApiKey,
     setBudgetAlertsEnabled,
     setAiBudgetAlertsEnabled,
-    setAiToneMode,
+    setNotificationPersona,
+    setNotificationIntensity,
+    setAllowStrongLanguage,
     setGeminiApiKey,
     setCategoryBudget,
     removeCategoryBudget,
     getBudgetStatus,
     pushInAppNotification,
+    notificationMemory,
+    inAppNotifications,
+    loadNotificationMemory,
+    loadTransactions,
+    loadStats,
   } = useAppStore();
 
   const [isBudgetModalVisible, setIsBudgetModalVisible] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
   const [selectedBudgetCategory, setSelectedBudgetCategory] = useState<string>('other');
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   const nowYear = dayjs().year();
   const nowMonth = dayjs().month() + 1;
@@ -95,6 +106,11 @@ const BudgetSettingsScreen: React.FC = () => {
 
   const formatCurrency = (amount: number): string =>
     `${new Intl.NumberFormat('vi-VN').format(Math.max(0, amount))} ₫`;
+  const selectedPersonaMeta = PERSONA_OPTIONS.find(item => item.id === notificationPersona);
+  const recentNotifications = useMemo(
+    () => [...inAppNotifications].sort((a, b) => b.createdAt - a.createdAt).slice(0, 10),
+    [inAppNotifications],
+  );
 
   const getBudgetBadge = (progress: number, isOver: boolean): {text: string; bg: string; color: string} => {
     if (isOver) {return {text: 'Vượt', bg: '#fde7e3', color: C.err};}
@@ -126,18 +142,40 @@ const BudgetSettingsScreen: React.FC = () => {
   };
 
   const handleTestAiAlert = async () => {
-    const categoryId = 'food';
-    const categoryLabel = CATEGORY_LABELS[categoryId] || 'Ăn uống';
-    const spent = 1320000;
-    const limit = 1000000;
-    const threshold: 80 | 100 | 120 = 120;
-    const progress = spent / limit;
+    await loadTransactions();
+    await loadStats();
+
+    const latest = useAppStore.getState();
+    const rowsWithBudget = allCategoryIds
+      .map(categoryId => ({
+        categoryId,
+        label: CATEGORY_LABELS[categoryId] || latest.customCategories[categoryId]?.name || categoryId,
+        status: latest.getBudgetStatus(categoryId, nowYear, nowMonth),
+      }))
+      .filter(row => row.status.exists && row.status.limit > 0);
+    const candidate = rowsWithBudget
+      .filter(row => row.status.spent > 0)
+      .sort((a, b) => b.status.progress - a.status.progress)[0];
+
+    if (!candidate) {
+      toast.error('Chưa có danh mục nào có chi tiêu + hạn mức để test');
+      return;
+    }
+
+    const categoryId = candidate.categoryId;
+    const categoryLabel = candidate.label;
+    const spent = candidate.status.spent;
+    const limit = candidate.status.limit;
+    const progress = limit > 0 ? spent / limit : 0;
+    const percent = Math.round(progress * 100);
+    const threshold: 50 | 80 | 100 | 120 =
+      percent >= 120 ? 120 : percent >= 100 ? 100 : percent >= 80 ? 80 : 50;
     const aiEnabled = aiBudgetAlertsEnabled;
 
     let title = 'Cảnh báo chi tiêu (test)';
-    let message = `Danh mục ${categoryLabel} đã dùng ${Math.round(progress * 100)}% ngân sách tháng (${formatCurrency(spent)} / ${formatCurrency(limit)}).`;
-    let source: 'budget_alert_ai' | 'budget_alert_template' = 'budget_alert_template';
-    let toneTag: 'gentle' | 'cute' | 'sarcastic_strong' | 'angry' | undefined;
+    let message = `Danh mục ${categoryLabel} đã dùng ${percent}% ngân sách tháng (${formatCurrency(spent)} / ${formatCurrency(limit)}).`;
+    let source: 'ai_fallback' | 'template' = 'template';
+    let toneTag = notificationPersona;
 
     if (aiEnabled) {
       const roast = await generateBudgetRoast({
@@ -149,11 +187,12 @@ const BudgetSettingsScreen: React.FC = () => {
         progress,
         threshold,
         monthKey,
-        toneMode: aiToneMode,
+        persona: notificationPersona,
+        allowStrongLanguage,
       });
       title = roast.title || title;
       message = roast.message || message;
-      source = roast.fallbackUsed ? 'budget_alert_template' : 'budget_alert_ai';
+      source = roast.fallbackUsed ? 'template' : 'ai_fallback';
       toneTag = roast.toneTag;
     }
 
@@ -189,6 +228,7 @@ const BudgetSettingsScreen: React.FC = () => {
             />
           </View>
           <View style={s.thresholdRow}>
+            <Text style={s.thresholdPill}>50%</Text>
             <Text style={s.thresholdPill}>80%</Text>
             <Text style={s.thresholdPill}>100%</Text>
             <Text style={s.thresholdPill}>120%</Text>
@@ -198,7 +238,7 @@ const BudgetSettingsScreen: React.FC = () => {
           <View style={[s.row, {justifyContent: 'space-between'}]}>
             <View style={{flex: 1}}>
               <Text style={s.label}>Bật cảnh báo AI </Text>
-              <Text style={s.desc}>Nếu tắt, app dùng mẫu cảnh báo tĩnh như trước.</Text>
+              <Text style={s.desc}>Nếu tắt, app luôn dùng template persona nội bộ. Nếu bật, Gemini chỉ dùng khi fallback.</Text>
             </View>
             <Switch
               value={aiBudgetAlertsEnabled}
@@ -220,28 +260,61 @@ const BudgetSettingsScreen: React.FC = () => {
           <Text style={s.keyHint}>
             Không hardcode key khi build production. Bản phát hành chính thức cần chuyển qua backend proxy.
           </Text>
-          <Text style={[s.desc, {marginTop: 10}]}>Phong cách thông báo</Text>
+          <Text style={[s.desc, {marginTop: 10}]}>Persona thông báo</Text>
           <View style={s.toneRow}>
-            <TouchableOpacity
-              style={[s.toneChip, aiToneMode === 'gentle' && s.toneChipActive]}
-              onPress={() => setAiToneMode('gentle')}>
-              <Text style={[s.toneChipTxt, aiToneMode === 'gentle' && s.toneChipTxtActive]}>Nhẹ nhàng</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.toneChip, aiToneMode === 'cute' && s.toneChipActive]}
-              onPress={() => setAiToneMode('cute')}>
-              <Text style={[s.toneChipTxt, aiToneMode === 'cute' && s.toneChipTxtActive]}>Dễ thương</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.toneChip, aiToneMode === 'sarcastic_strong' && s.toneChipActive]}
-              onPress={() => setAiToneMode('sarcastic_strong')}>
-              <Text style={[s.toneChipTxt, aiToneMode === 'sarcastic_strong' && s.toneChipTxtActive]}>Xéo xắc</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.toneChip, aiToneMode === 'angry' && s.toneChipActive]}
-              onPress={() => setAiToneMode('angry')}>
-              <Text style={[s.toneChipTxt, aiToneMode === 'angry' && s.toneChipTxtActive]}>{"Cáu gắt(Ai thích tự ngược thì chọn:)))"}</Text>
-            </TouchableOpacity>
+            {PERSONA_OPTIONS.map(option => (
+              <TouchableOpacity
+                key={option.id}
+                style={[s.toneChip, notificationPersona === option.id && s.toneChipActive]}
+                onPress={() => setNotificationPersona(option.id)}>
+                <Text style={[s.toneChipTxt, notificationPersona === option.id && s.toneChipTxtActive]}>
+                  {option.title}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={[s.desc, {marginTop: 10}]}>Cường độ hội thoại</Text>
+          <View style={s.toneRow}>
+            {[
+              {id: 'soft', label: 'Nhẹ'},
+              {id: 'normal', label: 'Cân bằng'},
+              {id: 'sharp', label: 'Sắc'},
+            ].map(option => (
+              <TouchableOpacity
+                key={option.id}
+                style={[s.toneChip, notificationIntensity === option.id && s.toneChipActive]}
+                onPress={() => setNotificationIntensity(option.id as 'soft' | 'normal' | 'sharp')}>
+                <Text style={[s.toneChipTxt, notificationIntensity === option.id && s.toneChipTxtActive]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {selectedPersonaMeta && (
+            <View style={[s.card, {marginTop: 10, marginBottom: 0}]}>
+              <Text style={s.label}>{selectedPersonaMeta.title}</Text>
+              <Text style={s.desc}>{selectedPersonaMeta.description}</Text>
+              <Text style={[s.desc, {fontStyle: 'italic', marginTop: 4}]}>Nhẹ: “{selectedPersonaMeta.preview}”</Text>
+              <Text style={[s.desc, {fontStyle: 'italic', marginTop: 4}]}>
+                Tái phạm: “{selectedPersonaMeta.id === 'advisor'
+                  ? 'Nhịp này lặp lại nhiều rồi, mình phanh sớm để đỡ áp lực cuối tháng nhé.'
+                  : selectedPersonaMeta.id === 'wallet_pet'
+                    ? 'Ví bé thấy pattern này rồi nè, mình giảm ga kẻo ví tụt pin nha 🥲'
+                    : selectedPersonaMeta.id === 'toxic_friend'
+                      ? 'Cú này lặp lại hơi đều, và cuối tháng thì hậu quả cũng đều như vậy.'
+                      : 'Nhắc nhẹ không nghe thì giờ dừng ngay, đừng tự làm khó mình nữa.'}”
+              </Text>
+            </View>
+          )}
+          <Text style={[s.desc, {marginTop: 8}]}>Ngôn từ gắt hơn (chỉ áp dụng cho “Mẹ Việt Nam”)</Text>
+          <View style={[s.row, {justifyContent: 'space-between'}]}>
+            <Text style={s.desc}>Cho phép xưng hô gắt hơn</Text>
+            <Switch
+              value={allowStrongLanguage}
+              onValueChange={setAllowStrongLanguage}
+              trackColor={{false: '#d8ddd4', true: C.pri}}
+              thumbColor="#ffffff"
+            />
           </View>
           <TouchableOpacity style={[s.secondaryBtn, {marginTop: 12, alignSelf: 'flex-start'}]} onPress={handleTestAiAlert}>
             <Text style={s.secondaryBtnTxt}>Test AI alert</Text>
@@ -250,7 +323,13 @@ const BudgetSettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={s.secondaryBtn}
               onPress={() => {
-                configurePeriodicRoast(aiBudgetAlertsEnabled, resolveApiKey(), aiToneMode);
+                configurePeriodicRoast(
+                  aiBudgetAlertsEnabled,
+                  resolveApiKey(),
+                  notificationPersona,
+                  allowStrongLanguage,
+                  notificationIntensity,
+                );
                 startPeriodicRoastReminder();
                 toast.success('Đã bật periodic native mỗi 1 giờ');
               }}>
@@ -322,6 +401,63 @@ const BudgetSettingsScreen: React.FC = () => {
             </View>
           );
         })}
+
+        <Text style={s.sec}>Debug Notification Engine</Text>
+        <View style={s.card}>
+          <View style={[s.row, {justifyContent: 'space-between'}]}>
+            <Text style={s.label}>Memory + Recent events</Text>
+            <TouchableOpacity style={s.secondaryBtn} onPress={() => setShowDebugPanel(v => !v)}>
+              <Text style={s.secondaryBtnTxt}>{showDebugPanel ? 'Ẩn' : 'Hiện'}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={[s.row, {marginTop: 10}]}> 
+            <TouchableOpacity
+              style={s.secondaryBtn}
+              onPress={() => {
+                loadNotificationMemory();
+                toast.success('Đã refresh memory');
+              }}>
+              <Text style={s.secondaryBtnTxt}>Refresh memory</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showDebugPanel && (
+            <View style={{marginTop: 12}}>
+              <Text style={s.debugLine}>recentTemplateIds: {notificationMemory.recentTemplateIds.length}</Text>
+              <Text style={s.debugLine}>recentTexts: {notificationMemory.recentTexts.length}</Text>
+              <Text style={s.debugLine}>countTodayByTrigger: {Object.keys(notificationMemory.countTodayByTrigger).length}</Text>
+              <Text style={s.debugLine}>countTodayByCategory: {Object.keys(notificationMemory.countTodayByCategory).length}</Text>
+              <Text style={s.debugLine}>warningCountByCategory: {Object.keys(notificationMemory.warningCountByCategory).length}</Text>
+              <Text style={s.debugLine}>lastResetDate: {notificationMemory.lastResetDate || '-'}</Text>
+
+              <Text style={[s.label, {marginTop: 12}]}>10 thông báo gần nhất</Text>
+              {recentNotifications.length === 0 ? (
+                <Text style={s.desc}>Chưa có thông báo nào.</Text>
+              ) : (
+                recentNotifications.map(item => (
+                  <View key={item.id} style={s.debugItem}>
+                    <Text style={s.debugTitle}>{item.title}</Text>
+                    <Text style={s.debugMeta}>
+                      {dayjs(item.createdAt).format('DD/MM HH:mm:ss')} • {item.type} • {item.source || '-'}
+                    </Text>
+                    <Text style={s.debugMeta}>
+                      trigger: {item.trigger || '-'} • severity: {item.severity || '-'} • persona: {item.toneTag || '-'}
+                    </Text>
+                    <Text style={s.debugMeta}>
+                      context: {item.categoryContext || '-'} • tier: {item.escalationTier || '-'} • origin: {item.templateOrigin || '-'}
+                    </Text>
+                    <Text style={s.debugMeta}>
+                      templateId: {item.templateId || '-'}
+                    </Text>
+                    <Text style={s.debugMeta}>
+                      score: {item.scoreMeta || '-'}
+                    </Text>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       <Modal
@@ -426,6 +562,17 @@ const createStyles = (C: {
   },
   toneChipTxt: {color: C.txt, fontSize: 12, fontWeight: '600'},
   toneChipTxtActive: {color: C.pri},
+  debugLine: {color: C.sub, fontSize: 12, marginTop: 4},
+  debugItem: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: C.muted,
+  },
+  debugTitle: {color: C.txt, fontSize: 13, fontWeight: '700'},
+  debugMeta: {color: C.sub, fontSize: 11, marginTop: 3},
 });
 
 export default BudgetSettingsScreen;

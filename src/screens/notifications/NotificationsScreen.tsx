@@ -117,9 +117,41 @@ const NotificationsScreen: React.FC = () => {
                   <View style={s.titleRow}>
                     <View style={s.titleWrap}>
                       <Text style={s.title}>{item.title}</Text>
-                      {(item.source === 'budget_alert_ai' || item.source === 'periodic_reminder_ai') && (
+                      {item.source === 'ai_fallback' && (
                         <View style={s.aiBadge}>
                           <Text style={s.aiBadgeTxt}>AI</Text>
+                        </View>
+                      )}
+                      {item.toneTag && (
+                        <View style={s.personaBadge}>
+                          <Text style={s.personaBadgeTxt}>
+                            {item.toneTag === 'advisor'
+                              ? 'Cố vấn'
+                              : item.toneTag === 'wallet_pet'
+                                ? 'Ví bé'
+                                : item.toneTag === 'toxic_friend'
+                                  ? 'Toxic'
+                                  : 'Mẹ Việt'}
+                          </Text>
+                        </View>
+                      )}
+                      {item.severity && (
+                        <View style={[
+                          s.levelBadge,
+                          item.severity === 'critical'
+                            ? s.levelCritical
+                            : item.severity === 'high'
+                              ? s.levelHigh
+                              : item.severity === 'medium'
+                                ? s.levelMedium
+                                : s.levelLow,
+                        ]}>
+                          <Text style={s.levelBadgeTxt}>{item.severity}</Text>
+                        </View>
+                      )}
+                      {item.escalationTier && (
+                        <View style={s.tierBadge}>
+                          <Text style={s.tierBadgeTxt}>T{item.escalationTier}</Text>
                         </View>
                       )}
                     </View>
@@ -239,6 +271,34 @@ const createStyles = (C: {
     paddingVertical: 2,
   },
   aiBadgeTxt: {color: C.acc, fontSize: 10, fontWeight: '800'},
+  personaBadge: {
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.muted,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  personaBadgeTxt: {color: C.sub, fontSize: 10, fontWeight: '700'},
+  levelBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  levelLow: {backgroundColor: '#e4f7ea'},
+  levelMedium: {backgroundColor: '#fff1d7'},
+  levelHigh: {backgroundColor: '#ffd8d8'},
+  levelCritical: {backgroundColor: '#ffb8b8'},
+  levelBadgeTxt: {color: '#812f2f', fontSize: 10, fontWeight: '800'},
+  tierBadge: {
+    borderWidth: 1,
+    borderColor: C.acc,
+    backgroundColor: C.soft,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  tierBadgeTxt: {color: C.acc, fontSize: 10, fontWeight: '800'},
   dot: {width: 8, height: 8, borderRadius: 4, backgroundColor: C.warn},
   message: {color: C.txt, fontSize: 13, marginTop: 4, lineHeight: 18},
   meta: {color: C.sub, fontSize: 12, marginTop: 6},

@@ -28,6 +28,7 @@ import type {BankNotification} from './src/shared/types';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {triggerBudgetAlertsForTransaction} from './src/services/budgetAlerts';
+import {handlePhase2TransactionSignals} from './src/services/notificationPhase2';
 import {useThemeTransition} from './src/animations';
 import Animated from 'react-native-reanimated';
 import {getGeminiApiKeyFromEnv} from './src/config/env';
@@ -77,10 +78,13 @@ export default function App() {
   const loadBudgetAlertsEnabled = useAppStore(s => s.loadBudgetAlertsEnabled);
   const loadAiAlertSettings = useAppStore(s => s.loadAiAlertSettings);
   const loadBudgetAlertHistory = useAppStore(s => s.loadBudgetAlertHistory);
+  const loadNotificationMemory = useAppStore(s => s.loadNotificationMemory);
   const loadInAppNotifications = useAppStore(s => s.loadInAppNotifications);
   const loadThemeMode = useAppStore(s => s.loadThemeMode);
   const aiBudgetAlertsEnabled = useAppStore(s => s.aiBudgetAlertsEnabled);
-  const aiToneMode = useAppStore(s => s.aiToneMode);
+  const notificationPersona = useAppStore(s => s.notificationPersona);
+  const notificationIntensity = useAppStore(s => s.notificationIntensity);
+  const allowStrongLanguage = useAppStore(s => s.allowStrongLanguage);
   const geminiApiKey = useAppStore(s => s.geminiApiKey);
   const themeMode = useAppStore(s => s.themeMode);
   const colors = getThemeColors(themeMode);
@@ -107,6 +111,7 @@ export default function App() {
       loadBudgetAlertsEnabled();
       loadAiAlertSettings();
       loadBudgetAlertHistory();
+      loadNotificationMemory();
       loadInAppNotifications();
       loadThemeMode();
       const hasOnboarded = storage.getBoolean('onboarded');
@@ -144,14 +149,20 @@ export default function App() {
       loadStats();
       triggerBudgetAlertsForTransaction(result.transaction);
     }
+    handlePhase2TransactionSignals({
+      transaction: result.transaction,
+      skippedReason: result.skippedReason,
+      isSuspectedGap: result.isSuspectedGap,
+      missingAmount: result.missingAmount,
+    });
   }, [addTransaction, loadStats]);
 
   useBankNotifications(handleNotification);
 
   useEffect(() => {
     const resolvedKey = geminiApiKey.trim() || getGeminiApiKeyFromEnv();
-    configurePeriodicRoast(aiBudgetAlertsEnabled, resolvedKey, aiToneMode);
-  }, [aiBudgetAlertsEnabled, geminiApiKey, aiToneMode]);
+    configurePeriodicRoast(aiBudgetAlertsEnabled, resolvedKey, notificationPersona, allowStrongLanguage, notificationIntensity);
+  }, [aiBudgetAlertsEnabled, geminiApiKey, notificationPersona, allowStrongLanguage, notificationIntensity]);
 
   useEffect(() => {
     if (!isReady) {return;}

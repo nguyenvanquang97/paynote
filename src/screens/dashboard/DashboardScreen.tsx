@@ -305,7 +305,7 @@ const DashboardScreen: React.FC = () => {
                 </View>
                 <View>
                   <Text style={styles.txDescription} numberOfLines={1}>
-                    {tx.description || tx.bank}
+                    {tx.description?.trim() || getCategoryLabel(tx.category || 'other')}
                   </Text>
                   <Text style={styles.txDate}>
                     {dayjs(tx.timestamp).format('HH:mm DD/MM')}
