@@ -1,6 +1,6 @@
 import {detectAIIntent} from './aiIntentService';
 import {buildFinancialContextForIntent} from './financialContextService';
-import {generateLocalAnswer} from './localAIAnswerService';
+import {generateLocalAnswerPayload} from './localAIAnswerService';
 import {createAIChatMessageId, type AIChatMessage} from '../types/aiChat.types';
 import {getAIEnvSettings} from '../../../config/env';
 import {buildLLMMessages} from './llm/llmPromptBuilder';
@@ -14,7 +14,9 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
 
   const intent = detectAIIntent(content);
   const context = await buildFinancialContextForIntent(intent, content);
-  const localAnswer = generateLocalAnswer(content, intent, context);
+  const localPayload = generateLocalAnswerPayload(content, intent, context);
+  const localAnswer = localPayload.text;
+  const localCards = localPayload.cards;
   const llmMessages = buildLLMMessages(content, intent, context);
   const llmSettings = getAIEnvSettings();
   console.info('[AI_CHAT] provider=%s useLLM=%s model=%s', llmSettings.provider, String(llmSettings.useLLM), llmSettings.model);
@@ -28,6 +30,7 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
     metadata: {
       intent,
       source: 'fallback',
+      cards: localCards,
     },
   });
 
@@ -85,6 +88,7 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
       metadata: {
         intent,
         source: 'llm',
+        cards: localCards,
       },
     };
   } catch {

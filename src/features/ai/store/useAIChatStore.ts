@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {createMMKV} from 'react-native-mmkv';
-import type {AIChatMessage, AIChatRole, AIIntent} from '../types/aiChat.types';
+import type {AIAnswerCard, AIChatMessage, AIChatRole, AIIntent} from '../types/aiChat.types';
 
 const storage = createMMKV();
 const STORAGE_KEY = 'ai_chat_messages_v1';
@@ -18,6 +18,95 @@ const VALID_INTENTS = new Set<AIIntent>([
   'saving_advice',
   'unknown',
 ]);
+const VALID_CARD_TYPES = new Set<AIAnswerCard['type']>([
+  'summary',
+  'category_breakdown',
+  'transactions',
+  'warning',
+]);
+
+const sanitizeCards = (value: unknown): AIAnswerCard[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const cards = value
+    .map((item): AIAnswerCard | null => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+      const card = item as AIAnswerCard;
+      if (!VALID_CARD_TYPES.has(card.type)) {
+        return null;
+      }
+
+      if (card.type === 'summary') {
+        if (typeof card.title !== 'string' || typeof card.value !== 'number') {
+          return null;
+        }
+        return {
+          type: 'summary',
+          title: card.title,
+          value: card.value,
+          subtitle: typeof card.subtitle === 'string' ? card.subtitle : undefined,
+        };
+      }
+
+      if (card.type === 'category_breakdown') {
+        if (!Array.isArray(card.items)) {
+          return null;
+        }
+        const items = card.items
+          .filter(row => row && typeof row === 'object')
+          .map(row => ({
+            label: typeof row.label === 'string' ? row.label : '',
+            amount: typeof row.amount === 'number' ? row.amount : 0,
+            percentage: typeof row.percentage === 'number' ? row.percentage : 0,
+          }))
+          .filter(row => row.label.length > 0);
+        return {
+          type: 'category_breakdown',
+          items,
+        };
+      }
+
+      if (card.type === 'transactions') {
+        if (!Array.isArray(card.items)) {
+          return null;
+        }
+        const items = card.items
+          .filter(row => row && typeof row === 'object')
+          .map(row => ({
+            id: typeof row.id === 'string' ? row.id : '',
+            amount: typeof row.amount === 'number' ? row.amount : 0,
+            title: typeof row.title === 'string' ? row.title : '',
+            date: typeof row.date === 'string' ? row.date : '',
+          }))
+          .filter(row => row.id && row.title);
+        return {
+          type: 'transactions',
+          items,
+        };
+      }
+
+      if (
+        typeof (card as any).title !== 'string' ||
+        typeof (card as any).description !== 'string' ||
+        !['low', 'medium', 'high'].includes(String((card as any).severity))
+      ) {
+        return null;
+      }
+      return {
+        type: 'warning',
+        title: (card as any).title,
+        description: (card as any).description,
+        severity: (card as any).severity,
+      };
+    })
+    .filter((item): item is AIAnswerCard => item !== null);
+
+  return cards.length > 0 ? cards : undefined;
+};
 
 const sanitizeMessage = (value: unknown): AIChatMessage | null => {
   if (!value || typeof value !== 'object') {
@@ -47,6 +136,7 @@ const sanitizeMessage = (value: unknown): AIChatMessage | null => {
         source: raw.metadata.source === 'local' || raw.metadata.source === 'llm' || raw.metadata.source === 'fallback'
           ? raw.metadata.source
           : undefined,
+        cards: sanitizeCards(raw.metadata.cards),
       }
     : undefined;
 

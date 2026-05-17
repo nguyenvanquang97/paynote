@@ -1,8 +1,87 @@
 import {AI_QUICK_PROMPTS} from '../constants/aiQuickPrompts';
 import type {FinancialContext} from './financialContextService';
-import type {AIIntent} from '../types/aiChat.types';
+import type {AIAnswerCard, AIIntent} from '../types/aiChat.types';
 
 const formatVnd = (value: number): string => `${new Intl.NumberFormat('vi-VN').format(Math.round(value))}đ`;
+
+export type LocalAIAnswerPayload = {
+  text: string;
+  cards: AIAnswerCard[];
+};
+
+const buildCards = (intent: AIIntent, context: FinancialContext): AIAnswerCard[] => {
+  const cards: AIAnswerCard[] = [];
+  const {totals, categoryBreakdown, topTransactions, duplicateCandidates, missedTransactionWarnings, comparison} = context;
+
+  if (intent === 'spending_summary' || intent === 'period_compare') {
+    cards.push({
+      type: 'summary',
+      title: `${context.period.label} - Tổng chi`,
+      value: totals.expense,
+      subtitle: `Thu ${formatVnd(totals.income)} • Còn ${formatVnd(totals.balance)}`,
+    });
+  }
+
+  if (categoryBreakdown.length > 0 && (
+    intent === 'spending_summary' ||
+    intent === 'category_breakdown' ||
+    intent === 'saving_advice' ||
+    intent === 'abnormal_spending'
+  )) {
+    cards.push({
+      type: 'category_breakdown',
+      items: categoryBreakdown.slice(0, 5).map(item => ({
+        label: item.categoryName,
+        amount: item.amount,
+        percentage: item.percentage,
+      })),
+    });
+  }
+
+  if ((intent === 'spending_summary' || intent === 'category_breakdown') && topTransactions.length > 0) {
+    cards.push({
+      type: 'transactions',
+      items: topTransactions.slice(0, 3).map(item => ({
+        id: item.id,
+        amount: item.amount,
+        title: item.description?.trim() || item.categoryName || 'Giao dịch',
+        date: item.transactionDate,
+      })),
+    });
+  }
+
+  if (intent === 'period_compare' && comparison) {
+    cards.push({
+      type: 'warning',
+      title: comparison.trend === 'up' ? 'Chi tiêu đang tăng' : comparison.trend === 'down' ? 'Chi tiêu đang giảm' : 'Chi tiêu ổn định',
+      description:
+        comparison.trend === 'flat'
+          ? 'Mức chi tiêu tháng này gần như bằng tháng trước.'
+          : `${comparison.trend === 'up' ? 'Tăng' : 'Giảm'} ${Math.abs(comparison.deltaPercent)}% so với tháng trước.`,
+      severity: comparison.trend === 'up' ? 'medium' : 'low',
+    });
+  }
+
+  if (intent === 'duplicate_check' && (duplicateCandidates || []).length > 0) {
+    cards.push({
+      type: 'warning',
+      title: 'Nghi ngờ giao dịch trùng',
+      description: `${duplicateCandidates?.length || 0} nhóm cần bạn kiểm tra trước khi xử lý.`,
+      severity: 'high',
+    });
+  }
+
+  if (intent === 'missed_transaction_check' && (missedTransactionWarnings || []).length > 0) {
+    cards.push({
+      type: 'warning',
+      title: 'Nghi ngờ thiếu giao dịch',
+      description: missedTransactionWarnings?.[0]?.reason || 'Có dấu hiệu bỏ sót giao dịch.',
+      severity: 'medium',
+    });
+  }
+
+  return cards;
+};
 
 export function generateLocalAnswer(
   input: string,
@@ -89,4 +168,15 @@ export function generateLocalAnswer(
     'Bạn có thể thử một trong các gợi ý sau:',
     promptHints,
   ].join('\n');
+}
+
+export function generateLocalAnswerPayload(
+  input: string,
+  intent: AIIntent,
+  context: FinancialContext,
+): LocalAIAnswerPayload {
+  return {
+    text: generateLocalAnswer(input, intent, context),
+    cards: buildCards(intent, context),
+  };
 }

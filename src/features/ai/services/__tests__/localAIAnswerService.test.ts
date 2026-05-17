@@ -1,4 +1,4 @@
-import {generateLocalAnswer} from '../localAIAnswerService';
+import {generateLocalAnswer, generateLocalAnswerPayload} from '../localAIAnswerService';
 import type {FinancialContext} from '../financialContextService';
 
 const baseContext: FinancialContext = {
@@ -80,5 +80,12 @@ describe('localAIAnswerService', () => {
     };
     const answer = generateLocalAnswer('tháng này tiêu bao nhiêu', 'spending_summary', emptyContext);
     expect(answer).toContain('chưa có dữ liệu');
+  });
+
+  it('returns rich cards payload', () => {
+    const payload = generateLocalAnswerPayload('tháng này tiêu bao nhiêu', 'spending_summary', baseContext);
+    expect(payload.text.length).toBeGreaterThan(0);
+    expect(payload.cards.length).toBeGreaterThan(0);
+    expect(payload.cards.some(card => card.type === 'summary')).toBe(true);
   });
 });

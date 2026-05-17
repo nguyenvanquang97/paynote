@@ -10,6 +10,37 @@ export type AIIntent =
 
 export type AIChatRole = 'user' | 'assistant' | 'system';
 
+export type AIAnswerCard =
+  | {
+      type: 'summary';
+      title: string;
+      value: number;
+      subtitle?: string;
+    }
+  | {
+      type: 'category_breakdown';
+      items: Array<{
+        label: string;
+        amount: number;
+        percentage: number;
+      }>;
+    }
+  | {
+      type: 'transactions';
+      items: Array<{
+        id: string;
+        amount: number;
+        title: string;
+        date: string;
+      }>;
+    }
+  | {
+      type: 'warning';
+      title: string;
+      description: string;
+      severity: 'low' | 'medium' | 'high';
+    };
+
 export type AIChatMessage = {
   id: string;
   role: AIChatRole;
@@ -19,6 +50,7 @@ export type AIChatMessage = {
   metadata?: {
     intent?: AIIntent;
     source?: 'local' | 'llm' | 'fallback';
+    cards?: AIAnswerCard[];
   };
 };
 

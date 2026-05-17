@@ -16,6 +16,7 @@ jest.mock('../financialContextService', () => ({
 
 jest.mock('../localAIAnswerService', () => ({
   generateLocalAnswer: () => 'local answer',
+  generateLocalAnswerPayload: () => ({text: 'local answer', cards: []}),
 }));
 
 jest.mock('../llm/llmPromptBuilder', () => ({

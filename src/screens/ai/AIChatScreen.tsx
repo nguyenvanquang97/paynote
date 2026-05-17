@@ -10,13 +10,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import dayjs from 'dayjs';
 import {useThemeColors} from '../../shared/theme';
 import {AI_QUICK_PROMPTS} from '../../features/ai/constants/aiQuickPrompts';
 import {useAIChatStore} from '../../features/ai/store/useAIChatStore';
 import {createAIChatMessageId, type AIChatMessage} from '../../features/ai/types/aiChat.types';
 import {sendAIChatMessage} from '../../features/ai/services/aiChatService';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import AIQuickPromptList from '../../features/ai/components/AIQuickPromptList';
+import AIMessageBubble from '../../features/ai/components/AIMessageBubble';
 
 const AIChatScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -203,42 +204,34 @@ const AIChatScreen: React.FC = () => {
           </View>
         ) : (
           messages.map(message => (
-            <View
+            <AIMessageBubble
               key={message.id}
-              style={[
-                s.bubble,
-                message.role === 'user' ? s.userBubble : s.assistantBubble,
-                message.role === 'user' ? s.bubbleRight : s.bubbleLeft,
-              ]}>
-              <Text
-                style={[
-                  s.bubbleText,
-                  message.role === 'user' ? s.userBubbleText : s.assistantBubbleText,
-                ]}>
-                {message.content}
-              </Text>
-              <Text style={s.bubbleMeta}>
-                {dayjs(message.createdAt).format('HH:mm')}
-                {message.status === 'sending' ? ' • đang gửi' : ''}
-                {message.status === 'error' ? ' • lỗi' : ''}
-              </Text>
-            </View>
+              message={message}
+              colors={{
+                border: C.border,
+                sub: C.sub,
+                userBubble: C.userBubble,
+                userText: C.userText,
+                assistantBubble: C.assistantBubble,
+                assistantText: C.assistantText,
+                cardBg: C.card,
+                cardBorder: C.border,
+                accent: C.acc,
+              }}
+            />
           ))
         )}
       </ScrollView>
 
       <View style={[s.quickPromptWrap, Platform.OS === 'android' && {marginBottom: Math.max(0, androidKeyboardHeight - insets.bottom - 6)}]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.quickPromptContent}>
-          {AI_QUICK_PROMPTS.map(prompt => (
-            <TouchableOpacity
-              key={prompt}
-              style={s.quickPromptChip}
-              onPress={() => handleQuickPrompt(prompt)}
-              disabled={isLoading}>
-              <Text style={s.quickPromptText}>{prompt}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <AIQuickPromptList
+          prompts={AI_QUICK_PROMPTS}
+          onPressPrompt={handleQuickPrompt}
+          disabled={isLoading}
+          colorBorder={C.border}
+          colorBg={C.muted}
+          colorText={C.acc}
+        />
       </View>
 
       <View style={[s.inputRow, {paddingBottom: Math.max(8, insets.bottom)}]}>
@@ -330,64 +323,9 @@ const createStyles = (C: {
     fontSize: 12,
     marginTop: 4,
   },
-  bubble: {
-    maxWidth: '88%',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  userBubble: {
-    backgroundColor: C.userBubble,
-    alignSelf: 'flex-end',
-  },
-  assistantBubble: {
-    backgroundColor: C.assistantBubble,
-    alignSelf: 'flex-start',
-  },
-  bubbleLeft: {
-    borderTopLeftRadius: 6,
-  },
-  bubbleRight: {
-    borderTopRightRadius: 6,
-  },
-  bubbleText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  userBubbleText: {
-    color: C.userText,
-  },
-  assistantBubbleText: {
-    color: C.assistantText,
-  },
-  bubbleMeta: {
-    color: C.sub,
-    fontSize: 11,
-    marginTop: 6,
-  },
   quickPromptWrap: {
     marginTop: 8,
     marginBottom: 8,
-  },
-  quickPromptContent: {
-    gap: 8,
-    paddingVertical: 2,
-    paddingRight: 24,
-  },
-  quickPromptChip: {
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.muted,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  quickPromptText: {
-    color: C.acc,
-    fontSize: 12,
-    fontWeight: '700',
   },
   inputRow: {
     flexDirection: 'row',
