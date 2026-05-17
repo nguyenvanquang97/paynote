@@ -1,4 +1,13 @@
-import {RUNTIME_ENV} from './runtimeEnv.generated';
+import {RUNTIME_ENV as BASE_ENV} from './runtimeEnv.generated';
+
+const LOCAL_ENV = (() => {
+  try {
+    const local = require('./runtimeEnv.local');
+    return (local?.RUNTIME_ENV || {}) as Record<string, string>;
+  } catch {
+    return {} as Record<string, string>;
+  }
+})();
 
 export type AIProvider = 'openai' | 'gemini' | 'mock';
 
@@ -7,16 +16,26 @@ export type AIEnvSettings = {
   apiKey: string;
   model: string;
   useLLM: boolean;
+  localOnly: boolean;
   timeoutMs: number;
 };
 
 const DEFAULT_LLM_TIMEOUT_MS = 15000;
 
 const readEnv = (key: string): string => {
-  const generatedValue = (((RUNTIME_ENV as unknown as Record<string, string>)[key] || '') as string).trim();
-  if (generatedValue.length > 0) {return generatedValue;}
+  const localValue = (LOCAL_ENV[key] || '').trim();
+  if (localValue.length > 0) {return localValue;}
+
+  const baseValue = (((BASE_ENV as unknown as Record<string, string>)[key] || '') as string).trim();
+  if (baseValue.length > 0) {return baseValue;}
+
   const runtimeValue = ((globalThis as any)?.process?.env?.[key] as string | undefined) || '';
   return runtimeValue.trim();
+};
+
+const asBooleanFlag = (value: string): boolean => {
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 };
 
 export const getGeminiApiKeyFromEnv = (): string => {
@@ -31,7 +50,6 @@ export const getAIProviderFromEnv = (): AIProvider => {
     return raw;
   }
 
-  // Auto-pick provider when PAYNOTE_AI_PROVIDER is not set.
   if (getGeminiApiKeyFromEnv().length > 0) {
     return 'gemini';
   }
@@ -70,6 +88,7 @@ export const getAIModelFromEnv = (provider: AIProvider): string => {
 };
 
 export const getAIEnvSettings = (): AIEnvSettings => {
+  const localOnly = asBooleanFlag(readEnv('PAYNOTE_AI_LOCAL_ONLY'));
   const provider = getAIProviderFromEnv();
   const apiKey = getAIApiKeyFromEnv(provider);
   const model = getAIModelFromEnv(provider);
@@ -78,13 +97,14 @@ export const getAIEnvSettings = (): AIEnvSettings => {
     ? Math.round(timeoutRaw)
     : DEFAULT_LLM_TIMEOUT_MS;
 
-  const useLLM = provider === 'mock' || apiKey.length > 0;
+  const useLLM = !localOnly && (provider === 'mock' || apiKey.length > 0);
 
   return {
     provider,
     apiKey,
     model,
     useLLM,
+    localOnly,
     timeoutMs,
   };
 };

@@ -5,7 +5,7 @@ const {spawn} = require('child_process');
 
 const projectRoot = process.cwd();
 const envPath = path.join(projectRoot, '.env');
-const generatedEnvPath = path.join(projectRoot, 'src', 'config', 'runtimeEnv.generated.ts');
+const generatedEnvPath = path.join(projectRoot, 'src', 'config', 'runtimeEnv.local.ts');
 
 const parseEnvFile = (content) => {
   const env = {};
@@ -52,6 +52,7 @@ const writeGeneratedEnvModule = (env) => {
     PAYNOTE_AI_PROVIDER: typeof env.PAYNOTE_AI_PROVIDER === 'string' ? env.PAYNOTE_AI_PROVIDER : '',
     PAYNOTE_AI_API_KEY: typeof env.PAYNOTE_AI_API_KEY === 'string' ? env.PAYNOTE_AI_API_KEY : '',
     PAYNOTE_AI_MODEL: typeof env.PAYNOTE_AI_MODEL === 'string' ? env.PAYNOTE_AI_MODEL : '',
+    PAYNOTE_AI_LOCAL_ONLY: typeof env.PAYNOTE_AI_LOCAL_ONLY === 'string' ? env.PAYNOTE_AI_LOCAL_ONLY : '',
     PAYNOTE_AI_TIMEOUT_MS: typeof env.PAYNOTE_AI_TIMEOUT_MS === 'string' ? env.PAYNOTE_AI_TIMEOUT_MS : '',
   };
   const content = [
@@ -63,6 +64,7 @@ const writeGeneratedEnvModule = (env) => {
     `  PAYNOTE_AI_PROVIDER: ${JSON.stringify(safe.PAYNOTE_AI_PROVIDER)},`,
     `  PAYNOTE_AI_API_KEY: ${JSON.stringify(safe.PAYNOTE_AI_API_KEY)},`,
     `  PAYNOTE_AI_MODEL: ${JSON.stringify(safe.PAYNOTE_AI_MODEL)},`,
+    `  PAYNOTE_AI_LOCAL_ONLY: ${JSON.stringify(safe.PAYNOTE_AI_LOCAL_ONLY)},`,
     `  PAYNOTE_AI_TIMEOUT_MS: ${JSON.stringify(safe.PAYNOTE_AI_TIMEOUT_MS)},`,
     '} as const;',
     '',

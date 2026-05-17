@@ -49,7 +49,7 @@ describe('aiChatService', () => {
     });
 
     const message = await sendAIChatMessage('tháng này tôi tiêu bao nhiêu');
-    expect(message.content).toBe('local answer');
+    expect(message.content).toBe('aQuang: local answer');
     expect(message.metadata?.source).toBe('fallback');
   });
 
@@ -64,7 +64,7 @@ describe('aiChatService', () => {
     mockedRequestLLMAnswer.mockRejectedValue(new Error('network fail'));
 
     const message = await sendAIChatMessage('tháng này tôi tiêu bao nhiêu');
-    expect(message.content).toBe('local answer');
+    expect(message.content).toBe('aQuang: local answer');
     expect(message.metadata?.source).toBe('fallback');
   });
 
@@ -82,7 +82,7 @@ describe('aiChatService', () => {
     });
 
     const message = await sendAIChatMessage('tháng này tôi tiêu bao nhiêu');
-    expect(message.content).toBe('llm answer');
+    expect(message.content).toBe('aQuang: llm answer');
     expect(message.metadata?.source).toBe('llm');
   });
 });

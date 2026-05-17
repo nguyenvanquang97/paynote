@@ -6,6 +6,16 @@ import {getAIEnvSettings} from '../../../config/env';
 import {buildLLMMessages} from './llm/llmPromptBuilder';
 import {requestLLMAnswer} from './llm/llmClient';
 
+const ensureAquangVoice = (text: string): string => {
+  const trimmed = text.trim();
+  if (!trimmed) {return 'aQuang: ...';}
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith('aquang') || lower.startsWith('aquang:') || lower.includes('aquang')) {
+    return trimmed;
+  }
+  return `aQuang: ${trimmed}`;
+};
+
 export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
   const content = input.trim();
   if (!content) {
@@ -15,7 +25,7 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
   const intent = detectAIIntent(content);
   const context = await buildFinancialContextForIntent(intent, content);
   const localPayload = generateLocalAnswerPayload(content, intent, context);
-  const localAnswer = localPayload.text;
+  const localAnswer = ensureAquangVoice(localPayload.text);
   const localCards = localPayload.cards;
   const llmMessages = buildLLMMessages(content, intent, context);
   const llmSettings = getAIEnvSettings();
@@ -24,7 +34,7 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
   const toFallbackMessage = (fallbackContent: string): AIChatMessage => ({
     id: createAIChatMessageId(),
     role: 'assistant',
-    content: fallbackContent,
+    content: ensureAquangVoice(fallbackContent),
     createdAt: Date.now(),
     status: 'success',
     metadata: {
@@ -47,7 +57,7 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
       if (!text) {
         return null;
       }
-      return toFallbackMessage(text);
+      return toFallbackMessage(ensureAquangVoice(text));
     } catch {
       return null;
     }
@@ -74,7 +84,7 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
       messages: llmMessages,
     });
 
-    const llmContent = llmResponse.content.trim();
+    const llmContent = ensureAquangVoice(llmResponse.content.trim());
     if (!llmContent) {
       throw new Error('EMPTY_LLM_RESPONSE');
     }

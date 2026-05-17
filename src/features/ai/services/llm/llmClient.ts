@@ -74,7 +74,7 @@ const mapGeminiMessages = (messages: LLMMessage[]): string =>
 
 const callGemini = async (request: LLMRequest): Promise<LLMResponse> => {
   const prompt = mapGeminiMessages(request.messages);
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${request.model}:generateContent?key=${encodeURIComponent(request.apiKey)}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${request.model}:generateContent`;
   console.info('[AI_LLM] Gemini request model=%s timeoutMs=%d', request.model, request.timeoutMs);
 
   const response = await fetchWithTimeout(
@@ -82,6 +82,7 @@ const callGemini = async (request: LLMRequest): Promise<LLMResponse> => {
     {
       method: 'POST',
       headers: {
+        'x-goog-api-key': request.apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
