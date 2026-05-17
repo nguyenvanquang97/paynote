@@ -14,8 +14,7 @@ import {useThemeColors} from '../../shared/theme';
 import {AI_QUICK_PROMPTS} from '../../features/ai/constants/aiQuickPrompts';
 import {useAIChatStore} from '../../features/ai/store/useAIChatStore';
 import {createAIChatMessageId} from '../../features/ai/types/aiChat.types';
-
-const MOCK_ASSISTANT_RESPONSE = 'Tính năng AI tài chính đang được khởi tạo. Ở bước sau tôi sẽ đọc dữ liệu chi tiêu thật.';
+import {sendAIChatMessage} from '../../features/ai/services/aiChatService';
 
 const AIChatScreen: React.FC = () => {
   const t = useThemeColors();
@@ -39,7 +38,6 @@ const AIChatScreen: React.FC = () => {
   const s = useMemo(() => createStyles(C), [C]);
 
   const scrollRef = useRef<ScrollView | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const messages = useAIChatStore(state => state.messages);
   const isLoading = useAIChatStore(state => state.isLoading);
@@ -50,21 +48,13 @@ const AIChatScreen: React.FC = () => {
   const [input, setInput] = useState('');
 
   useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
     const id = setTimeout(() => {
       scrollRef.current?.scrollToEnd({animated: true});
     }, 40);
     return () => clearTimeout(id);
   }, [messages]);
 
-  const sendMessage = (draft?: string) => {
+  const sendMessage = async (draft?: string) => {
     const content = (typeof draft === 'string' ? draft : input).trim();
     if (!content || isLoading) {
       return;
@@ -93,20 +83,27 @@ const AIChatScreen: React.FC = () => {
 
     setInput('');
     setLoading(true);
-
-    timerRef.current = setTimeout(() => {
+    try {
+      const assistantMessage = await sendAIChatMessage(content);
       updateMessage(assistantId, {
-        content: MOCK_ASSISTANT_RESPONSE,
+        content: assistantMessage.content,
         status: 'success',
+        metadata: assistantMessage.metadata,
+      });
+    } catch {
+      updateMessage(assistantId, {
+        content: 'Hiện tại chưa xử lý được câu hỏi này. Bạn thử diễn đạt lại ngắn hơn nhé.',
+        status: 'error',
         metadata: {source: 'fallback'},
       });
+    } finally {
       setLoading(false);
-    }, 420);
+    }
   };
 
   const handleQuickPrompt = (prompt: string) => {
     setInput(prompt);
-    sendMessage(prompt);
+    sendMessage(prompt).catch(() => {});
   };
 
   return (
@@ -177,13 +174,13 @@ const AIChatScreen: React.FC = () => {
           placeholderTextColor={C.sub}
           style={s.input}
           editable={!isLoading}
-          onSubmitEditing={() => sendMessage()}
+          onSubmitEditing={() => { sendMessage().catch(() => {}); }}
           returnKeyType="send"
         />
         <TouchableOpacity
           style={[s.sendBtn, (!input.trim() || isLoading) && s.sendBtnDisabled]}
           disabled={!input.trim() || isLoading}
-          onPress={() => sendMessage()}>
+          onPress={() => { sendMessage().catch(() => {}); }}>
           <Text style={s.sendBtnTxt}>Gửi</Text>
         </TouchableOpacity>
       </View>
