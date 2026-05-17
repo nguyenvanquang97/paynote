@@ -259,9 +259,9 @@ const createStyles = (C: {
     justifyContent: 'center',
   },
   emoji: {fontSize: 18},
-  titleRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  titleWrap: {flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1},
-  title: {color: C.txt, fontSize: 15, fontWeight: '700'},
+  titleRow: {flexDirection: 'row', alignItems: 'flex-start'},
+  titleWrap: {flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6},
+  title: {color: C.txt, fontSize: 15, fontWeight: '700', flexShrink: 1},
   aiBadge: {
     borderWidth: 1,
     borderColor: C.acc,
@@ -299,7 +299,7 @@ const createStyles = (C: {
     paddingVertical: 2,
   },
   tierBadgeTxt: {color: C.acc, fontSize: 10, fontWeight: '800'},
-  dot: {width: 8, height: 8, borderRadius: 4, backgroundColor: C.warn},
+  dot: {width: 8, height: 8, borderRadius: 4, backgroundColor: C.warn, marginLeft: 8, marginTop: 5},
   message: {color: C.txt, fontSize: 13, marginTop: 4, lineHeight: 18},
   meta: {color: C.sub, fontSize: 12, marginTop: 6},
 });
