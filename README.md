@@ -1,97 +1,154 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# PayNote
 
-# Getting Started
+Ứng dụng quản lý chi tiêu cá nhân trên mobile, tập trung vào tốc độ nhập liệu, theo dõi ngân sách theo danh mục và cảnh báo chi tiêu theo ngữ cảnh.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Mục tiêu sản phẩm
 
-## Step 1: Start Metro
+- Ghi nhận giao dịch nhanh, ít thao tác.
+- Theo dõi sức khỏe tài chính theo tháng.
+- Cảnh báo khi chi tiêu vượt ngưỡng ngân sách.
+- Hỗ trợ nhắc nhở định kỳ và thông báo trong ứng dụng.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Tính năng chính
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- Quản lý giao dịch thu/chi.
+- Dashboard tổng quan thu nhập, chi tiêu và phân bổ danh mục.
+- Biểu đồ thống kê theo danh mục và thời gian.
+- Cài đặt ngân sách theo danh mục theo tháng.
+- Cảnh báo ngân sách theo ngưỡng (`50/80/100/120%`).
+- Trung tâm thông báo trong app (đánh dấu đã đọc/chưa đọc, xoá, chọn nhiều).
+- Nhắc nhở định kỳ qua native notification.
+- Tuỳ chọn AI budget alerts (dùng Gemini API key).
+- Tuỳ chỉnh theme và thông tin hồ sơ cá nhân.
 
-```sh
-# Using npm
-npm start
+## Công nghệ sử dụng
 
-# OR using Yarn
+- React Native `0.85.3` (CLI)
+- React `19.2.3`
+- TypeScript
+- Zustand (state management)
+- MMKV (local key-value storage)
+- SQLite (`react-native-sqlite-storage`)
+- React Navigation (stack + bottom tabs)
+- Reanimated + Gesture Handler + Bottom Sheet
+
+## Yêu cầu môi trường
+
+- Node.js `>= 22.11.0`
+- Yarn `3.6.4` (khuyến nghị, theo `packageManager`)
+- Android Studio + Android SDK (để chạy Android)
+- Xcode + CocoaPods (để chạy iOS trên macOS)
+
+## Cài đặt
+
+```bash
+yarn install
+```
+
+## Cấu hình biến môi trường
+
+Tạo file `.env` ở thư mục gốc:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+Ghi chú:
+
+- App hỗ trợ cả `GEMINI_API_KEY` và `GOOGLE_API_KEY`.
+- Script `scripts/with-env.js` sẽ tự generate `src/config/runtimeEnv.generated.ts` khi chạy app.
+
+## Chạy dự án
+
+### 1) Khởi động Metro
+
+```bash
 yarn start
 ```
 
-## Step 2: Build and run your app
+### 2) Chạy Android
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
+```bash
 yarn android
 ```
 
-### iOS
+### 3) Chạy iOS
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+Cài pods (lần đầu hoặc khi thay đổi native dependencies):
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
+```bash
 bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
 bundle exec pod install
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Sau đó chạy:
 
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
+```bash
 yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## Scripts hữu ích
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+- `yarn start`: chạy Metro bundler.
+- `yarn android`: build + chạy app Android.
+- `yarn ios`: build + chạy app iOS.
+- `yarn lint`: chạy ESLint.
+- `yarn test`: chạy Jest tests.
 
-## Step 3: Modify your app
+## Cấu trúc thư mục
 
-Now that you have successfully run the app, let's make changes!
+```text
+src/
+  animations/        # hiệu ứng và transition
+  app/               # Zustand store và app state
+  assets/            # images, static assets
+  config/            # env/runtime config
+  database/          # truy cập và xử lý SQLite
+  modules/           # domain modules (banking, analytics, export, ...)
+  native/            # bridge native notification/bank notification
+  screens/           # màn hình UI
+  services/          # logic nghiệp vụ (budget alert, notifications, updater, ...)
+  shared/            # component dùng chung, constants, theme, types
+  utils/             # utility helpers
+```
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## Kiến trúc ngắn gọn
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+- `App.tsx` khởi tạo dữ liệu từ local storage, thiết lập navigation và background services.
+- Giao dịch mới (đặc biệt từ bank notification parser) sẽ kích hoạt:
+  - cập nhật store,
+  - tính lại thống kê,
+  - kiểm tra ngưỡng ngân sách,
+  - tạo thông báo in-app.
+- Native layer Android hỗ trợ nhận/chạy thông báo định kỳ và bridge sang JS.
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## Kiểm thử và chất lượng
 
-## Congratulations! :tada:
+```bash
+yarn lint
+yarn test
+```
 
-You've successfully run and modified your React Native App. :partying_face:
+Khuyến nghị chạy cả lint và test trước khi mở PR.
 
-### Now what?
+## Troubleshooting nhanh
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+- Không chạy được Android: kiểm tra `ANDROID_HOME`, emulator/device và cấp quyền notification.
+- iOS lỗi pods: chạy lại `bundle exec pod install` trong thư mục `ios/`.
+- AI alert không hoạt động: kiểm tra `.env` và giá trị API key hợp lệ.
 
-# Troubleshooting
+## Lưu ý bảo mật
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+- Không commit file `.env` hoặc API key thật.
+- File `src/config/runtimeEnv.generated.ts` được generate tự động từ local env.
 
-# Learn More
+## Đóng góp
 
-To learn more about React Native, take a look at the following resources:
+1. Tạo branch mới từ `main`.
+2. Commit theo từng thay đổi nhỏ, rõ ràng.
+3. Chạy `yarn lint` và `yarn test`.
+4. Mở Pull Request với mô tả mục tiêu và phạm vi thay đổi.
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## License
+
+Chưa khai báo license chính thức trong repository này.
