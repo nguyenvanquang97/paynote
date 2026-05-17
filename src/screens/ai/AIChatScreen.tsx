@@ -1,5 +1,6 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,10 +14,12 @@ import dayjs from 'dayjs';
 import {useThemeColors} from '../../shared/theme';
 import {AI_QUICK_PROMPTS} from '../../features/ai/constants/aiQuickPrompts';
 import {useAIChatStore} from '../../features/ai/store/useAIChatStore';
-import {createAIChatMessageId} from '../../features/ai/types/aiChat.types';
+import {createAIChatMessageId, type AIChatMessage} from '../../features/ai/types/aiChat.types';
 import {sendAIChatMessage} from '../../features/ai/services/aiChatService';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 const AIChatScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const t = useThemeColors();
   const C = useMemo(() => ({
     bg: t.appBg,
@@ -38,6 +41,7 @@ const AIChatScreen: React.FC = () => {
   const s = useMemo(() => createStyles(C), [C]);
 
   const scrollRef = useRef<ScrollView | null>(null);
+  const streamTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const messages = useAIChatStore(state => state.messages);
   const isLoading = useAIChatStore(state => state.isLoading);
@@ -46,6 +50,8 @@ const AIChatScreen: React.FC = () => {
   const setLoading = useAIChatStore(state => state.setLoading);
 
   const [input, setInput] = useState('');
+  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
+  type AssistantMetadata = NonNullable<AIChatMessage['metadata']>;
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -53,6 +59,73 @@ const AIChatScreen: React.FC = () => {
     }, 40);
     return () => clearTimeout(id);
   }, [messages]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    const showSub = Keyboard.addListener('keyboardDidShow', event => {
+      const height = event?.endCoordinates?.height || 0;
+      setAndroidKeyboardHeight(height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setAndroidKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => () => {
+    if (streamTimerRef.current) {
+      clearTimeout(streamTimerRef.current);
+    }
+  }, []);
+
+  const streamAssistantMessage = (
+    assistantId: string,
+    fullText: string,
+    metadata: AssistantMetadata,
+    status: 'success' | 'error',
+  ): Promise<void> => new Promise(resolve => {
+    const words = fullText.split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      updateMessage(assistantId, {
+        content: fullText,
+        status,
+        metadata,
+      });
+      resolve();
+      return;
+    }
+
+    let index = 0;
+    const step = () => {
+      index = Math.min(index + 3, words.length);
+      updateMessage(assistantId, {
+        content: `${words.slice(0, index).join(' ')}${index < words.length ? ' ▌' : ''}`,
+        status: 'sending',
+        metadata,
+      });
+
+      if (index >= words.length) {
+        updateMessage(assistantId, {
+          content: fullText,
+          status,
+          metadata,
+        });
+        resolve();
+        return;
+      }
+
+      streamTimerRef.current = setTimeout(step, 28);
+    };
+
+    step();
+  });
 
   const sendMessage = async (draft?: string) => {
     const content = (typeof draft === 'string' ? draft : input).trim();
@@ -85,17 +158,19 @@ const AIChatScreen: React.FC = () => {
     setLoading(true);
     try {
       const assistantMessage = await sendAIChatMessage(content);
-      updateMessage(assistantId, {
-        content: assistantMessage.content,
-        status: 'success',
-        metadata: assistantMessage.metadata,
-      });
+      await streamAssistantMessage(
+        assistantId,
+        assistantMessage.content,
+        assistantMessage.metadata || {source: 'local'},
+        'success',
+      );
     } catch {
-      updateMessage(assistantId, {
-        content: 'Hiện tại chưa xử lý được câu hỏi này. Bạn thử diễn đạt lại ngắn hơn nhé.',
-        status: 'error',
-        metadata: {source: 'fallback'},
-      });
+      await streamAssistantMessage(
+        assistantId,
+        'Hiện tại chưa xử lý được câu hỏi này. Bạn thử diễn đạt lại ngắn hơn nhé.',
+        {source: 'fallback'},
+        'error',
+      );
     } finally {
       setLoading(false);
     }
@@ -109,7 +184,7 @@ const AIChatScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={s.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}>
       <View style={s.headerCard}>
         <Text style={s.headerTitle}>aQuang</Text>
@@ -152,7 +227,7 @@ const AIChatScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      <View style={s.quickPromptWrap}>
+      <View style={[s.quickPromptWrap, Platform.OS === 'android' && {marginBottom: Math.max(0, androidKeyboardHeight - insets.bottom - 6)}]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.quickPromptContent}>
           {AI_QUICK_PROMPTS.map(prompt => (
             <TouchableOpacity
@@ -166,7 +241,7 @@ const AIChatScreen: React.FC = () => {
         </ScrollView>
       </View>
 
-      <View style={s.inputRow}>
+      <View style={[s.inputRow, {paddingBottom: Math.max(8, insets.bottom)}]}>
         <TextInput
           value={input}
           onChangeText={setInput}
