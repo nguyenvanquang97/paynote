@@ -68,11 +68,21 @@ const SettingsIcon = ({ color }: { color: string }) => (
   </Svg>
 );
 
+const AIChatIcon = ({ color }: { color: string }) => (
+  <Svg width={TAB_ICON_SIZE} height={TAB_ICON_SIZE} viewBox="0 0 24 24" fill="none">
+    <Rect x="4" y="4" width="16" height="12" rx="3" stroke={color} strokeWidth="2" />
+    <Path d="M10 16v2.5h4V16" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    <Circle cx="9" cy="10" r="1" fill={color} />
+    <Circle cx="15" cy="10" r="1" fill={color} />
+  </Svg>
+);
+
 const ROUTE_ICONS: Record<string, (color: string) => React.ReactNode> = {
   Dashboard: (c) => <DashboardIcon color={c} />,
   Transactions: (c) => <TransactionsIcon color={c} />,
   Charts: (c) => <ChartsIcon color={c} />,
   Categories: (c) => <CategoriesIcon color={c} />,
+  AIChat: (c) => <AIChatIcon color={c} />,
   Settings: (c) => <SettingsIcon color={c} />,
 };
 
@@ -81,6 +91,7 @@ const ROUTE_LABELS: Record<string, string> = {
   Transactions: 'Giao dịch',
   Charts: 'Biểu đồ',
   Categories: 'Danh mục',
+  AIChat: 'AI',
   Settings: 'Cài đặt',
 };
 

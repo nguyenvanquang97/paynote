@@ -1,9 +1,9 @@
 import {pickBudgetAlertThreshold} from '../src/services/budgetAlertUtils';
 
 describe('budget alerts threshold', () => {
-  it('returns null below 80%', () => {
+  it('returns first threshold reached', () => {
     const threshold = pickBudgetAlertThreshold(79.9, () => false);
-    expect(threshold).toBeNull();
+    expect(threshold).toBe(50);
   });
 
   it('returns highest threshold reached', () => {
@@ -17,7 +17,7 @@ describe('budget alerts threshold', () => {
   });
 
   it('returns null when all reached thresholds already triggered', () => {
-    const threshold = pickBudgetAlertThreshold(121, (t) => t === 120 || t === 100 || t === 80);
+    const threshold = pickBudgetAlertThreshold(121, (t) => t === 120 || t === 100 || t === 80 || t === 50);
     expect(threshold).toBeNull();
   });
 });

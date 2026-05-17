@@ -2,6 +2,7 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {useNavigation} from '@react-navigation/native';
 import {StatusBar, ImageBackground, StyleSheet, View} from 'react-native';
 import {createMMKV} from 'react-native-mmkv';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -12,6 +13,8 @@ import TransactionsScreen from './src/screens/transactions/TransactionsScreen';
 import ChartsScreen from './src/screens/charts/ChartsScreen';
 import CategoriesScreen from './src/screens/categories/CategoriesScreen';
 import SettingsScreen from './src/screens/settings/SettingsScreen';
+import AIChatScreen from './src/screens/ai/AIChatScreen';
+import AIChatFloatingButton from './src/features/ai/components/AIChatFloatingButton';
 import PersonalFinanceScreen from './src/screens/settings/PersonalFinanceScreen';
 import BudgetSettingsScreen from './src/screens/settings/BudgetSettingsScreen';
 import NotificationsScreen from './src/screens/notifications/NotificationsScreen';
@@ -34,32 +37,42 @@ import Animated from 'react-native-reanimated';
 import {getGeminiApiKeyFromEnv} from './src/config/env';
 
 const storage = createMMKV();
-const Tab = createBottomTabNavigator();
+type MainTabParamList = {
+  Dashboard: undefined;
+  Transactions: undefined;
+  Charts: undefined;
+  Categories: undefined;
+  Settings: undefined;
+};
+
+const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator();
 
 function MainTabs() {
+  const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const themeMode = useAppStore(s => s.themeMode);
-  const aiBudgetAlertsEnabled = useAppStore(s => s.aiBudgetAlertsEnabled);
-  const geminiApiKey = useAppStore(s => s.geminiApiKey);
   const colors = getThemeColors(themeMode);
   return (
-    <Tab.Navigator
-      tabBar={props => <BubbleTabBar {...props} />}
-      screenOptions={{
-        sceneStyle: {backgroundColor: 'transparent', paddingTop: insets.top + 8},
-        headerShown: false,
-        headerTransparent: true,
-        headerStyle: {backgroundColor: 'transparent'},
-        headerTintColor: colors.textPrimary,
-        headerTitleStyle: {fontWeight: '700', color: colors.textPrimary},
-      }}>
-      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{title: ''}} />
-      <Tab.Screen name="Transactions" component={TransactionsScreen} options={{title: 'Giao dịch'}} />
-      <Tab.Screen name="Charts" component={ChartsScreen} options={{title: 'Biểu đồ'}} />
-      <Tab.Screen name="Categories" component={CategoriesScreen} options={{title: 'Danh mục'}} />
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{title: 'Cài đặt'}} />
-    </Tab.Navigator>
+    <View style={styles.bg}>
+      <Tab.Navigator
+        tabBar={props => <BubbleTabBar {...props} />}
+        screenOptions={{
+          sceneStyle: {backgroundColor: 'transparent', paddingTop: insets.top + 8},
+          headerShown: false,
+          headerTransparent: true,
+          headerStyle: {backgroundColor: 'transparent'},
+          headerTintColor: colors.textPrimary,
+          headerTitleStyle: {fontWeight: '700', color: colors.textPrimary},
+        }}>
+        <Tab.Screen name="Dashboard" component={DashboardScreen} options={{title: ''}} />
+        <Tab.Screen name="Transactions" component={TransactionsScreen} options={{title: 'Giao dịch'}} />
+        <Tab.Screen name="Charts" component={ChartsScreen} options={{title: 'Biểu đồ'}} />
+        <Tab.Screen name="Categories" component={CategoriesScreen} options={{title: 'Danh mục'}} />
+        <Tab.Screen name="Settings" component={SettingsScreen} options={{title: 'Cài đặt'}} />
+      </Tab.Navigator>
+      <AIChatFloatingButton onPress={() => navigation.navigate('AIChat')} />
+    </View>
   );
 }
 
@@ -133,6 +146,7 @@ export default function App() {
     loadBudgetAlertsEnabled,
     loadAiAlertSettings,
     loadBudgetAlertHistory,
+    loadNotificationMemory,
     loadInAppNotifications,
     loadThemeMode,
   ]);
@@ -237,6 +251,11 @@ export default function App() {
                         name="Notifications"
                         component={NotificationsScreen}
                         options={{title: 'Thông báo'}}
+                      />
+                      <Stack.Screen
+                        name="AIChat"
+                        component={AIChatScreen}
+                        options={{title: 'aQuang'}}
                       />
                     </Stack.Navigator>
                   )}
