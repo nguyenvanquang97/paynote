@@ -4,6 +4,7 @@ import {showBudgetAlertNotification} from '../native';
 import {toast} from '../shared/components/Toast';
 import {useAppStore} from '../app/store';
 import type {Transaction} from '../shared/types';
+import {COOLDOWN_BY_TRIGGER} from './notifications/notificationRules';
 import {generateNotificationMessage, type NotificationTrigger, type NotificationSeverity} from './notifications';
 
 const phase2Storage = createMMKV();
@@ -12,6 +13,7 @@ const KEY_STREAK_DAYS = 'phase2_saving_streak_days';
 const KEY_LAST_SPEND_DATE = 'phase2_last_spend_date';
 const KEY_LAST_EOD = 'phase2_last_eod_summary';
 const KEY_LAST_EOM = 'phase2_last_eom_warning';
+const KEY_LAST_TRIGGER_PREFIX = 'phase2_last_trigger_at_';
 
 const formatCurrency = (amount: number): string =>
   `${new Intl.NumberFormat('vi-VN').format(Math.max(0, Math.round(amount)))} ₫`;
@@ -24,6 +26,14 @@ const pushGenerated = (params: {
   titleFallback: string;
   messageFallback: string;
 }): void => {
+  const now = Date.now();
+  const triggerCooldown = COOLDOWN_BY_TRIGGER[params.trigger] ?? 30 * 60 * 1000;
+  const triggerKey = `${KEY_LAST_TRIGGER_PREFIX}${params.trigger}`;
+  const lastTriggerAt = phase2Storage.getNumber(triggerKey) || 0;
+  if (now - lastTriggerAt < triggerCooldown) {
+    return;
+  }
+
   const state = useAppStore.getState();
   const generated = generateNotificationMessage({
     trigger: params.trigger,
@@ -34,9 +44,13 @@ const pushGenerated = (params: {
     intensity: state.notificationIntensity,
     allowStrongLanguage: state.allowStrongLanguage,
   });
+  if (!generated) {
+    return;
+  }
 
-  const title = generated?.title || params.titleFallback;
-  const message = generated?.message || params.messageFallback;
+  const title = generated.title || params.titleFallback;
+  const message = generated.message || params.messageFallback;
+  phase2Storage.set(triggerKey, now);
 
   state.pushInAppNotification({
     type: 'periodic_reminder',
@@ -44,13 +58,13 @@ const pushGenerated = (params: {
     message,
     source: 'template',
     toneTag: state.notificationPersona,
-    templateId: generated?.templateId,
-    templateOrigin: generated?.templateOrigin,
-    escalationTier: generated?.escalationTier,
-    scoreMeta: generated?.scoreMeta,
+    templateId: generated.templateId,
+    templateOrigin: generated.templateOrigin,
+    escalationTier: generated.escalationTier,
+    scoreMeta: generated.scoreMeta,
     trigger: params.trigger,
     severity: params.severity,
-    categoryContext: generated?.categoryContext,
+    categoryContext: generated.categoryContext,
     monthKey: dayjs().format('YYYY-MM'),
   });
 

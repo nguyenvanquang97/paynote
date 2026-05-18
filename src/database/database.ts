@@ -57,6 +57,28 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase) => {
     CREATE INDEX IF NOT EXISTS idx_transactions_type
     ON transactions (transaction_type)
   `);
+
+  const [columns] = await database.executeSql(`PRAGMA table_info(transactions)`);
+  let hasDedupeKey = false;
+  for (let i = 0; i < columns.rows.length; i++) {
+    const row = columns.rows.item(i) as {name?: string};
+    if (row.name === 'dedupe_key') {
+      hasDedupeKey = true;
+      break;
+    }
+  }
+
+  if (!hasDedupeKey) {
+    await database.executeSql(`
+      ALTER TABLE transactions
+      ADD COLUMN dedupe_key TEXT
+    `);
+  }
+
+  await database.executeSql(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_dedupe_key
+    ON transactions (dedupe_key)
+  `);
 };
 
 export const closeDatabase = async () => {

@@ -10,6 +10,36 @@ class NotificationService : NotificationListenerService() {
 
     companion object {
         private const val TAG = "NotificationService"
+        private const val CACHE_WINDOW_MS = 15_000L
+        private const val MAX_CACHE_ENTRIES = 200
+    }
+
+    private val recentNotificationCache = object : LinkedHashMap<String, Long>(MAX_CACHE_ENTRIES, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?): Boolean {
+            return size > MAX_CACHE_ENTRIES
+        }
+    }
+
+    @Synchronized
+    private fun shouldSkipDuplicate(sbn: StatusBarNotification, text: String?): Boolean {
+        val now = System.currentTimeMillis()
+        val key = "${sbn.key}|${sbn.postTime}|${text ?: ""}"
+
+        val iterator = recentNotificationCache.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            if (now - entry.value > CACHE_WINDOW_MS) {
+                iterator.remove()
+            }
+        }
+
+        val lastSeen = recentNotificationCache[key]
+        if (lastSeen != null && now - lastSeen <= CACHE_WINDOW_MS) {
+            return true
+        }
+
+        recentNotificationCache[key] = now
+        return false
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -21,6 +51,11 @@ class NotificationService : NotificationListenerService() {
                 .getString(Notification.EXTRA_TITLE)
 
             val text = extractNotificationText(extras)
+
+            if (shouldSkipDuplicate(sbn, text)) {
+                Log.d(TAG, "Skip duplicate notification from: $packageName")
+                return
+            }
 
             Log.d(TAG, "Notification from: $packageName")
 

@@ -1,1 +1,1 @@
-export {generateTransactionHash, isDuplicate} from './deduplication';
+export {generateDedupeKey, isDuplicate} from './deduplication';

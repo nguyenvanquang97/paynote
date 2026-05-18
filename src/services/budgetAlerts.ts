@@ -165,6 +165,7 @@ const emitNotification = async (payload: {
 export const triggerBudgetAlertsForTransaction = async (transaction: Transaction): Promise<void> => {
   if (transaction.transactionType !== 'expense') {return;}
   const categoryId = transaction.category || 'other';
+  const isOtherCategory = categoryId === 'other';
   const year = dayjs(transaction.timestamp).year();
   const month = dayjs(transaction.timestamp).month() + 1;
   const monthKey = toMonthKey(year, month);
@@ -207,6 +208,9 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
   );
 
   if (threshold) {
+    if (isOtherCategory && threshold < 100) {
+      return;
+    }
     const cooldownKey = `${alertPeriodKey}:${categoryId}:${threshold}`;
     const lastAt = alertCooldownMap.get(cooldownKey) || 0;
     if (Date.now() - lastAt >= ALERT_COOLDOWN_MS) {
@@ -245,7 +249,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
     dayjs(tx.timestamp).format('YYYY-MM-DD') === dayKey,
   );
 
-  if (dayExpensesSameCategory.length >= 3) {
+  if (!isOtherCategory && dayExpensesSameCategory.length >= 3) {
     const reached = pickReachedMilestone(dayExpensesSameCategory.length, REPEAT_MILESTONES);
     if (!reached) {return;}
     const cooldownKey = `repeat:${dayKey}:${categoryId}:m${reached}`;
@@ -274,7 +278,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
     tx.timestamp >= weekStart &&
     tx.timestamp <= transaction.timestamp,
   );
-  if (weekExpensesSameCategory.length >= 8) {
+  if (!isOtherCategory && weekExpensesSameCategory.length >= 8) {
     const reachedWeekly = pickReachedMilestone(weekExpensesSameCategory.length, WEEK_REPEAT_MILESTONES);
     if (!reachedWeekly) {return;}
     const weekKey = dayjs(transaction.timestamp).format('YYYY-[W]WW');
@@ -305,7 +309,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
   const dayCount = Math.max(dayjs(transaction.timestamp).date(), 1);
   const averageDailySpend = totalMonthSpend / dayCount;
 
-  if (averageDailySpend > 0 && transaction.amount >= averageDailySpend * 2) {
+  if (!isOtherCategory && averageDailySpend > 0 && transaction.amount >= averageDailySpend * 2) {
     const cooldownKey = `large:${dayKey}:${categoryId}`;
     const lastAt = alertCooldownMap.get(cooldownKey) || 0;
     if (Date.now() - lastAt >= 60 * 60 * 1000) {
@@ -330,7 +334,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
     }
   }
 
-  if (shouldTriggerLateNight(transaction.timestamp)) {
+  if (!isOtherCategory && shouldTriggerLateNight(transaction.timestamp)) {
     const cooldownKey = `night:${dayKey}`;
     const lastAt = alertCooldownMap.get(cooldownKey) || 0;
     if (Date.now() - lastAt >= 2 * 60 * 60 * 1000) {

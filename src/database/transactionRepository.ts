@@ -1,13 +1,23 @@
 import uuid from 'react-native-uuid';
 import {getDatabase} from './database';
 import type {Transaction, ParsedTransaction} from '../shared/types';
+import {generateDedupeKey} from '../modules/banking/services/deduplication';
 
 export const insertTransaction = async (
   bank: string,
   parsed: ParsedTransaction,
   category?: string,
-): Promise<Transaction> => {
+): Promise<Transaction | null> => {
   const db = await getDatabase();
+  const dedupeKey = generateDedupeKey(
+    bank,
+    parsed.amount,
+    parsed.timestamp,
+    parsed.transactionType,
+    parsed.description,
+    parsed.balanceAfter,
+    parsed.rawText,
+  );
 
   const transaction: Transaction = {
     ...parsed,
@@ -19,10 +29,10 @@ export const insertTransaction = async (
   };
 
   await db.executeSql(
-    `INSERT INTO transactions
+    `INSERT OR IGNORE INTO transactions
       (id, bank, amount, balance_after, description, category,
-       transaction_type, timestamp, raw_text, is_suspected_gap, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       transaction_type, timestamp, raw_text, is_suspected_gap, created_at, dedupe_key)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       transaction.id,
       transaction.bank,
@@ -35,8 +45,18 @@ export const insertTransaction = async (
       transaction.rawText,
       transaction.isSuspectedGap ? 1 : 0,
       transaction.createdAt,
+      dedupeKey,
     ],
   );
+
+  const [insertCheck] = await db.executeSql(
+    `SELECT id FROM transactions WHERE dedupe_key = ? LIMIT 1`,
+    [dedupeKey],
+  );
+  const insertedId = insertCheck.rows.length > 0 ? insertCheck.rows.item(0).id : null;
+  if (insertedId !== transaction.id) {
+    return null;
+  }
 
   return transaction;
 };
@@ -173,11 +193,20 @@ export const importTransactions = async (transactions: Transaction[]): Promise<v
   const db = await getDatabase();
   await db.transaction(tx => {
     for (const transaction of transactions) {
+      const dedupeKey = generateDedupeKey(
+        transaction.bank,
+        transaction.amount,
+        transaction.timestamp,
+        transaction.transactionType,
+        transaction.description,
+        transaction.balanceAfter,
+        transaction.rawText,
+      );
       tx.executeSql(
-        `INSERT INTO transactions
+        `INSERT OR IGNORE INTO transactions
           (id, bank, amount, balance_after, description, category,
-           transaction_type, timestamp, raw_text, is_suspected_gap, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           transaction_type, timestamp, raw_text, is_suspected_gap, created_at, dedupe_key)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           transaction.id,
           transaction.bank,
@@ -190,6 +219,7 @@ export const importTransactions = async (transactions: Transaction[]): Promise<v
           transaction.rawText,
           transaction.isSuspectedGap ? 1 : 0,
           transaction.createdAt,
+          dedupeKey,
         ],
       );
     }

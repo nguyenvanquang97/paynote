@@ -51,7 +51,7 @@ const AIChatScreen: React.FC = () => {
   const setLoading = useAIChatStore(state => state.setLoading);
 
   const [input, setInput] = useState('');
-  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   type AssistantMetadata = NonNullable<AIChatMessage['metadata']>;
 
   useEffect(() => {
@@ -66,12 +66,11 @@ const AIChatScreen: React.FC = () => {
       return;
     }
 
-    const showSub = Keyboard.addListener('keyboardDidShow', event => {
-      const height = event?.endCoordinates?.height || 0;
-      setAndroidKeyboardHeight(height);
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      setIsKeyboardVisible(true);
     });
     const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-      setAndroidKeyboardHeight(0);
+      setIsKeyboardVisible(false);
     });
 
     return () => {
@@ -185,7 +184,7 @@ const AIChatScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={s.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}>
       <View style={s.headerCard}>
         <Text style={s.headerTitle}>aQuang</Text>
@@ -223,7 +222,7 @@ const AIChatScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      <View style={[s.quickPromptWrap, Platform.OS === 'android' && {marginBottom: Math.max(0, androidKeyboardHeight - insets.bottom - 6)}]}>
+      <View style={[s.quickPromptWrap, Platform.OS === 'android' && isKeyboardVisible && s.quickPromptWrapKeyboard]}>
         <AIQuickPromptList
           prompts={AI_QUICK_PROMPTS}
           onPressPrompt={handleQuickPrompt}
@@ -326,6 +325,9 @@ const createStyles = (C: {
   quickPromptWrap: {
     marginTop: 8,
     marginBottom: 8,
+  },
+  quickPromptWrapKeyboard: {
+    marginBottom: 4,
   },
   inputRow: {
     flexDirection: 'row',

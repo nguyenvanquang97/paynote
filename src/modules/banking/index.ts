@@ -2,7 +2,6 @@ import type {BankNotification, Transaction} from '../../shared/types';
 import {detectBank} from './detectors';
 import {parseNotification} from './parsers';
 import {categorizeTransaction} from './categorization';
-import {isDuplicate} from './services';
 import {checkReconciliation} from './reconciliation';
 import {insertTransaction} from '../../database';
 import {useAppStore} from '../../app/store';
@@ -13,10 +12,9 @@ import {useAppStore} from '../../app/store';
  * Flow:
  * 1. Detect bank from package name
  * 2. Parse notification text
- * 3. Check for duplicates
- * 4. Categorize transaction
- * 5. Save to database
- * 6. Run reconciliation check
+ * 3. Categorize transaction
+ * 4. Save to database (DB-level dedupe with unique key)
+ * 5. Run reconciliation check
  */
 export const processNotification = async (
   notification: BankNotification,
@@ -48,18 +46,13 @@ export const processNotification = async (
     };
   }
 
-  // Step 3: Check for duplicates
-  const duplicate = await isDuplicate(
-    bank,
-    parsed.amount,
-    parsed.timestamp,
-    parsed.transactionType,
-    parsed.description,
-    parsed.balanceAfter,
-    parsed.rawText,
-  );
+  // Step 3: Categorize
+  const customCategories = useAppStore.getState().customCategories;
+  const category = categorizeTransaction(parsed.description, customCategories);
 
-  if (duplicate) {
+  // Step 4: Save to database
+  const transaction = await insertTransaction(bank, parsed, category);
+  if (!transaction) {
     return {
       transaction: null,
       isSuspectedGap: false,
@@ -67,14 +60,7 @@ export const processNotification = async (
     };
   }
 
-  // Step 4: Categorize
-  const customCategories = useAppStore.getState().customCategories;
-  const category = categorizeTransaction(parsed.description, customCategories);
-
-  // Step 5: Save to database
-  const transaction = await insertTransaction(bank, parsed, category);
-
-  // Step 6: Reconciliation
+  // Step 5: Reconciliation
   const reconciliationResult = await checkReconciliation(transaction);
 
   return {
@@ -87,5 +73,5 @@ export const processNotification = async (
 export {detectBank} from './detectors';
 export {parseNotification} from './parsers';
 export {categorizeTransaction, getAllCategories} from './categorization';
-export {isDuplicate} from './services';
+export {isDuplicate, generateDedupeKey} from './services';
 export {checkReconciliation} from './reconciliation';
