@@ -103,6 +103,7 @@ const callGemini = async (request: LLMRequest): Promise<LLMResponse> => {
   }
 
   const data = await response.json();
+    console.log('[AI_LLM] Gemini response data', data);
   const parts = data?.candidates?.[0]?.content?.parts;
   const content = Array.isArray(parts)
     ? parts.map((part: any) => extractText(part?.text)).filter(Boolean).join('\n').trim()

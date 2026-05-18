@@ -69,10 +69,17 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase) => {
   }
 
   if (!hasDedupeKey) {
-    await database.executeSql(`
-      ALTER TABLE transactions
-      ADD COLUMN dedupe_key TEXT
-    `);
+    try {
+      await database.executeSql(`
+        ALTER TABLE transactions
+        ADD COLUMN dedupe_key TEXT
+      `);
+    } catch (error: any) {
+      const message = String(error?.message || '');
+      if (!/duplicate column name:\s*dedupe_key/i.test(message)) {
+        throw error;
+      }
+    }
   }
 
   await database.executeSql(`
