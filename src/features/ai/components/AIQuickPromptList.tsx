@@ -1,14 +1,21 @@
-import React from 'react';
-import {ScrollView, StyleSheet, Text, TouchableOpacity} from 'react-native';
+import React, {useMemo, useState} from 'react';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+
+type PromptChip = {
+  label: string;
+  prompt: string;
+};
 
 type Props = {
-  prompts: readonly string[];
+  prompts: readonly PromptChip[];
   onPressPrompt: (prompt: string) => void;
   disabled?: boolean;
   colorBorder: string;
   colorBg: string;
   colorText: string;
 };
+
+const DEFAULT_VISIBLE_CHIPS = 4;
 
 export default function AIQuickPromptList({
   prompts,
@@ -18,26 +25,44 @@ export default function AIQuickPromptList({
   colorBg,
   colorText,
 }: Props) {
+  const [expanded, setExpanded] = useState(false);
+  const visiblePrompts = useMemo(
+    () => (expanded ? prompts : prompts.slice(0, DEFAULT_VISIBLE_CHIPS)),
+    [expanded, prompts],
+  );
+  const canExpand = prompts.length > DEFAULT_VISIBLE_CHIPS;
+
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.content}>
-      {prompts.map(prompt => (
+    <View style={styles.content}>
+      {visiblePrompts.map(item => (
         <TouchableOpacity
-          key={prompt}
+          key={item.prompt}
           style={[styles.chip, {borderColor: colorBorder, backgroundColor: colorBg}]}
-          onPress={() => onPressPrompt(prompt)}
+          onPress={() => onPressPrompt(item.prompt)}
           disabled={disabled}>
-          <Text style={[styles.text, {color: colorText}]}>{prompt}</Text>
+          <Text style={[styles.text, {color: colorText}]}>{item.label}</Text>
         </TouchableOpacity>
       ))}
-    </ScrollView>
+      {canExpand && (
+        <TouchableOpacity
+          style={[styles.expandChip, {borderColor: colorBorder, backgroundColor: colorBg}]}
+          onPress={() => setExpanded(prev => !prev)}
+          disabled={disabled}>
+          <Text style={[styles.expandTxt, {color: colorText}]}>
+            {expanded ? 'Thu gọn' : 'Xem thêm'}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     paddingVertical: 2,
-    paddingRight: 24,
   },
   chip: {
     borderWidth: 1,
@@ -48,5 +73,15 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  expandChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  expandTxt: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

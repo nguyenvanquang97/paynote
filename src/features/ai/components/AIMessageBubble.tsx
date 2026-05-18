@@ -1,7 +1,7 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import dayjs from 'dayjs';
-import type {AIAnswerCard, AIChatMessage} from '../types/aiChat.types';
+import type {AIAction, AIAnswerCard, AIChatMessage} from '../types/aiChat.types';
 import AISummaryCard from './AISummaryCard';
 import AICategoryBreakdownCard from './AICategoryBreakdownCard';
 import AITransactionListCard from './AITransactionListCard';
@@ -23,6 +23,7 @@ type Props = {
   message: AIChatMessage;
   colors: Colors;
   onPressTransaction?: (transactionId: string) => void;
+  onPressAction?: (action: AIAction) => void;
 };
 
 const renderCard = (
@@ -30,6 +31,7 @@ const renderCard = (
   key: string,
   colors: Colors,
   onPressTransaction?: (transactionId: string) => void,
+  onPressAction?: (action: AIAction) => void,
 ) => {
   if (card.type === 'summary') {
     return (
@@ -81,11 +83,13 @@ const renderCard = (
       description={card.description}
       severity={card.severity}
       colorText={colors.assistantText}
+      actions={card.actions}
+      onPressAction={onPressAction}
     />
   );
 };
 
-export default function AIMessageBubble({message, colors, onPressTransaction}: Props) {
+export default function AIMessageBubble({message, colors, onPressTransaction, onPressAction}: Props) {
   const isUser = message.role === 'user';
   const cards = message.metadata?.cards || [];
 
@@ -105,7 +109,13 @@ export default function AIMessageBubble({message, colors, onPressTransaction}: P
 
       {!isUser && cards.length > 0 ? (
         <View>
-          {cards.map((card, idx) => renderCard(card, `${message.id}_${card.type}_${idx}`, colors, onPressTransaction))}
+          {cards.map((card, idx) => renderCard(
+            card,
+            `${message.id}_${card.type}_${idx}`,
+            colors,
+            onPressTransaction,
+            onPressAction,
+          ))}
         </View>
       ) : null}
 

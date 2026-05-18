@@ -114,4 +114,30 @@ describe('financialContextService', () => {
     expect(context.duplicateCandidates?.[0]?.transactionIds).toContain('a');
     expect(context.duplicateCandidates?.[0]?.transactionIds).toContain('b');
   });
+
+  it('hides duplicate groups that user already reviewed', () => {
+    const transactions: Transaction[] = [
+      tx('a', 'expense', 250000, '2026-05-12T09:30:00', {description: 'Cafe sáng'}),
+      tx('b', 'expense', 250000, '2026-05-12T09:33:00', {description: 'Cafe sáng'}),
+    ];
+
+    const reviewedKey = ['a', 'b'].sort().join('|');
+    const context = buildFinancialContextFromTransactions({
+      transactions,
+      customCategories: {},
+      duplicateReviewMap: {
+        [reviewedKey]: {
+          key: reviewedKey,
+          transactionIds: ['a', 'b'],
+          status: 'ignored',
+          updatedAt: NOW,
+        },
+      },
+      now: NOW,
+      intent: 'duplicate_check',
+      input: 'có giao dịch nào trùng không',
+    });
+
+    expect(context.duplicateCandidates).toHaveLength(0);
+  });
 });

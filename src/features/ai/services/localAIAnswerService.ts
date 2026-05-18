@@ -63,20 +63,59 @@ const buildCards = (intent: AIIntent, context: FinancialContext): AIAnswerCard[]
   }
 
   if (intent === 'duplicate_check' && (duplicateCandidates || []).length > 0) {
+    const first = duplicateCandidates?.[0];
+    const firstId = first?.transactionIds?.[0];
+    const confidencePercent = Math.round((first?.confidence || 0.8) * 100);
+
     cards.push({
       type: 'warning',
       title: 'Nghi ngờ giao dịch trùng',
-      description: `${duplicateCandidates?.length || 0} nhóm cần bạn kiểm tra trước khi xử lý.`,
+      description: `${duplicateCandidates?.length || 0} nhóm cần bạn kiểm tra trước khi xử lý. Nhóm đầu tiên có độ tin cậy khoảng ${confidencePercent}%.`,
       severity: 'high',
+      actions: [
+        ...(firstId
+          ? [{
+              label: 'Xem giao dịch',
+              tone: 'primary' as const,
+              action: {type: 'open_transaction' as const, transactionId: firstId},
+            }]
+          : []),
+        ...(first?.transactionIds?.length
+          ? [{
+              label: 'Đánh dấu trùng',
+              tone: 'default' as const,
+              action: {type: 'mark_duplicate' as const, transactionIds: first.transactionIds},
+            }, {
+              label: 'Bỏ qua',
+              tone: 'danger' as const,
+              action: {type: 'ignore_duplicate' as const, transactionIds: first.transactionIds},
+            }]
+          : []),
+      ],
     });
   }
 
   if (intent === 'missed_transaction_check' && (missedTransactionWarnings || []).length > 0) {
+    const first = missedTransactionWarnings?.[0];
     cards.push({
       type: 'warning',
       title: 'Nghi ngờ thiếu giao dịch',
-      description: missedTransactionWarnings?.[0]?.reason || 'Có dấu hiệu bỏ sót giao dịch.',
+      description: first?.reason || 'Có dấu hiệu bỏ sót giao dịch.',
       severity: 'medium',
+      actions: [
+        {label: 'Mở import', tone: 'primary', action: {type: 'open_import'}},
+        ...(first?.transactionId
+          ? [{
+              label: 'Xem cảnh báo',
+              tone: 'default' as const,
+              action: {type: 'open_transaction' as const, transactionId: first.transactionId},
+            }]
+          : [{
+              label: 'Xem cảnh báo',
+              tone: 'default' as const,
+              action: {type: 'view_gap_warnings' as const},
+            }]),
+      ],
     });
   }
 
@@ -142,7 +181,8 @@ export function generateLocalAnswer(
       return 'Mình chưa thấy nhóm giao dịch nào có dấu hiệu bị trùng.';
     }
     const first = duplicateCandidates[0];
-    return `Mình tìm thấy ${duplicateCandidates.length} nhóm giao dịch có khả năng bị trùng.\nNhóm đáng chú ý: ${formatVnd(first?.amount || 0)} vào ngày ${first?.transactionDate}, ${first?.reason.toLowerCase()}.`;
+    const confidencePercent = Math.round((first?.confidence || 0.8) * 100);
+    return `Mình tìm thấy ${duplicateCandidates.length} nhóm giao dịch có khả năng bị trùng.\nNhóm đáng chú ý: ${formatVnd(first?.amount || 0)} vào ngày ${first?.transactionDate}, ${first?.reason.toLowerCase()} (độ tin cậy ~${confidencePercent}%).`;
   }
 
   if (intent === 'missed_transaction_check') {

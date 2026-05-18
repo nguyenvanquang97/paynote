@@ -10,6 +10,37 @@ export type AIIntent =
 
 export type AIChatRole = 'user' | 'assistant' | 'system';
 
+export type AIAction =
+  | {
+      type: 'open_transaction';
+      transactionId: string;
+    }
+  | {
+      type: 'mark_duplicate';
+      transactionIds: string[];
+    }
+  | {
+      type: 'ignore_duplicate';
+      transactionIds: string[];
+    }
+  | {
+      type: 'open_import';
+    }
+  | {
+      type: 'view_gap_warnings';
+    }
+  | {
+      type: 'set_budget';
+      categoryId: string;
+      amount: number;
+    };
+
+export type AIActionButton = {
+  label: string;
+  tone?: 'default' | 'primary' | 'danger';
+  action: AIAction;
+};
+
 export type AIAnswerCard =
   | {
       type: 'summary';
@@ -39,6 +70,7 @@ export type AIAnswerCard =
       title: string;
       description: string;
       severity: 'low' | 'medium' | 'high';
+      actions?: AIActionButton[];
     };
 
 export type AIChatMessage = {

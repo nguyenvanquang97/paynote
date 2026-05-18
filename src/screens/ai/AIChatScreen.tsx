@@ -10,17 +10,29 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import {useThemeColors} from '../../shared/theme';
-import {AI_QUICK_PROMPTS} from '../../features/ai/constants/aiQuickPrompts';
+import {AI_QUICK_PROMPT_CHIPS} from '../../features/ai/constants/aiQuickPrompts';
 import {useAIChatStore} from '../../features/ai/store/useAIChatStore';
-import {createAIChatMessageId, type AIChatMessage} from '../../features/ai/types/aiChat.types';
+import {createAIChatMessageId, type AIAction, type AIChatMessage} from '../../features/ai/types/aiChat.types';
 import {sendAIChatMessage} from '../../features/ai/services/aiChatService';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import AIQuickPromptList from '../../features/ai/components/AIQuickPromptList';
 import AIMessageBubble from '../../features/ai/components/AIMessageBubble';
+import {toast} from '../../shared/components/Toast';
+import {dialog} from '../../shared/components/Dialog';
+import {useAppStore} from '../../app/store';
+
+const PROVIDER_OPTIONS = [
+  {id: 'auto', label: 'Auto'},
+  {id: 'mock', label: 'Mock'},
+  {id: 'gemini', label: 'Gemini'},
+  {id: 'openai', label: 'OpenAI'},
+] as const;
 
 const AIChatScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const t = useThemeColors();
   const C = useMemo(() => ({
     bg: t.appBg,
@@ -49,10 +61,93 @@ const AIChatScreen: React.FC = () => {
   const addMessage = useAIChatStore(state => state.addMessage);
   const updateMessage = useAIChatStore(state => state.updateMessage);
   const setLoading = useAIChatStore(state => state.setLoading);
+  const markDuplicateReview = useAppStore(state => state.markDuplicateReview);
+  const aiProviderPreference = useAppStore(state => state.aiProviderPreference);
+  const setAIProviderPreference = useAppStore(state => state.setAIProviderPreference);
+  const setAIUseOnline = useAppStore(state => state.setAIUseOnline);
 
   const [input, setInput] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   type AssistantMetadata = NonNullable<AIChatMessage['metadata']>;
+
+  const openTransactionFromAI = (transactionId: string) => {
+    if (!transactionId) {
+      return;
+    }
+    navigation.navigate('MainTabs', {
+      screen: 'Transactions',
+      params: {
+        fromDashboard: {
+          transactionId,
+          ts: Date.now(),
+        },
+      },
+    });
+  };
+
+  const handleAIAction = (action: AIAction) => {
+    if (action.type === 'open_transaction') {
+      openTransactionFromAI(action.transactionId);
+      return;
+    }
+
+    if (action.type === 'open_import') {
+      navigation.navigate('PersonalFinance');
+      return;
+    }
+
+    if (action.type === 'view_gap_warnings') {
+      navigation.navigate('MainTabs', {
+        screen: 'Transactions',
+        params: {
+          fromDashboard: {
+            filter: 'all',
+            ts: Date.now(),
+          },
+        },
+      });
+      return;
+    }
+
+    if (action.type === 'mark_duplicate') {
+      dialog.confirm(
+        'Đánh dấu giao dịch trùng',
+        `Xác nhận lưu nhóm ${action.transactionIds.length} giao dịch là "đã xử lý trùng"?`,
+        {
+          confirmText: 'Xác nhận',
+          cancelText: 'Hủy',
+          onConfirm: () => {
+            markDuplicateReview(action.transactionIds, 'marked');
+            if (action.transactionIds[0]) {
+              openTransactionFromAI(action.transactionIds[0]);
+            }
+            toast.success('Đã lưu trạng thái nhóm trùng. AI sẽ không nhắc lại nhóm này.');
+          },
+        },
+      );
+      return;
+    }
+
+    if (action.type === 'ignore_duplicate') {
+      dialog.confirm(
+        'Bỏ qua nghi ngờ trùng',
+        `Bỏ qua nhóm gồm ${action.transactionIds.length} giao dịch này? AI sẽ không nhắc lại nhóm này.`,
+        {
+          confirmText: 'Bỏ qua',
+          cancelText: 'Hủy',
+          onConfirm: () => {
+            markDuplicateReview(action.transactionIds, 'ignored');
+            toast.success('Đã bỏ qua. AI sẽ không nhắc lại nhóm giao dịch này.');
+          },
+        },
+      );
+      return;
+    }
+
+    if (action.type === 'set_budget') {
+      toast.info('Tính năng đặt ngân sách từ AI sẽ mở ở bước sau.');
+    }
+  };
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -189,6 +284,23 @@ const AIChatScreen: React.FC = () => {
       <View style={s.headerCard}>
         <Text style={s.headerTitle}>aQuang</Text>
         <Text style={s.headerSub}>Hỏi aQuang về chi tiêu của bạn</Text>
+        <View style={s.providerRow}>
+          {PROVIDER_OPTIONS.map(option => (
+            <TouchableOpacity
+              key={option.id}
+              style={[s.providerChip, aiProviderPreference === option.id && s.providerChipActive]}
+              onPress={() => {
+                setAIProviderPreference(option.id);
+                if (option.id !== 'mock') {
+                  setAIUseOnline(true);
+                }
+              }}>
+              <Text style={[s.providerChipTxt, aiProviderPreference === option.id && s.providerChipTxtActive]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       <ScrollView
@@ -206,6 +318,8 @@ const AIChatScreen: React.FC = () => {
             <AIMessageBubble
               key={message.id}
               message={message}
+              onPressTransaction={openTransactionFromAI}
+              onPressAction={handleAIAction}
               colors={{
                 border: C.border,
                 sub: C.sub,
@@ -224,7 +338,7 @@ const AIChatScreen: React.FC = () => {
 
       <View style={[s.quickPromptWrap, Platform.OS === 'android' && isKeyboardVisible && s.quickPromptWrapKeyboard]}>
         <AIQuickPromptList
-          prompts={AI_QUICK_PROMPTS}
+          prompts={AI_QUICK_PROMPT_CHIPS}
           onPressPrompt={handleQuickPrompt}
           disabled={isLoading}
           colorBorder={C.border}
@@ -296,6 +410,32 @@ const createStyles = (C: {
     color: C.sub,
     fontSize: 13,
     marginTop: 4,
+  },
+  providerRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  providerChip: {
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.muted,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  providerChipActive: {
+    borderColor: C.acc,
+    backgroundColor: C.accSoft,
+  },
+  providerChipTxt: {
+    color: C.sub,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  providerChipTxtActive: {
+    color: C.acc,
   },
   messages: {
     flex: 1,

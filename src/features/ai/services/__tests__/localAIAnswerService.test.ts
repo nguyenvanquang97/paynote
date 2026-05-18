@@ -88,4 +88,14 @@ describe('localAIAnswerService', () => {
     expect(payload.cards.length).toBeGreaterThan(0);
     expect(payload.cards.some(card => card.type === 'summary')).toBe(true);
   });
+
+  it('adds duplicate action buttons for duplicate intent', () => {
+    const payload = generateLocalAnswerPayload('có giao dịch nào bị trùng không', 'duplicate_check', baseContext);
+    const warning = payload.cards.find(card => card.type === 'warning');
+    expect(warning).toBeDefined();
+    if (!warning || warning.type !== 'warning') {
+      return;
+    }
+    expect((warning.actions || []).length).toBeGreaterThan(0);
+  });
 });

@@ -1,6 +1,7 @@
 import type {AIIntent} from '../../types/aiChat.types';
 import type {FinancialContext} from '../financialContextService';
 import type {LLMMessage} from './llm.types';
+import type {AIResponseStyle} from '../../../../app/store';
 
 const SYSTEM_PROMPT = [
   'Bạn là trợ lý tài chính cá nhân của app Paynote, tên là aQuang.',
@@ -43,12 +44,20 @@ export const buildLLMMessages = (
   input: string,
   intent: AIIntent,
   context: FinancialContext,
+  responseStyle: AIResponseStyle = 'normal',
 ): LLMMessage[] => {
   const sanitizedContext = sanitizeFinancialContext(context);
+  const styleInstruction = responseStyle === 'strict'
+    ? 'Response style: strict (thẳng, ngắn, tập trung số liệu).'
+    : responseStyle === 'funny'
+      ? 'Response style: funny (nhẹ nhàng dí dỏm, không châm chọc).'
+      : 'Response style: normal.';
   const userPrompt = [
     `User question:\n${input}`,
     '',
     `Intent:\n${intent}`,
+    '',
+    styleInstruction,
     '',
     `Financial context:\n${JSON.stringify(sanitizedContext, null, 2)}`,
   ].join('\n');

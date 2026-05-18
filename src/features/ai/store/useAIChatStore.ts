@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {createMMKV} from 'react-native-mmkv';
-import type {AIAnswerCard, AIChatMessage, AIChatRole, AIIntent} from '../types/aiChat.types';
+import type {AIAction, AIActionButton, AIAnswerCard, AIChatMessage, AIChatRole, AIIntent} from '../types/aiChat.types';
 
 const storage = createMMKV();
 const STORAGE_KEY = 'ai_chat_messages_v1';
@@ -24,6 +24,92 @@ const VALID_CARD_TYPES = new Set<AIAnswerCard['type']>([
   'transactions',
   'warning',
 ]);
+
+const sanitizeAction = (value: unknown): AIAction | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const raw = value as Partial<AIAction>;
+  if (raw.type === 'open_transaction' && typeof (raw as any).transactionId === 'string') {
+    return {
+      type: 'open_transaction',
+      transactionId: (raw as any).transactionId,
+    };
+  }
+
+  if (raw.type === 'mark_duplicate' && Array.isArray((raw as any).transactionIds)) {
+    const transactionIds = (raw as any).transactionIds.filter((item: unknown) => typeof item === 'string');
+    if (transactionIds.length > 0) {
+      return {
+        type: 'mark_duplicate',
+        transactionIds,
+      };
+    }
+  }
+
+  if (raw.type === 'ignore_duplicate' && Array.isArray((raw as any).transactionIds)) {
+    const transactionIds = (raw as any).transactionIds.filter((item: unknown) => typeof item === 'string');
+    if (transactionIds.length > 0) {
+      return {
+        type: 'ignore_duplicate',
+        transactionIds,
+      };
+    }
+  }
+
+  if (raw.type === 'open_import') {
+    return {type: 'open_import'};
+  }
+
+  if (raw.type === 'view_gap_warnings') {
+    return {type: 'view_gap_warnings'};
+  }
+
+  if (
+    raw.type === 'set_budget' &&
+    typeof (raw as any).categoryId === 'string' &&
+    typeof (raw as any).amount === 'number'
+  ) {
+    return {
+      type: 'set_budget',
+      categoryId: (raw as any).categoryId,
+      amount: (raw as any).amount,
+    };
+  }
+
+  return null;
+};
+
+const sanitizeActionButtons = (value: unknown): AIActionButton[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const actions = value
+    .filter(item => item && typeof item === 'object')
+    .map((item): AIActionButton | null => {
+      const raw = item as Partial<AIActionButton>;
+      if (typeof raw.label !== 'string') {
+        return null;
+      }
+      const action = sanitizeAction(raw.action);
+      if (!action) {
+        return null;
+      }
+      const tone = raw.tone === 'default' || raw.tone === 'primary' || raw.tone === 'danger'
+        ? raw.tone
+        : undefined;
+      return {
+        label: raw.label,
+        tone,
+        action,
+      };
+    })
+    .filter((item): item is AIActionButton => item !== null);
+
+  return actions.length > 0 ? actions : undefined;
+};
 
 const sanitizeCards = (value: unknown): AIAnswerCard[] | undefined => {
   if (!Array.isArray(value)) {
@@ -101,6 +187,7 @@ const sanitizeCards = (value: unknown): AIAnswerCard[] | undefined => {
         title: (card as any).title,
         description: (card as any).description,
         severity: (card as any).severity,
+        actions: sanitizeActionButtons((card as any).actions),
       };
     })
     .filter((item): item is AIAnswerCard => item !== null);

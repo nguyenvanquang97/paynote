@@ -6,6 +6,27 @@ import {CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import {useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
 
+const getSeverityLabel = (severity: string): string => {
+  if (severity === 'critical') {return 'Khẩn cấp';}
+  if (severity === 'high') {return 'Cao';}
+  if (severity === 'medium') {return 'Vừa';}
+  return 'Nhẹ';
+};
+
+const getTierLabel = (tier?: number): string => {
+  if (tier === 4) {return 'Khẩn';}
+  if (tier === 3) {return 'Nghiêm túc';}
+  if (tier === 2) {return 'Cần chú ý';}
+  return 'Nhắc nhẹ';
+};
+
+const getAlertLevel = (severity?: string, tier?: number): 'low' | 'medium' | 'high' | 'critical' => {
+  if (severity === 'critical' || tier === 4) {return 'critical';}
+  if (severity === 'high' || tier === 3) {return 'high';}
+  if (severity === 'medium' || tier === 2) {return 'medium';}
+  return 'low';
+};
+
 const NotificationsScreen: React.FC = () => {
   const t = useThemeColors();
   const C = useMemo(() => ({
@@ -85,6 +106,11 @@ const NotificationsScreen: React.FC = () => {
         inAppNotifications.map(item => {
           const emoji = item.categoryId ? (CATEGORY_EMOJI[item.categoryId] || '📌') : '📌';
           const isSelected = selectedIds.includes(item.id);
+          const hasAlertBadge = !!item.severity || !!item.escalationTier;
+          const alertLevel = getAlertLevel(item.severity, item.escalationTier);
+          const alertLabel = item.escalationTier
+            ? getTierLabel(item.escalationTier)
+            : getSeverityLabel(item.severity || 'low');
           return (
             <TouchableOpacity
               key={item.id}
@@ -135,23 +161,18 @@ const NotificationsScreen: React.FC = () => {
                           </Text>
                         </View>
                       )}
-                      {item.severity && (
+                      {hasAlertBadge && (
                         <View style={[
                           s.levelBadge,
-                          item.severity === 'critical'
+                          alertLevel === 'critical'
                             ? s.levelCritical
-                            : item.severity === 'high'
+                            : alertLevel === 'high'
                               ? s.levelHigh
-                              : item.severity === 'medium'
+                              : alertLevel === 'medium'
                                 ? s.levelMedium
                                 : s.levelLow,
                         ]}>
-                          <Text style={s.levelBadgeTxt}>{item.severity}</Text>
-                        </View>
-                      )}
-                      {item.escalationTier && (
-                        <View style={s.tierBadge}>
-                          <Text style={s.tierBadgeTxt}>T{item.escalationTier}</Text>
+                          <Text style={s.levelBadgeTxt}>Mức: {alertLabel}</Text>
                         </View>
                       )}
                     </View>
@@ -290,15 +311,6 @@ const createStyles = (C: {
   levelHigh: {backgroundColor: '#ffd8d8'},
   levelCritical: {backgroundColor: '#ffb8b8'},
   levelBadgeTxt: {color: '#812f2f', fontSize: 10, fontWeight: '800'},
-  tierBadge: {
-    borderWidth: 1,
-    borderColor: C.acc,
-    backgroundColor: C.soft,
-    borderRadius: 999,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  tierBadgeTxt: {color: C.acc, fontSize: 10, fontWeight: '800'},
   dot: {width: 8, height: 8, borderRadius: 4, backgroundColor: C.warn, marginLeft: 8, marginTop: 5},
   message: {color: C.txt, fontSize: 13, marginTop: 4, lineHeight: 18},
   meta: {color: C.sub, fontSize: 12, marginTop: 6},

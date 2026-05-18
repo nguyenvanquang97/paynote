@@ -17,6 +17,8 @@ import AIChatScreen from './src/screens/ai/AIChatScreen';
 import AIChatFloatingButton from './src/features/ai/components/AIChatFloatingButton';
 import PersonalFinanceScreen from './src/screens/settings/PersonalFinanceScreen';
 import BudgetSettingsScreen from './src/screens/settings/BudgetSettingsScreen';
+import GeneralToolsScreen from './src/screens/settings/GeneralToolsScreen';
+import AISettingsScreen from './src/screens/settings/AISettingsScreen';
 import NotificationsScreen from './src/screens/notifications/NotificationsScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import SplashScreen from './src/screens/splash/SplashScreen';
@@ -52,6 +54,7 @@ function MainTabs() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const themeMode = useAppStore(s => s.themeMode);
+  const aiChatEnabled = useAppStore(s => s.aiChatEnabled);
   const colors = getThemeColors(themeMode);
   return (
     <View style={styles.bg}>
@@ -71,7 +74,9 @@ function MainTabs() {
         <Tab.Screen name="Categories" component={CategoriesScreen} options={{title: 'Danh mục'}} />
         <Tab.Screen name="Settings" component={SettingsScreen} options={{title: 'Cài đặt'}} />
       </Tab.Navigator>
-      <AIChatFloatingButton onPress={() => navigation.navigate('AIChat')} />
+      {aiChatEnabled && (
+        <AIChatFloatingButton onPress={() => navigation.navigate('AIChat')} />
+      )}
     </View>
   );
 }
@@ -94,6 +99,8 @@ export default function App() {
   const loadNotificationMemory = useAppStore(s => s.loadNotificationMemory);
   const loadInAppNotifications = useAppStore(s => s.loadInAppNotifications);
   const loadThemeMode = useAppStore(s => s.loadThemeMode);
+  const loadDuplicateReviewMap = useAppStore(s => s.loadDuplicateReviewMap);
+  const loadAIChatSettings = useAppStore(s => s.loadAIChatSettings);
   const aiBudgetAlertsEnabled = useAppStore(s => s.aiBudgetAlertsEnabled);
   const notificationPersona = useAppStore(s => s.notificationPersona);
   const notificationIntensity = useAppStore(s => s.notificationIntensity);
@@ -127,6 +134,8 @@ export default function App() {
       loadNotificationMemory();
       loadInAppNotifications();
       loadThemeMode();
+      loadDuplicateReviewMap();
+      loadAIChatSettings();
       const hasOnboarded = storage.getBoolean('onboarded');
       setShowOnboarding(!hasOnboarded);
 
@@ -149,6 +158,8 @@ export default function App() {
     loadNotificationMemory,
     loadInAppNotifications,
     loadThemeMode,
+    loadDuplicateReviewMap,
+    loadAIChatSettings,
   ]);
 
   useEffect(() => {
@@ -237,6 +248,16 @@ export default function App() {
                         animation: 'slide_from_right',
                       }}>
                       <Stack.Screen name="MainTabs" component={MainTabs} options={{headerShown: false}} />
+                      <Stack.Screen
+                        name="GeneralTools"
+                        component={GeneralToolsScreen}
+                        options={{title: 'Tiện ích chung'}}
+                      />
+                      <Stack.Screen
+                        name="AISettings"
+                        component={AISettingsScreen}
+                        options={{title: 'Cài đặt AI'}}
+                      />
                       <Stack.Screen
                         name="PersonalFinance"
                         component={PersonalFinanceScreen}

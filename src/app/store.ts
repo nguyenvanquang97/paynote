@@ -63,6 +63,16 @@ export interface BudgetAlertRecord {
 }
 
 export type BudgetAlertHistory = Record<string, BudgetAlertRecord>;
+export type DuplicateReviewStatus = 'marked' | 'ignored';
+
+export interface DuplicateReviewDecision {
+  key: string;
+  transactionIds: string[];
+  status: DuplicateReviewStatus;
+  updatedAt: number;
+}
+
+export type DuplicateReviewMap = Record<string, DuplicateReviewDecision>;
 
 export interface InAppNotificationItem {
   id: string;
@@ -86,6 +96,8 @@ export interface InAppNotificationItem {
 }
 
 export type {ThemeMode};
+export type AIResponseStyle = 'normal' | 'strict' | 'funny';
+export type AIProviderPreference = 'auto' | 'mock' | 'gemini' | 'openai';
 
 export const toMonthKey = (year: number, month: number): string =>
   `${year}-${String(month).padStart(2, '0')}`;
@@ -98,6 +110,9 @@ export const toBudgetAlertKey = (
   categoryId: string,
   threshold: BudgetAlertThreshold,
 ): string => `${monthKey}:${categoryId}:${threshold}`;
+
+export const toDuplicateReviewKey = (transactionIds: string[]): string =>
+  transactionIds.slice().sort().join('|');
 
 interface AppState {
   // Transactions
@@ -136,6 +151,12 @@ interface AppState {
   budgetAlertHistory: BudgetAlertHistory;
   inAppNotifications: InAppNotificationItem[];
   themeMode: ThemeMode;
+  duplicateReviewMap: DuplicateReviewMap;
+  aiChatEnabled: boolean;
+  aiUseOnline: boolean;
+  aiAllowFinancialContext: boolean;
+  aiResponseStyle: AIResponseStyle;
+  aiProviderPreference: AIProviderPreference;
 
   // Actions
   loadTransactions: () => Promise<void>;
@@ -190,6 +211,15 @@ interface AppState {
   clearInAppNotifications: () => void;
   loadThemeMode: () => void;
   setThemeMode: (mode: ThemeMode) => void;
+  loadDuplicateReviewMap: () => void;
+  markDuplicateReview: (transactionIds: string[], status: DuplicateReviewStatus) => void;
+  clearDuplicateReview: (transactionIds: string[]) => void;
+  loadAIChatSettings: () => void;
+  setAIChatEnabled: (enabled: boolean) => void;
+  setAIUseOnline: (enabled: boolean) => void;
+  setAIAllowFinancialContext: (enabled: boolean) => void;
+  setAIResponseStyle: (style: AIResponseStyle) => void;
+  setAIProviderPreference: (provider: AIProviderPreference) => void;
   resetData: () => Promise<void>;
 }
 
@@ -232,6 +262,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   budgetAlertHistory: {},
   inAppNotifications: [],
   themeMode: DEFAULT_THEME_ID,
+  duplicateReviewMap: {},
+  aiChatEnabled: true,
+  aiUseOnline: true,
+  aiAllowFinancialContext: true,
+  aiResponseStyle: 'normal',
+  aiProviderPreference: 'auto',
 
   // Actions
   loadTransactions: async () => {
@@ -737,6 +773,116 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({themeMode: mode});
   },
 
+  loadDuplicateReviewMap: () => {
+    const raw = storage.getString('ai_duplicate_review_map');
+    if (!raw) {return;}
+    try {
+      const parsed = JSON.parse(raw) as DuplicateReviewMap;
+      const sanitized = Object.fromEntries(
+        Object.entries(parsed || {}).filter(([key, value]) =>
+          Boolean(
+            key &&
+            value &&
+            Array.isArray(value.transactionIds) &&
+            (value.status === 'marked' || value.status === 'ignored') &&
+            typeof value.updatedAt === 'number',
+          ),
+        ),
+      ) as DuplicateReviewMap;
+      storage.set('ai_duplicate_review_map', JSON.stringify(sanitized));
+      set({duplicateReviewMap: sanitized});
+    } catch (error) {
+      console.error('Failed to parse duplicate review map', error);
+    }
+  },
+
+  markDuplicateReview: (transactionIds, status) => {
+    const ids = transactionIds.filter(Boolean);
+    if (ids.length === 0) {return;}
+    set(state => {
+      const key = toDuplicateReviewKey(ids);
+      const decision: DuplicateReviewDecision = {
+        key,
+        transactionIds: ids.slice().sort(),
+        status,
+        updatedAt: Date.now(),
+      };
+      const next = {
+        ...state.duplicateReviewMap,
+        [key]: decision,
+      };
+      storage.set('ai_duplicate_review_map', JSON.stringify(next));
+      return {duplicateReviewMap: next};
+    });
+  },
+
+  clearDuplicateReview: (transactionIds) => {
+    const ids = transactionIds.filter(Boolean);
+    if (ids.length === 0) {return;}
+    set(state => {
+      const key = toDuplicateReviewKey(ids);
+      if (!state.duplicateReviewMap[key]) {
+        return state;
+      }
+      const next = {...state.duplicateReviewMap};
+      delete next[key];
+      storage.set('ai_duplicate_review_map', JSON.stringify(next));
+      return {duplicateReviewMap: next};
+    });
+  },
+
+  loadAIChatSettings: () => {
+    const enabled = storage.getBoolean('ai_chat_enabled');
+    const useOnline = storage.getBoolean('ai_chat_use_online');
+    const allowFinancialContext = storage.getBoolean('ai_chat_allow_financial_context');
+    const responseStyleRaw = storage.getString('ai_chat_response_style');
+    const providerPreferenceRaw = storage.getString('ai_chat_provider_preference');
+    const responseStyle: AIResponseStyle =
+      responseStyleRaw === 'strict' || responseStyleRaw === 'funny' || responseStyleRaw === 'normal'
+        ? responseStyleRaw
+        : 'normal';
+    const providerPreference: AIProviderPreference =
+      providerPreferenceRaw === 'mock' ||
+      providerPreferenceRaw === 'gemini' ||
+      providerPreferenceRaw === 'openai' ||
+      providerPreferenceRaw === 'auto'
+        ? providerPreferenceRaw
+        : 'auto';
+
+    set({
+      aiChatEnabled: typeof enabled === 'boolean' ? enabled : true,
+      aiUseOnline: typeof useOnline === 'boolean' ? useOnline : true,
+      aiAllowFinancialContext: typeof allowFinancialContext === 'boolean' ? allowFinancialContext : true,
+      aiResponseStyle: responseStyle,
+      aiProviderPreference: providerPreference,
+    });
+  },
+
+  setAIChatEnabled: (enabled) => {
+    storage.set('ai_chat_enabled', enabled);
+    set({aiChatEnabled: enabled});
+  },
+
+  setAIUseOnline: (enabled) => {
+    storage.set('ai_chat_use_online', enabled);
+    set({aiUseOnline: enabled});
+  },
+
+  setAIAllowFinancialContext: (enabled) => {
+    storage.set('ai_chat_allow_financial_context', enabled);
+    set({aiAllowFinancialContext: enabled});
+  },
+
+  setAIResponseStyle: (style) => {
+    storage.set('ai_chat_response_style', style);
+    set({aiResponseStyle: style});
+  },
+
+  setAIProviderPreference: (provider) => {
+    storage.set('ai_chat_provider_preference', provider);
+    set({aiProviderPreference: provider});
+  },
+
   resetData: async () => {
     await deleteAllTransactions();
     storage.remove('custom_categories');
@@ -753,6 +899,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     storage.remove('gemini_api_key');
     storage.remove('in_app_notifications');
     storage.remove('theme_mode');
+    storage.remove('ai_duplicate_review_map');
+    storage.remove('ai_chat_enabled');
+    storage.remove('ai_chat_use_online');
+    storage.remove('ai_chat_allow_financial_context');
+    storage.remove('ai_chat_response_style');
+    storage.remove('ai_chat_provider_preference');
     set({
       transactions: [],
       totalIncome: 0,
@@ -786,6 +938,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       budgetAlertHistory: {},
       inAppNotifications: [],
       themeMode: DEFAULT_THEME_ID,
+      duplicateReviewMap: {},
+      aiChatEnabled: true,
+      aiUseOnline: true,
+      aiAllowFinancialContext: true,
+      aiResponseStyle: 'normal',
+      aiProviderPreference: 'auto',
     });
   },
 }));

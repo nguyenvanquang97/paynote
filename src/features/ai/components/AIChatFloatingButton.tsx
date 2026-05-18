@@ -11,9 +11,8 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useThemeColors} from '../../../shared/theme';
 
 const BUTTON_SIZE = 72;
-const MARGIN = 14;
+const EDGE_MARGIN = 24;
 const TAB_BAR_SPACE = 90;
-const BOTTOM_ACTION_SAFE_SPACE = 110;
 const BOTTOM_RIGHT_BLOCK_WIDTH = 132;
 const BOTTOM_RIGHT_BLOCK_HEIGHT = 132;
 
@@ -31,9 +30,9 @@ export default function AIChatFloatingButton({onPress}: AIChatFloatingButtonProp
   }), [t]);
 
   const isInsideBottomRightBlockedZone = (x: number, y: number) => {
-    const blockedLeft = width - BOTTOM_RIGHT_BLOCK_WIDTH - MARGIN;
+    const blockedLeft = width - BOTTOM_RIGHT_BLOCK_WIDTH - EDGE_MARGIN;
     const blockedTop = height - BOTTOM_RIGHT_BLOCK_HEIGHT - insets.bottom - TAB_BAR_SPACE;
-    const blockedRight = width - MARGIN;
+    const blockedRight = width - EDGE_MARGIN;
     const blockedBottom = height - insets.bottom - TAB_BAR_SPACE + 8;
 
     const centerX = x + BUTTON_SIZE / 2;
@@ -47,10 +46,10 @@ export default function AIChatFloatingButton({onPress}: AIChatFloatingButtonProp
   };
 
   const clamp = (x: number, y: number) => {
-    const minX = MARGIN;
-    const maxX = Math.max(MARGIN, width - BUTTON_SIZE - MARGIN);
-    const minY = Math.max(insets.top + 10, MARGIN + 44);
-    const maxY = Math.max(minY, height - BUTTON_SIZE - TAB_BAR_SPACE - insets.bottom - BOTTOM_ACTION_SAFE_SPACE);
+    const minX = EDGE_MARGIN;
+    const maxX = Math.max(EDGE_MARGIN, width - BUTTON_SIZE - EDGE_MARGIN);
+    const minY = Math.max(insets.top + 10, EDGE_MARGIN + 44);
+    const maxY = Math.max(minY, height - BUTTON_SIZE - TAB_BAR_SPACE - insets.bottom - EDGE_MARGIN);
     const clamped = {
       x: Math.min(Math.max(x, minX), maxX),
       y: Math.min(Math.max(y, minY), maxY),
@@ -66,7 +65,7 @@ export default function AIChatFloatingButton({onPress}: AIChatFloatingButtonProp
     };
   };
 
-  const initial = clamp(MARGIN, height * 0.42);
+  const initial = clamp(EDGE_MARGIN, height);
   const position = useRef(new Animated.ValueXY(initial)).current;
   const isDraggingRef = useRef(false);
   const dragDistanceRef = useRef(0);

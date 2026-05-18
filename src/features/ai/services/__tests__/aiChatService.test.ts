@@ -29,17 +29,40 @@ jest.mock('../llm/llmClient', () => ({
 }));
 
 const mockedGetAIEnvSettings = jest.fn();
+const mockedGetAIApiKeyFromEnv = jest.fn();
+const mockedGetAIModelFromEnv = jest.fn();
 jest.mock('../../../../config/env', () => ({
   getAIEnvSettings: () => mockedGetAIEnvSettings(),
+  getAIApiKeyFromEnv: (...args: unknown[]) => mockedGetAIApiKeyFromEnv(...args),
+  getAIModelFromEnv: (...args: unknown[]) => mockedGetAIModelFromEnv(...args),
+}));
+
+const mockedUseAppStoreGetState = jest.fn();
+jest.mock('../../../../app/store', () => ({
+  useAppStore: {
+    getState: () => mockedUseAppStoreGetState(),
+  },
 }));
 
 describe('aiChatService', () => {
   beforeEach(() => {
     mockedRequestLLMAnswer.mockReset();
     mockedGetAIEnvSettings.mockReset();
+    mockedGetAIApiKeyFromEnv.mockReset();
+    mockedGetAIModelFromEnv.mockReset();
+    mockedUseAppStoreGetState.mockReset();
+    mockedUseAppStoreGetState.mockReturnValue({
+      aiChatEnabled: true,
+      aiUseOnline: true,
+      aiAllowFinancialContext: true,
+      aiResponseStyle: 'normal',
+      aiProviderPreference: 'auto',
+    });
+    mockedGetAIApiKeyFromEnv.mockReturnValue('');
+    mockedGetAIModelFromEnv.mockImplementation((provider: string) => provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash');
   });
 
-  it('returns fallback local answer when LLM is disabled/missing key', async () => {
+  it('returns local answer when online LLM is disabled/missing key', async () => {
     mockedGetAIEnvSettings.mockReturnValue({
       provider: 'openai',
       apiKey: '',
@@ -50,7 +73,7 @@ describe('aiChatService', () => {
 
     const message = await sendAIChatMessage('tháng này tôi tiêu bao nhiêu');
     expect(message.content).toBe('aQuang: local answer');
-    expect(message.metadata?.source).toBe('fallback');
+    expect(message.metadata?.source).toBe('local');
   });
 
   it('returns fallback local answer when LLM throws', async () => {
@@ -83,6 +106,58 @@ describe('aiChatService', () => {
 
     const message = await sendAIChatMessage('tháng này tôi tiêu bao nhiêu');
     expect(message.content).toBe('aQuang: llm answer');
+    expect(message.metadata?.source).toBe('llm');
+  });
+
+  it('refuses financial question when financial context permission is off', async () => {
+    mockedUseAppStoreGetState.mockReturnValue({
+      aiChatEnabled: true,
+      aiUseOnline: true,
+      aiAllowFinancialContext: false,
+      aiResponseStyle: 'normal',
+      aiProviderPreference: 'auto',
+    });
+    mockedGetAIEnvSettings.mockReturnValue({
+      provider: 'gemini',
+      apiKey: 'k',
+      model: 'gemini-2.5-flash',
+      useLLM: true,
+      timeoutMs: 15000,
+    });
+
+    const message = await sendAIChatMessage('tháng này tôi tiêu bao nhiêu');
+    expect(message.content).toContain('tắt quyền dùng dữ liệu tài chính');
+    expect(message.metadata?.source).toBe('local');
+  });
+
+  it('uses provider preference from app settings when not auto', async () => {
+    mockedUseAppStoreGetState.mockReturnValue({
+      aiChatEnabled: true,
+      aiUseOnline: true,
+      aiAllowFinancialContext: true,
+      aiResponseStyle: 'normal',
+      aiProviderPreference: 'gemini',
+    });
+    mockedGetAIEnvSettings.mockReturnValue({
+      provider: 'mock',
+      apiKey: '',
+      model: 'mock-local',
+      useLLM: true,
+      timeoutMs: 15000,
+    });
+    mockedGetAIApiKeyFromEnv.mockReturnValue('gem-key');
+    mockedGetAIModelFromEnv.mockReturnValue('gemini-2.5-flash');
+    mockedRequestLLMAnswer.mockResolvedValue({
+      content: 'llm answer',
+      provider: 'gemini',
+    });
+
+    const message = await sendAIChatMessage('tháng này tôi tiêu bao nhiêu');
+    expect(mockedRequestLLMAnswer).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'gemini',
+      apiKey: 'gem-key',
+      model: 'gemini-2.5-flash',
+    }));
     expect(message.metadata?.source).toBe('llm');
   });
 });

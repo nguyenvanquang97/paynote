@@ -1,7 +1,13 @@
-const loadEnvModule = (runtimeEnv: Record<string, string>) => {
+const loadEnvModule = (
+  runtimeEnv: Record<string, string>,
+  localRuntimeEnv: Record<string, string> = {},
+) => {
   jest.resetModules();
   jest.doMock('../runtimeEnv.generated', () => ({
     RUNTIME_ENV: runtimeEnv,
+  }));
+  jest.doMock('../runtimeEnv.local', () => ({
+    RUNTIME_ENV: localRuntimeEnv,
   }));
   return require('../env') as typeof import('../env');
 };

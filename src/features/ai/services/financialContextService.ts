@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import {useAppStore} from '../../../app/store';
+import {useAppStore, type DuplicateReviewMap} from '../../../app/store';
 import {getCategoryLabel} from '../../../shared/constants';
 import type {Transaction} from '../../../shared/types';
 import type {AIIntent} from '../types/aiChat.types';
@@ -37,8 +37,10 @@ export type FinancialContext = {
     reason: string;
     amount: number;
     transactionDate: string;
+    confidence?: number;
   }>;
   missedTransactionWarnings?: Array<{
+    transactionId?: string;
     reason: string;
     expectedPattern?: string;
   }>;
@@ -60,6 +62,7 @@ type PeriodRange = {
 type BuildOptions = {
   transactions: Transaction[];
   customCategories?: Record<string, CategoryLike>;
+  duplicateReviewMap?: DuplicateReviewMap;
   now?: number;
   intent: AIIntent;
   input: string;
@@ -201,7 +204,13 @@ export const getTopExpenseTransactions = (
 const normalizeDescription = (value: string | undefined): string =>
   (value || '').trim().toLowerCase();
 
-export const getDuplicateCandidates = (transactions: Transaction[]) => {
+const toDuplicateReviewKey = (transactionIds: string[]): string =>
+  transactionIds.slice().sort().join('|');
+
+export const getDuplicateCandidates = (
+  transactions: Transaction[],
+  duplicateReviewMap: DuplicateReviewMap = {},
+) => {
   const group = new Map<string, Transaction[]>();
 
   transactions.forEach(tx => {
@@ -222,13 +231,21 @@ export const getDuplicateCandidates = (transactions: Transaction[]) => {
     .filter(items => items.length >= 2)
     .map(items => {
       const first = items[0];
+      const hasDescription = normalizeDescription(first?.description).length > 0;
+      const transactionIds = items.map(tx => tx.id);
+      const reviewKey = toDuplicateReviewKey(transactionIds);
+      if (duplicateReviewMap[reviewKey]) {
+        return null;
+      }
       return {
-        transactionIds: items.map(tx => tx.id),
+        transactionIds,
         reason: 'Cùng số tiền, cùng mô tả và gần thời điểm nhau',
         amount: first?.amount || 0,
         transactionDate: dayjs(first?.timestamp || Date.now()).format('DD/MM/YYYY'),
+        confidence: hasDescription ? 0.92 : 0.78,
       };
     })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
     .sort((a, b) => b.transactionIds.length - a.transactionIds.length)
     .slice(0, 5);
 };
@@ -236,6 +253,7 @@ export const getDuplicateCandidates = (transactions: Transaction[]) => {
 export const getMissedTransactionWarnings = (transactions: Transaction[]) => {
   const suspected = transactions.filter(tx => tx.isSuspectedGap).slice(0, 5);
   return suspected.map(tx => ({
+    transactionId: tx.id,
     reason: `Có dấu hiệu thiếu giao dịch gần ${dayjs(tx.timestamp).format('DD/MM/YYYY HH:mm')}`,
     expectedPattern: tx.description?.trim() || undefined,
   }));
@@ -245,6 +263,7 @@ export const buildFinancialContextFromTransactions = (options: BuildOptions): Fi
   const now = options.now || Date.now();
   const period = resolvePeriod(options.intent, options.input, now);
   const customCategories = options.customCategories || {};
+  const duplicateReviewMap = options.duplicateReviewMap || {};
 
   const periodTransactions = options.transactions.filter(
     tx => tx.timestamp >= period.start && tx.timestamp <= period.end,
@@ -253,7 +272,7 @@ export const buildFinancialContextFromTransactions = (options: BuildOptions): Fi
   const totals = buildTotals(periodTransactions);
   const categoryBreakdown = getCategoryBreakdown(periodTransactions, customCategories);
   const topTransactions = getTopExpenseTransactions(periodTransactions, customCategories);
-  const duplicateCandidates = getDuplicateCandidates(options.transactions);
+  const duplicateCandidates = getDuplicateCandidates(options.transactions, duplicateReviewMap);
   const missedTransactionWarnings = getMissedTransactionWarnings(options.transactions);
 
   const previous = getPreviousMonthSummary(options.transactions, now);
@@ -293,6 +312,7 @@ export const buildFinancialContextForIntent = async (
   return buildFinancialContextFromTransactions({
     transactions: state.transactions,
     customCategories: state.customCategories,
+    duplicateReviewMap: state.duplicateReviewMap,
     intent,
     input,
     now: Date.now(),
