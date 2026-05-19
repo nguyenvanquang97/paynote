@@ -279,8 +279,8 @@ const AIChatScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={s.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 8}>
       <View style={s.headerCard}>
         <Text style={s.headerTitle}>aQuang</Text>
         <Text style={s.headerSub}>Hỏi aQuang về chi tiêu của bạn</Text>

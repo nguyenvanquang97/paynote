@@ -97,7 +97,7 @@ const callGemini = async (request: LLMRequest): Promise<LLMResponse> => {
     request.timeoutMs,
   );
 
-  console.log('[AI_LLM] Gemini response status=', response);
+ 
   if (!response.ok) {
     throw new Error(`GEMINI_HTTP_${response.status}`);
   }
