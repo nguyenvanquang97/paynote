@@ -2,6 +2,15 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+def projectRootDir = rootProject.projectDir.parentFile
+
+tasks.register("generateRuntimeEnv", Exec) {
+    workingDir projectRootDir
+    commandLine "node", "scripts/with-env.js", "--generate-only"
+}
+
+preBuild.dependsOn("generateRuntimeEnv")
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.

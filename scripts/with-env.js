@@ -72,15 +72,19 @@ const writeGeneratedEnvModule = (env) => {
   fs.writeFileSync(generatedEnvPath, content, 'utf8');
 };
 
+const fileEnv = loadDotEnv();
+const mergedEnv = {...process.env, ...fileEnv};
+writeGeneratedEnvModule(mergedEnv);
+
 const args = process.argv.slice(2);
+if (args.length === 1 && args[0] === '--generate-only') {
+  process.exit(0);
+}
+
 if (args.length === 0) {
   console.error('[with-env] Missing command. Example: node scripts/with-env.js react-native start');
   process.exit(1);
 }
-
-const fileEnv = loadDotEnv();
-writeGeneratedEnvModule(fileEnv);
-const mergedEnv = {...process.env, ...fileEnv};
 
 const child = spawn(args[0], args.slice(1), {
   stdio: 'inherit',
