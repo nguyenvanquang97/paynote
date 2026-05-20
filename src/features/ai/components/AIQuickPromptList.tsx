@@ -13,6 +13,8 @@ type Props = {
   colorBorder: string;
   colorBg: string;
   colorText: string;
+  maxVisibleChips?: number;
+  showExpand?: boolean;
 };
 
 const DEFAULT_VISIBLE_CHIPS = 4;
@@ -24,13 +26,15 @@ export default function AIQuickPromptList({
   colorBorder,
   colorBg,
   colorText,
+  maxVisibleChips = DEFAULT_VISIBLE_CHIPS,
+  showExpand = true,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const visiblePrompts = useMemo(
-    () => (expanded ? prompts : prompts.slice(0, DEFAULT_VISIBLE_CHIPS)),
-    [expanded, prompts],
+    () => (expanded && showExpand ? prompts : prompts.slice(0, maxVisibleChips)),
+    [expanded, maxVisibleChips, prompts, showExpand],
   );
-  const canExpand = prompts.length > DEFAULT_VISIBLE_CHIPS;
+  const canExpand = showExpand && prompts.length > maxVisibleChips;
 
   return (
     <View style={styles.content}>

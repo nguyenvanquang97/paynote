@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useThemeColors} from '../../shared/theme';
@@ -30,9 +31,12 @@ const PROVIDER_OPTIONS = [
   {id: 'openai', label: 'OpenAI'},
 ] as const;
 
+const ANDROID_COMPOSER_BOTTOM_GAP = 12;
+
 const AIChatScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const {height: windowHeight} = useWindowDimensions();
   const t = useThemeColors();
   const C = useMemo(() => ({
     bg: t.appBg,
@@ -68,7 +72,17 @@ const AIChatScreen: React.FC = () => {
 
   const [input, setInput] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardFrameY, setKeyboardFrameY] = useState<number | null>(null);
   type AssistantMetadata = NonNullable<AIChatMessage['metadata']>;
+  const androidKeyboardOverlap = Platform.OS === 'android' && keyboardFrameY !== null
+    ? Math.max(0, windowHeight - keyboardFrameY)
+    : 0;
+  const androidKeyboardAvoidanceStyle = Platform.OS === 'android' && androidKeyboardOverlap > 0
+    ? {paddingBottom: androidKeyboardOverlap + ANDROID_COMPOSER_BOTTOM_GAP}
+    : null;
+  const inputRowBottomStyle = useMemo(() => ({
+    paddingBottom: Platform.OS === 'android' && isKeyboardVisible ? 8 : Math.max(8, insets.bottom),
+  }), [insets.bottom, isKeyboardVisible]);
 
   const openTransactionFromAI = (transactionId: string) => {
     if (!transactionId) {
@@ -161,18 +175,39 @@ const AIChatScreen: React.FC = () => {
       return;
     }
 
-    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+    const showSub = Keyboard.addListener('keyboardDidShow', event => {
       setIsKeyboardVisible(true);
+      const screenY = event.endCoordinates?.screenY;
+      const keyboardHeight = event.endCoordinates?.height;
+      setKeyboardFrameY(
+        typeof screenY === 'number'
+          ? screenY
+          : typeof keyboardHeight === 'number'
+            ? windowHeight - keyboardHeight
+            : null,
+      );
     });
     const hideSub = Keyboard.addListener('keyboardDidHide', () => {
       setIsKeyboardVisible(false);
+      setKeyboardFrameY(null);
     });
 
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, []);
+  }, [windowHeight]);
+
+  useEffect(() => {
+    if (!isKeyboardVisible) {
+      return;
+    }
+
+    const id = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({animated: true});
+    }, 80);
+    return () => clearTimeout(id);
+  }, [androidKeyboardOverlap, isKeyboardVisible]);
 
   useEffect(() => () => {
     if (streamTimerRef.current) {
@@ -278,9 +313,10 @@ const AIChatScreen: React.FC = () => {
 
   return (
     <KeyboardAvoidingView
-      style={s.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 8}>
+      style={[s.container, androidKeyboardAvoidanceStyle]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      enabled={Platform.OS === 'ios'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}>
       <View style={s.headerCard}>
         <Text style={s.headerTitle}>aQuang</Text>
         <Text style={s.headerSub}>Hỏi aQuang về chi tiêu của bạn</Text>
@@ -344,10 +380,12 @@ const AIChatScreen: React.FC = () => {
           colorBorder={C.border}
           colorBg={C.muted}
           colorText={C.acc}
+          maxVisibleChips={isKeyboardVisible ? 2 : undefined}
+          showExpand={!isKeyboardVisible}
         />
       </View>
 
-      <View style={[s.inputRow, {paddingBottom: Math.max(8, insets.bottom)}]}>
+      <View style={[s.inputRow, inputRowBottomStyle]}>
         <TextInput
           value={input}
           onChangeText={setInput}
