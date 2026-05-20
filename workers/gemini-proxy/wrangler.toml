@@ -1,0 +1,7 @@
+name = "paynote-gemini-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-05-20"
+
+[vars]
+# Optional. Use "*" for development or a concrete web origin if this endpoint is also used from browser clients.
+ALLOWED_ORIGIN = "*"

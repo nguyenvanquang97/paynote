@@ -6,7 +6,7 @@ import {showBudgetAlertNotification} from '../native';
 import type {Transaction} from '../shared/types';
 import {pickBudgetAlertThreshold} from './budgetAlertUtils';
 import {generateBudgetRoast} from './geminiRoastService';
-import {getGeminiApiKeyFromEnv} from '../config/env';
+import {getAIProxyTokenFromEnv, getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv} from '../config/env';
 import {
   budgetSeverityFromThreshold,
   budgetTriggerFromThreshold,
@@ -125,6 +125,8 @@ const emitNotification = async (payload: {
   ) {
     const roast = await generateBudgetRoast({
       apiKey: getGeminiApiKey(state.geminiApiKey),
+      proxyUrl: getAIProxyUrlFromEnv(),
+      proxyToken: getAIProxyTokenFromEnv(),
       categoryId: payload.categoryId,
       categoryLabel: payload.context.categoryLabel,
       spent: payload.spent,

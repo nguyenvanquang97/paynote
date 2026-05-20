@@ -36,7 +36,7 @@ import {triggerBudgetAlertsForTransaction} from './src/services/budgetAlerts';
 import {handlePhase2TransactionSignals} from './src/services/notificationPhase2';
 import {useThemeTransition} from './src/animations';
 import Animated from 'react-native-reanimated';
-import {getGeminiApiKeyFromEnv} from './src/config/env';
+import {getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv} from './src/config/env';
 
 const storage = createMMKV();
 type MainTabParamList = {
@@ -185,7 +185,7 @@ export default function App() {
   useBankNotifications(handleNotification);
 
   useEffect(() => {
-    const resolvedKey = geminiApiKey.trim() || getGeminiApiKeyFromEnv();
+    const resolvedKey = getAIProxyUrlFromEnv() ? '' : geminiApiKey.trim() || getGeminiApiKeyFromEnv();
     configurePeriodicRoast(aiBudgetAlertsEnabled, resolvedKey, notificationPersona, allowStrongLanguage, notificationIntensity);
   }, [aiBudgetAlertsEnabled, geminiApiKey, notificationPersona, allowStrongLanguage, notificationIntensity]);
 

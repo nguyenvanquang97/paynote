@@ -160,4 +160,31 @@ describe('aiChatService', () => {
     }));
     expect(message.metadata?.source).toBe('llm');
   });
+
+  it('uses gemini proxy without requiring a bundled api key', async () => {
+    mockedGetAIEnvSettings.mockReturnValue({
+      provider: 'gemini',
+      apiKey: '',
+      proxyUrl: 'https://example.workers.dev/chat',
+      proxyToken: 'client-token',
+      model: 'gemini-2.5-flash',
+      useLLM: true,
+      timeoutMs: 15000,
+    });
+    mockedRequestLLMAnswer.mockResolvedValue({
+      content: 'proxy answer',
+      provider: 'gemini',
+    });
+
+    const message = await sendAIChatMessage('tháng này tôi tiêu bao nhiêu');
+    expect(mockedRequestLLMAnswer).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'gemini',
+      apiKey: '',
+      proxyUrl: 'https://example.workers.dev/chat',
+      proxyToken: 'client-token',
+      model: 'gemini-2.5-flash',
+    }));
+    expect(message.content).toBe('aQuang: proxy answer');
+    expect(message.metadata?.source).toBe('llm');
+  });
 });

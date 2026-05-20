@@ -74,7 +74,8 @@ const mapGeminiMessages = (messages: LLMMessage[]): string =>
 
 const callGemini = async (request: LLMRequest): Promise<LLMResponse> => {
   const prompt = mapGeminiMessages(request.messages);
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${request.model}:generateContent`;
+  const proxyUrl = request.proxyUrl?.trim();
+  const endpoint = proxyUrl || `https://generativelanguage.googleapis.com/v1beta/models/${request.model}:generateContent`;
   console.info('[AI_LLM] Gemini request model=%s timeoutMs=%d', request.model, request.timeoutMs);
 
   const response = await fetchWithTimeout(
@@ -82,32 +83,41 @@ const callGemini = async (request: LLMRequest): Promise<LLMResponse> => {
     {
       method: 'POST',
       headers: {
-        'x-goog-api-key': request.apiKey,
+        ...(proxyUrl ? {} : {'x-goog-api-key': request.apiKey}),
+        ...(proxyUrl && request.proxyToken?.trim()
+          ? {Authorization: `Bearer ${request.proxyToken.trim()}`}
+          : {}),
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{text: prompt}],
-          },
-        ],
-      }),
+      body: proxyUrl
+        ? JSON.stringify({
+          model: request.model,
+          messages: request.messages,
+        })
+        : JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{text: prompt}],
+            },
+          ],
+        }),
     },
     request.timeoutMs,
   );
 
- 
   if (!response.ok) {
     throw new Error(`GEMINI_HTTP_${response.status}`);
   }
 
   const data = await response.json();
-    console.log('[AI_LLM] Gemini response data', data);
+  const proxyContent = extractText(data?.content);
   const parts = data?.candidates?.[0]?.content?.parts;
-  const content = Array.isArray(parts)
-    ? parts.map((part: any) => extractText(part?.text)).filter(Boolean).join('\n').trim()
-    : '';
+  const content = proxyContent || (
+    Array.isArray(parts)
+      ? parts.map((part: any) => extractText(part?.text)).filter(Boolean).join('\n').trim()
+      : ''
+  );
 
   if (!content) {
     throw new Error('GEMINI_EMPTY_CONTENT');
@@ -133,7 +143,7 @@ export const requestLLMAnswer = async (request: LLMRequest): Promise<LLMResponse
     return callMock(request);
   }
 
-  if (!request.apiKey) {
+  if (!request.apiKey && !(request.provider === 'gemini' && request.proxyUrl?.trim())) {
     throw new Error('MISSING_API_KEY');
   }
 

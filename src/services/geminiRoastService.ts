@@ -4,6 +4,8 @@ import {buildFallbackRoastMessage} from './roastFallbackTemplates';
 
 interface RoastInput {
   apiKey: string;
+  proxyUrl?: string;
+  proxyToken?: string;
   categoryId: string;
   categoryLabel: string;
   spent: number;
@@ -93,6 +95,9 @@ const fetchWithTimeout = async (url: string, init: RequestInit, timeoutMs: numbe
 };
 
 const parseGeminiText = (payload: any): string => {
+  if (typeof payload?.content === 'string') {
+    return payload.content;
+  }
   return payload?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 };
 
@@ -118,16 +123,18 @@ const parseOutput = (text: string): RoastOutput | null => {
 };
 
 export const generateBudgetRoast = async (input: RoastInput): Promise<RoastOutput> => {
-  if (!input.apiKey.trim()) {
+  const proxyUrl = input.proxyUrl?.trim();
+  if (!proxyUrl && !input.apiKey.trim()) {
     return fallbackTemplate(input, 'missing_api_key');
   }
-  if (__DEV__ && !hasWarnedDirectKey) {
+  if (!proxyUrl && __DEV__ && !hasWarnedDirectKey) {
     hasWarnedDirectKey = true;
     console.warn('Gemini direct API key mode is for internal demo only. Use backend proxy for production.');
   }
 
-  const body = {
-    contents: [{parts: [{text: buildPrompt(input)}]}],
+  const prompt = buildPrompt(input);
+  const directBody = {
+    contents: [{parts: [{text: prompt}]}],
     generationConfig: {
       temperature: 0.85,
       topP: 0.92,
@@ -138,11 +145,21 @@ export const generateBudgetRoast = async (input: RoastInput): Promise<RoastOutpu
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const response = await fetchWithTimeout(
-        `${GEMINI_URL}?key=${encodeURIComponent(input.apiKey.trim())}`,
+        proxyUrl || `${GEMINI_URL}?key=${encodeURIComponent(input.apiKey.trim())}`,
         {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(body),
+          headers: {
+            'Content-Type': 'application/json',
+            ...(proxyUrl && input.proxyToken?.trim()
+              ? {Authorization: `Bearer ${input.proxyToken.trim()}`}
+              : {}),
+          },
+          body: proxyUrl
+            ? JSON.stringify({
+              model: MODEL,
+              messages: [{role: 'user', content: prompt}],
+            })
+            : JSON.stringify(directBody),
         },
         8500,
       );

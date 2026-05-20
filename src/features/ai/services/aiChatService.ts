@@ -68,9 +68,10 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
   const resolvedModel = appState.aiProviderPreference === 'auto'
     ? llmSettings.model
     : getAIModelFromEnv(resolvedProvider);
+  const resolvedProxyUrl = resolvedProvider === 'gemini' ? llmSettings.proxyUrl || '' : '';
   const resolvedUseLLM = Boolean(
     appState.aiUseOnline &&
-    (resolvedProvider === 'mock' || resolvedApiKey.length > 0),
+    (resolvedProvider === 'mock' || resolvedApiKey.length > 0 || resolvedProxyUrl.length > 0),
   );
   const llmMessages = buildLLMMessages(content, intent, context, appState.aiResponseStyle);
   console.info(
@@ -106,6 +107,8 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
     const llmResponse = await requestLLMAnswer({
       provider: resolvedProvider,
       apiKey: resolvedApiKey,
+      proxyUrl: resolvedProxyUrl,
+      proxyToken: resolvedProvider === 'gemini' ? llmSettings.proxyToken || '' : '',
       model: resolvedModel,
       timeoutMs: llmSettings.timeoutMs,
       messages: llmMessages,

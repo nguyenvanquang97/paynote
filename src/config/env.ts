@@ -14,6 +14,8 @@ export type AIProvider = 'openai' | 'gemini' | 'mock';
 export type AIEnvSettings = {
   provider: AIProvider;
   apiKey: string;
+  proxyUrl: string;
+  proxyToken: string;
   model: string;
   useLLM: boolean;
   localOnly: boolean;
@@ -53,6 +55,9 @@ export const getAIProviderFromEnv = (): AIProvider => {
   if (getGeminiApiKeyFromEnv().length > 0) {
     return 'gemini';
   }
+  if (readEnv('PAYNOTE_AI_PROXY_URL').length > 0) {
+    return 'gemini';
+  }
   if (readEnv('OPENAI_API_KEY').length > 0) {
     return 'openai';
   }
@@ -87,21 +92,33 @@ export const getAIModelFromEnv = (provider: AIProvider): string => {
   return 'mock-local';
 };
 
+export const getAIProxyUrlFromEnv = (): string => readEnv('PAYNOTE_AI_PROXY_URL');
+
+export const getAIProxyTokenFromEnv = (): string => readEnv('PAYNOTE_AI_PROXY_TOKEN');
+
 export const getAIEnvSettings = (): AIEnvSettings => {
   const localOnly = asBooleanFlag(readEnv('PAYNOTE_AI_LOCAL_ONLY'));
   const provider = getAIProviderFromEnv();
   const apiKey = getAIApiKeyFromEnv(provider);
+  const proxyUrl = getAIProxyUrlFromEnv();
+  const proxyToken = getAIProxyTokenFromEnv();
   const model = getAIModelFromEnv(provider);
   const timeoutRaw = Number(readEnv('PAYNOTE_AI_TIMEOUT_MS'));
   const timeoutMs = Number.isFinite(timeoutRaw) && timeoutRaw > 0
     ? Math.round(timeoutRaw)
     : DEFAULT_LLM_TIMEOUT_MS;
 
-  const useLLM = !localOnly && (provider === 'mock' || apiKey.length > 0);
+  const useLLM = !localOnly && (
+    provider === 'mock' ||
+    apiKey.length > 0 ||
+    (provider === 'gemini' && proxyUrl.length > 0)
+  );
 
   return {
     provider,
     apiKey,
+    proxyUrl,
+    proxyToken,
     model,
     useLLM,
     localOnly,

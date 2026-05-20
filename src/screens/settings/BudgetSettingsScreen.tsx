@@ -16,7 +16,7 @@ import NumericInput from '../../shared/components/NumericInput';
 import { CATEGORY_EMOJI, CATEGORY_ICONS, CATEGORY_LABELS } from '../../shared/constants';
 import { toast } from '../../shared/components/Toast';
 import { generateBudgetRoast } from '../../services/geminiRoastService';
-import { getGeminiApiKeyFromEnv } from '../../config/env';
+import { getAIProxyTokenFromEnv, getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv } from '../../config/env';
 import { PERSONA_OPTIONS } from '../../services/notifications';
 import {
   startPeriodicRoastReminder,
@@ -136,6 +136,7 @@ const BudgetSettingsScreen: React.FC = () => {
   };
 
   const resolveApiKey = (): string => {
+    if (getAIProxyUrlFromEnv()) { return ''; }
     const userKey = geminiApiKey.trim();
     if (userKey.length > 0) { return userKey; }
     return getGeminiApiKeyFromEnv();
@@ -180,6 +181,8 @@ const BudgetSettingsScreen: React.FC = () => {
     if (aiEnabled) {
       const roast = await generateBudgetRoast({
         apiKey: resolveApiKey(),
+        proxyUrl: getAIProxyUrlFromEnv(),
+        proxyToken: getAIProxyTokenFromEnv(),
         categoryId,
         categoryLabel,
         spent,

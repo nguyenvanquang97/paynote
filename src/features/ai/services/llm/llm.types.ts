@@ -13,6 +13,8 @@ export type LLMResponse = {
 export type LLMRequest = {
   provider: LLMProvider;
   apiKey: string;
+  proxyUrl?: string;
+  proxyToken?: string;
   model: string;
   timeoutMs: number;
   messages: LLMMessage[];

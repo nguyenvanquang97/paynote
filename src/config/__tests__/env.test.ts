@@ -55,4 +55,26 @@ describe('env AI provider resolution', () => {
 
     expect(env.getAIProviderFromEnv()).toBe('mock');
   });
+
+  it('uses gemini proxy as an online LLM path without bundling a key', () => {
+    const env = loadEnvModule({
+      GEMINI_API_KEY: '',
+      GOOGLE_API_KEY: '',
+      OPENAI_API_KEY: '',
+      PAYNOTE_AI_PROVIDER: '',
+      PAYNOTE_AI_API_KEY: '',
+      PAYNOTE_AI_PROXY_URL: 'https://example.workers.dev/chat',
+      PAYNOTE_AI_PROXY_TOKEN: 'client-token',
+      PAYNOTE_AI_MODEL: '',
+      PAYNOTE_AI_TIMEOUT_MS: '',
+    });
+
+    expect(env.getAIEnvSettings()).toEqual(expect.objectContaining({
+      provider: 'gemini',
+      apiKey: '',
+      proxyUrl: 'https://example.workers.dev/chat',
+      proxyToken: 'client-token',
+      useLLM: true,
+    }));
+  });
 });

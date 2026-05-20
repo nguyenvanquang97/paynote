@@ -3,7 +3,7 @@ import {CATEGORY_ICONS, getCategoryLabel} from '../shared/constants';
 import {toMonthKey, useAppStore, type BudgetAlertThreshold} from '../app/store';
 import {showBudgetAlertNotification} from '../native';
 import {generateBudgetRoast} from './geminiRoastService';
-import {getGeminiApiKeyFromEnv} from '../config/env';
+import {getAIProxyTokenFromEnv, getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv} from '../config/env';
 import {detectCategoryContext, generateNotificationMessage} from './notifications';
 import {runPhase2PeriodicSweep} from './notificationPhase2';
 
@@ -160,6 +160,8 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
   } else if (refreshed.aiBudgetAlertsEnabled) {
     const roast = await generateBudgetRoast({
       apiKey: getResolvedGeminiKey(),
+      proxyUrl: getAIProxyUrlFromEnv(),
+      proxyToken: getAIProxyTokenFromEnv(),
       categoryId: winnerData.categoryId,
       categoryLabel: winnerData.label,
       spent: winnerData.spent,
