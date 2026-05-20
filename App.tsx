@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useCallback} from 'react';
-import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
+import {NavigationContainer, DefaultTheme, createNavigationContainerRef} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {useNavigation} from '@react-navigation/native';
@@ -26,7 +26,13 @@ import BubbleTabBar from './src/shared/components/BubbleTabBar';
 import {getThemeColors} from './src/shared/theme';
 import {DialogContainer} from './src/shared/components/Dialog';
 import {ToastContainer} from './src/shared/components/Toast';
-import {configurePeriodicRoast, startPeriodicRoastReminder, useBankNotifications} from './src/native';
+import {
+  configurePeriodicRoast,
+  getInitialNotificationAction,
+  startPeriodicRoastReminder,
+  subscribeNotificationAction,
+  useBankNotifications,
+} from './src/native';
 import {processNotification} from './src/modules/banking';
 import {useAppStore} from './src/app/store';
 import type {BankNotification} from './src/shared/types';
@@ -37,6 +43,7 @@ import {handlePhase2TransactionSignals} from './src/services/notificationPhase2'
 import {useThemeTransition} from './src/animations';
 import Animated from 'react-native-reanimated';
 import {getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv} from './src/config/env';
+import {resolveNotificationAction} from './src/services/notifications/notificationNavigation';
 
 const storage = createMMKV();
 type MainTabParamList = {
@@ -49,6 +56,7 @@ type MainTabParamList = {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef<any>();
 
 function MainTabs() {
   const navigation = useNavigation<any>();
@@ -185,6 +193,43 @@ export default function App() {
   useBankNotifications(handleNotification);
 
   useEffect(() => {
+    const unsubscribe = subscribeNotificationAction(action => {
+      if (!navigationRef.isReady()) {
+        return;
+      }
+      const handled = resolveNotificationAction(navigationRef, action);
+      if (!handled) {
+        navigationRef.navigate('Notifications');
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const syncInitialAction = async () => {
+      const action = await getInitialNotificationAction();
+      if (!action) {
+        return;
+      }
+
+      const run = () => {
+        const handled = resolveNotificationAction(navigationRef, action);
+        if (!handled) {
+          navigationRef.navigate('Notifications');
+        }
+      };
+
+      if (navigationRef.isReady()) {
+        run();
+      } else {
+        setTimeout(run, 250);
+      }
+    };
+
+    syncInitialAction().catch(() => {});
+  }, [isReady]);
+
+  useEffect(() => {
     const resolvedKey = getAIProxyUrlFromEnv() ? '' : geminiApiKey.trim() || getGeminiApiKeyFromEnv();
     configurePeriodicRoast(aiBudgetAlertsEnabled, resolvedKey, notificationPersona, allowStrongLanguage, notificationIntensity);
   }, [aiBudgetAlertsEnabled, geminiApiKey, notificationPersona, allowStrongLanguage, notificationIntensity]);
@@ -235,7 +280,7 @@ export default function App() {
                     ]}
                   />
                 )}
-                <NavigationContainer theme={navTheme}>
+                <NavigationContainer ref={navigationRef} theme={navTheme}>
                   {showOnboarding ? (
                     <OnboardingScreen onComplete={handleOnboardingComplete} />
                   ) : (

@@ -1,11 +1,12 @@
 import dayjs from 'dayjs';
 import {CATEGORY_ICONS, getCategoryLabel} from '../shared/constants';
 import {toMonthKey, useAppStore, type BudgetAlertThreshold} from '../app/store';
-import {showBudgetAlertNotification} from '../native';
+import {showBudgetAlertNotificationWithAction} from '../native';
 import {generateBudgetRoast} from './geminiRoastService';
 import {getAIProxyTokenFromEnv, getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv} from '../config/env';
 import {detectCategoryContext, generateNotificationMessage} from './notifications';
 import {runPhase2PeriodicSweep} from './notificationPhase2';
+import {createNotificationActionFromTrigger} from './notifications/notificationAction';
 
 const PERIOD_MS = 6 * 60 * 60 * 1000;
 let lastReminderAt = 0;
@@ -177,6 +178,12 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
     source = 'ai_fallback';
   }
 
+  const action = createNotificationActionFromTrigger({
+    trigger: 'bank_transaction_detected',
+    monthKey,
+    categoryId: winnerData.categoryId,
+  });
+
   refreshed.pushInAppNotification({
     type: 'periodic_reminder',
     title,
@@ -193,7 +200,8 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
     categoryId: winnerData.categoryId,
     monthKey,
     threshold,
+    action,
   });
-  showBudgetAlertNotification(title, message);
+  showBudgetAlertNotificationWithAction(title, message, action);
   await runPhase2PeriodicSweep();
 };

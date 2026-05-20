@@ -1,10 +1,12 @@
 import React, {useMemo, useState} from 'react';
 import {View, Text, StyleSheet, ScrollView, TouchableOpacity} from 'react-native';
 import dayjs from 'dayjs';
+import {useNavigation} from '@react-navigation/native';
 import {useAppStore} from '../../app/store';
 import {CATEGORY_EMOJI, getCategoryLabel} from '../../shared/constants';
 import {useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
+import {resolveNotificationAction} from '../../services/notifications/notificationNavigation';
 
 const getSeverityLabel = (severity: string): string => {
   if (severity === 'critical') {return 'Khẩn cấp';}
@@ -28,6 +30,7 @@ const getAlertLevel = (severity?: string, tier?: number): 'low' | 'medium' | 'hi
 };
 
 const NotificationsScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const t = useThemeColors();
   const C = useMemo(() => ({
     bg: t.appBg,
@@ -121,6 +124,9 @@ const NotificationsScreen: React.FC = () => {
                   return;
                 }
                 markInAppNotificationRead(item.id);
+                if (!resolveNotificationAction(navigation, item.action)) {
+                  navigation.navigate('Notifications');
+                }
               }}
               onLongPress={() => {
                 if (!isSelectionMode) {

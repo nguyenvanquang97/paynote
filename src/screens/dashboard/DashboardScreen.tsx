@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 import {useThemeColors} from '../../shared/theme';
 import AppIcon from '../../shared/components/AppIcon';
 import {useNavigation} from '@react-navigation/native';
+import {useRoute} from '@react-navigation/native';
 import {AnimatedNumber, FadeSlideView, AnimatedPressable, AnimatedEmptyState} from '../../animations';
 
 const {width} = Dimensions.get('window');
@@ -41,6 +42,7 @@ const DashboardScreen: React.FC = () => {
   }), [t]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const {
     transactions,
     totalIncome,
@@ -63,6 +65,14 @@ const DashboardScreen: React.FC = () => {
     loadTransactions();
     loadStats();
   }, [loadTransactions, loadStats]);
+
+  useEffect(() => {
+    const incoming = route?.params?.fromNotification;
+    if (!incoming?.ts || typeof incoming.year !== 'number' || typeof incoming.month !== 'number') {
+      return;
+    }
+    setSelectedMonth(incoming.year, incoming.month);
+  }, [route?.params, setSelectedMonth]);
 
   const onRefresh = useCallback(() => {
     loadTransactions();

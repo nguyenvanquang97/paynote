@@ -88,6 +88,7 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
                 val fallbackMessage = PeriodicPlanFallbackTemplates.pick(toneMode, allowStrongLanguage, adjustedTier)
                 val aiMessage = if (aiEnabled && apiKey.isNotBlank()) requestGeminiRoast(apiKey, toneMode, allowStrongLanguage, intensity) else null
                 val message = aiMessage ?: fallbackMessage
+                val actionJson = """{"target":"dashboard","monthKey":"${java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())}","ts":${System.currentTimeMillis()}}"""
 
                 val notification = NotificationCompat.Builder(context, "budget_alerts")
                     .setSmallIcon(R.drawable.ic_stat_paynote)
@@ -95,7 +96,7 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
                     .setContentTitle("Nhắc nhở chi tiêu định kỳ")
                     .setContentText(message)
                     .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-                    .setContentIntent(NotificationBridge.getOpenAppPendingIntent(context))
+                    .setContentIntent(NotificationBridge.getOpenAppPendingIntent(context, actionJson))
                     .setAutoCancel(true)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                     .build()

@@ -18,6 +18,7 @@ import { toast } from '../../shared/components/Toast';
 import { generateBudgetRoast } from '../../services/geminiRoastService';
 import { getAIProxyTokenFromEnv, getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv } from '../../config/env';
 import { PERSONA_OPTIONS } from '../../services/notifications';
+import {createNotificationActionFromTrigger} from '../../services/notifications/notificationAction';
 import {
   startPeriodicRoastReminder,
   stopPeriodicRoastReminder,
@@ -208,6 +209,11 @@ const BudgetSettingsScreen: React.FC = () => {
       categoryId,
       monthKey,
       threshold,
+      action: createNotificationActionFromTrigger({
+        trigger: threshold >= 120 ? 'budget_120' : threshold >= 100 ? 'budget_100' : threshold >= 80 ? 'budget_80' : 'budget_50',
+        monthKey,
+        categoryId,
+      }),
     });
     toast.warning(message.length > 155 ? `${message.slice(0, 154).trim()}…` : message, 4500);
 

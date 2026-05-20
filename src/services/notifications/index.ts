@@ -8,5 +8,7 @@ export * from './notificationTemplates';
 export * from './notificationCategoryTemplates';
 export * from './pickNotificationTemplate';
 export * from './formatNotificationTemplate';
+export * from './notificationAction';
+export * from './notificationNavigation';
 export * from './notificationEngine';
 export * from './notificationStyleGuide';

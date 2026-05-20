@@ -22,3 +22,4 @@ export const SUPPORTED_BANKS = {
 export type BankId = keyof typeof SUPPORTED_BANKS;
 
 export const NOTIFICATION_EVENT = 'BANK_NOTIFICATION';
+export const NOTIFICATION_ACTION_EVENT = 'NOTIFICATION_ACTION';

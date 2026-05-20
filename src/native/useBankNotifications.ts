@@ -6,7 +6,9 @@ import {
   Platform,
 } from 'react-native';
 import type {BankNotification} from '../shared/types';
-import {NOTIFICATION_EVENT} from '../shared/constants';
+import {NOTIFICATION_ACTION_EVENT, NOTIFICATION_EVENT} from '../shared/constants';
+import type {NotificationAction} from '../services/notifications/notificationAction';
+import {isNotificationAction} from '../services/notifications/notificationAction';
 
 const {NotificationBridge} = NativeModules;
 
@@ -58,7 +60,16 @@ export const checkBatteryOptimizationDisabled = (): Promise<boolean> => {
 
 export const showBudgetAlertNotification = (title: string, message: string): void => {
   if (!NotificationBridge?.showBudgetAlertNotification) {return;}
-  NotificationBridge.showBudgetAlertNotification(title, message);
+  NotificationBridge.showBudgetAlertNotification(title, message, null);
+};
+
+export const showBudgetAlertNotificationWithAction = (
+  title: string,
+  message: string,
+  action: NotificationAction,
+): void => {
+  if (!NotificationBridge?.showBudgetAlertNotification) {return;}
+  NotificationBridge.showBudgetAlertNotification(title, message, JSON.stringify(action));
 };
 
 export const startPeriodicRoastReminder = (): void => {
@@ -95,3 +106,43 @@ export const requestPostNotificationsPermission = async (): Promise<boolean> => 
   );
   return granted === PermissionsAndroid.RESULTS.GRANTED;
 };
+
+export const subscribeNotificationAction = (
+  onAction: (action: NotificationAction) => void,
+): (() => void) => {
+  const sub = emitter.addListener(NOTIFICATION_ACTION_EVENT, payload => {
+    const rawAction = payload?.actionJson;
+    if (typeof rawAction !== 'string' || rawAction.trim().length === 0) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(rawAction) as NotificationAction;
+      if (isNotificationAction(parsed)) {
+        onAction(parsed);
+      }
+    } catch {
+      // ignore invalid native payload
+    }
+  });
+  return () => sub.remove();
+};
+
+export const getInitialNotificationAction = (): Promise<NotificationAction | null> =>
+  new Promise(resolve => {
+    if (!NotificationBridge?.getInitialNotificationAction) {
+      resolve(null);
+      return;
+    }
+    NotificationBridge.getInitialNotificationAction((value: string) => {
+      if (!value) {
+        resolve(null);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(value) as NotificationAction;
+        resolve(isNotificationAction(parsed) ? parsed : null);
+      } catch {
+        resolve(null);
+      }
+    });
+  });

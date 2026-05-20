@@ -1,18 +1,18 @@
 package com.paynote.app
 
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.AlarmManager
 import android.app.PendingIntent
-import android.content.Intent
 import android.content.Context
+import android.content.Intent
 import android.os.Build
-import android.util.Log
 import android.os.PowerManager
-import android.content.SharedPreferences
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.Callback
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
@@ -25,7 +25,10 @@ class NotificationBridge(
     companion object {
         private const val TAG = "NotificationBridge"
         private const val EVENT_NAME = "BANK_NOTIFICATION"
+        private const val ACTION_EVENT_NAME = "NOTIFICATION_ACTION"
         private const val BUDGET_ALERT_CHANNEL_ID = "budget_alerts"
+        private const val EXTRA_NOTIFICATION_ACTION_JSON = "notification_action_json"
+
         const val PERIODIC_REMINDER_ACTION = "com.paynote.app.PERIODIC_ROAST_REMINDER"
         const val PERIODIC_REMINDER_INTERVAL_MS = 6 * 60 * 60 * 1000L
         const val PERIODIC_PREFS = "periodic_roast_prefs"
@@ -36,9 +39,25 @@ class NotificationBridge(
         const val PERIODIC_PREF_INTENSITY = "intensity"
 
         private var instance: NotificationBridge? = null
+        private var pendingInitialActionJson: String? = null
 
         fun send(packageName: String, title: String?, text: String?) {
             instance?.sendEvent(packageName, title, text)
+        }
+
+        fun handleAppIntent(intent: Intent?) {
+            val actionJson = intent?.getStringExtra(EXTRA_NOTIFICATION_ACTION_JSON)?.trim().orEmpty()
+            if (actionJson.isBlank()) {
+                return
+            }
+            pendingInitialActionJson = actionJson
+            instance?.emitNotificationAction(actionJson)
+        }
+
+        fun consumeInitialActionJson(): String {
+            val value = pendingInitialActionJson.orEmpty()
+            pendingInitialActionJson = null
+            return value
         }
 
         fun getPeriodicReminderPendingIntent(context: Context): PendingIntent {
@@ -49,15 +68,27 @@ class NotificationBridge(
             return PendingIntent.getBroadcast(context, 77421, intent, flags)
         }
 
-        fun getOpenAppPendingIntent(context: Context): PendingIntent {
+        fun getOpenAppPendingIntent(context: Context, actionJson: String? = null): PendingIntent {
+            val normalizedAction = actionJson?.trim().orEmpty()
             val launchIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                if (normalizedAction.isNotBlank()) {
+                    putExtra(EXTRA_NOTIFICATION_ACTION_JSON, normalizedAction)
+                }
+            }
+            val requestCode = if (normalizedAction.isBlank()) {
+                99117
+            } else {
+                99117 + kotlin.math.abs(normalizedAction.hashCode() % 10000)
             }
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            return PendingIntent.getActivity(context, 99117, launchIntent, flags)
+            return PendingIntent.getActivity(context, requestCode, launchIntent, flags)
         }
 
-        fun schedulePeriodicRoastReminder(context: Context, triggerAtMillis: Long = System.currentTimeMillis() + PERIODIC_REMINDER_INTERVAL_MS) {
+        fun schedulePeriodicRoastReminder(
+            context: Context,
+            triggerAtMillis: Long = System.currentTimeMillis() + PERIODIC_REMINDER_INTERVAL_MS,
+        ) {
             try {
                 val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
                 val pendingIntent = getPeriodicReminderPendingIntent(context)
@@ -65,7 +96,7 @@ class NotificationBridge(
                     alarmManager.setExactAndAllowWhileIdle(
                         AlarmManager.RTC_WAKEUP,
                         triggerAtMillis,
-                        pendingIntent
+                        pendingIntent,
                     )
                 } else {
                     alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
@@ -100,7 +131,7 @@ class NotificationBridge(
         val channel = NotificationChannel(
             BUDGET_ALERT_CHANNEL_ID,
             "Cảnh báo chi tiêu",
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = "Cảnh báo khi chi tiêu tiệm cận hoặc vượt ngân sách danh mục"
         }
@@ -118,20 +149,40 @@ class NotificationBridge(
             reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
                 .emit(EVENT_NAME, params)
-
-            Log.d(TAG, "Event sent: $packageName")
         } catch (e: Exception) {
             Log.e(TAG, "Error sending event", e)
         }
     }
 
+    private fun emitNotificationAction(actionJson: String) {
+        try {
+            if (actionJson.isBlank()) {
+                return
+            }
+            val params = Arguments.createMap().apply {
+                putString("target", "notification_action")
+                putString("actionJson", actionJson)
+            }
+            reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit(ACTION_EVENT_NAME, params)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error emitting notification action", e)
+        }
+    }
+
     @ReactMethod
-    fun isNotificationAccessGranted(callback: com.facebook.react.bridge.Callback) {
+    fun getInitialNotificationAction(callback: Callback) {
+        callback.invoke(consumeInitialActionJson())
+    }
+
+    @ReactMethod
+    fun isNotificationAccessGranted(callback: Callback) {
         try {
             val contentResolver = reactContext.contentResolver
             val enabledListeners = android.provider.Settings.Secure.getString(
                 contentResolver,
-                "enabled_notification_listeners"
+                "enabled_notification_listeners",
             )
             val isGranted = enabledListeners?.contains(reactContext.packageName) == true
             callback.invoke(isGranted)
@@ -143,10 +194,8 @@ class NotificationBridge(
     @ReactMethod
     fun openNotificationSettings() {
         try {
-            val intent = android.content.Intent(
-                "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"
-            )
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             reactContext.startActivity(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Error opening notification settings", e)
@@ -156,10 +205,8 @@ class NotificationBridge(
     @ReactMethod
     fun openBatteryOptimizationSettings() {
         try {
-            val intent = android.content.Intent(
-                android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS
-            )
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             reactContext.startActivity(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Error opening battery settings", e)
@@ -167,17 +214,13 @@ class NotificationBridge(
     }
 
     @ReactMethod
-    fun isBatteryOptimizationDisabled(callback: com.facebook.react.bridge.Callback) {
+    fun isBatteryOptimizationDisabled(callback: Callback) {
         try {
-            val powerManager = reactContext.getSystemService(
-                android.content.Context.POWER_SERVICE
-            ) as? PowerManager
-
+            val powerManager = reactContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
             if (powerManager == null) {
                 callback.invoke(false)
                 return
             }
-
             val isIgnoring = powerManager.isIgnoringBatteryOptimizations(reactContext.packageName)
             callback.invoke(isIgnoring)
         } catch (e: Exception) {
@@ -196,7 +239,7 @@ class NotificationBridge(
     }
 
     @ReactMethod
-    fun showBudgetAlertNotification(title: String, message: String) {
+    fun showBudgetAlertNotification(title: String, message: String, actionJson: String?) {
         try {
             ensureBudgetAlertChannel()
             val notification = NotificationCompat.Builder(reactContext, BUDGET_ALERT_CHANNEL_ID)
@@ -204,13 +247,13 @@ class NotificationBridge(
                 .setContentTitle(title.ifBlank { "Cảnh báo chi tiêu" })
                 .setContentText(message)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-                .setContentIntent(getOpenAppPendingIntent(reactContext))
+                .setContentIntent(getOpenAppPendingIntent(reactContext, actionJson))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .build()
             NotificationManagerCompat.from(reactContext).notify(
                 (System.currentTimeMillis() % Int.MAX_VALUE).toInt(),
-                notification
+                notification,
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error showing budget alert notification", e)
@@ -241,9 +284,15 @@ class NotificationBridge(
     }
 
     @ReactMethod
-    fun configurePeriodicRoast(aiEnabled: Boolean, apiKey: String, toneMode: String, allowStrongLanguage: Boolean, intensity: String) {
+    fun configurePeriodicRoast(
+        aiEnabled: Boolean,
+        apiKey: String,
+        toneMode: String,
+        allowStrongLanguage: Boolean,
+        intensity: String,
+    ) {
         try {
-            val prefs: SharedPreferences = reactContext.getSharedPreferences(PERIODIC_PREFS, Context.MODE_PRIVATE)
+            val prefs = reactContext.getSharedPreferences(PERIODIC_PREFS, Context.MODE_PRIVATE)
             prefs.edit()
                 .putBoolean(PERIODIC_PREF_AI_ENABLED, aiEnabled)
                 .putString(PERIODIC_PREF_API_KEY, apiKey.trim())

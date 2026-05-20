@@ -51,6 +51,7 @@ const TransactionsScreen: React.FC = () => {
   const route = useRoute<any>();
   const {transactions, isLoading, loadTransactions, customCategories} = useAppStore();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [grouping, setGrouping] = useState<'day' | 'week' | 'month'>('day');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [pendingJump, setPendingJump] = useState<{year: number; month: number} | null>(null);
@@ -101,6 +102,9 @@ const TransactionsScreen: React.FC = () => {
   const filteredTransactions = transactions.filter(tx => {
     if (filter === 'all') {return true;}
     return tx.transactionType === filter;
+  }).filter(tx => {
+    if (!categoryFilter) {return true;}
+    return (tx.category || 'other') === categoryFilter;
   });
 
   const sections = React.useMemo(() => {
@@ -132,10 +136,11 @@ const TransactionsScreen: React.FC = () => {
     } else {
       setFilter('all');
     }
+    setCategoryFilter(typeof jump.categoryId === 'string' && jump.categoryId.trim().length > 0 ? jump.categoryId : null);
     setGrouping('month');
     setPendingJump({year: jump.year, month: jump.month});
     if (jump.transactionId) {
-      setFilter('all');
+      setFilter(jump.filter === 'income' || jump.filter === 'expense' ? jump.filter : 'all');
       setGrouping('day');
       setPendingTransactionId(jump.transactionId);
       setPendingJump(null);

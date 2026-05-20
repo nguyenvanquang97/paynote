@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import {CATEGORY_ICONS, getCategoryLabel} from '../shared/constants';
 import {toast} from '../shared/components/Toast';
 import {useAppStore, toMonthKey, type BudgetAlertThreshold} from '../app/store';
-import {showBudgetAlertNotification} from '../native';
+import {showBudgetAlertNotificationWithAction} from '../native';
 import type {Transaction} from '../shared/types';
 import {pickBudgetAlertThreshold} from './budgetAlertUtils';
 import {generateBudgetRoast} from './geminiRoastService';
@@ -14,6 +14,7 @@ import {
   generateNotificationMessage,
   type NotificationTrigger,
 } from './notifications';
+import {createNotificationActionFromTrigger, type NotificationAction} from './notifications/notificationAction';
 
 const formatCurrency = (amount: number): string =>
   new Intl.NumberFormat('vi-VN').format(Math.max(0, amount)) + ' ₫';
@@ -91,6 +92,7 @@ const emitNotification = async (payload: {
     amountText?: string;
     count?: number;
   };
+  transactionId?: string;
 }) => {
   const state = useAppStore.getState();
 
@@ -99,6 +101,12 @@ const emitNotification = async (payload: {
   let source: 'template' | 'ai_fallback' | 'native_periodic' = 'template';
   let toneTag = state.notificationPersona;
   let templateId: string | undefined;
+  const action: NotificationAction = createNotificationActionFromTrigger({
+    trigger: payload.trigger,
+    monthKey: payload.monthKey,
+    categoryId: payload.categoryId,
+    transactionId: payload.transactionId,
+  });
 
   const generated = generateNotificationMessage({
     trigger: payload.trigger,
@@ -159,9 +167,10 @@ const emitNotification = async (payload: {
     categoryId: payload.categoryId,
     monthKey: payload.monthKey,
     threshold: payload.threshold,
+    action,
   });
   toast.warning(trimForToast(message), 4500);
-  showBudgetAlertNotification(title, message);
+  showBudgetAlertNotificationWithAction(title, message, action);
 };
 
 export const triggerBudgetAlertsForTransaction = async (transaction: Transaction): Promise<void> => {
@@ -240,6 +249,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
           spentText: formatCurrency(spent),
           limitText: formatCurrency(limit),
         },
+        transactionId: transaction.id,
       });
     }
   }
@@ -269,6 +279,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
           categoryLabel: label,
           count: dayExpensesSameCategory.length,
         },
+        transactionId: transaction.id,
       });
     }
   }
@@ -299,6 +310,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
           categoryLabel: label,
           count: weekExpensesSameCategory.length,
         },
+        transactionId: transaction.id,
       });
     }
   }
@@ -332,6 +344,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
           categoryLabel: label,
           amountText: formatCurrency(transaction.amount),
         },
+        transactionId: transaction.id,
       });
     }
   }
@@ -352,6 +365,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
           categoryLabel: label,
           amountText: formatCurrency(transaction.amount),
         },
+        transactionId: transaction.id,
       });
     }
   }

@@ -1,11 +1,12 @@
 import dayjs from 'dayjs';
 import {createMMKV} from 'react-native-mmkv';
-import {showBudgetAlertNotification} from '../native';
+import {showBudgetAlertNotificationWithAction} from '../native';
 import {toast} from '../shared/components/Toast';
 import {useAppStore} from '../app/store';
 import type {Transaction} from '../shared/types';
 import {COOLDOWN_BY_TRIGGER} from './notifications/notificationRules';
 import {generateNotificationMessage, type NotificationTrigger, type NotificationSeverity} from './notifications';
+import {createNotificationActionFromTrigger} from './notifications/notificationAction';
 
 const phase2Storage = createMMKV();
 const KEY_LAST_NO_SPEND = 'phase2_last_no_spend_day';
@@ -25,6 +26,10 @@ const pushGenerated = (params: {
   context: Record<string, string | number | undefined>;
   titleFallback: string;
   messageFallback: string;
+  categoryId?: string;
+  monthKey?: string;
+  transactionId?: string;
+  timestamp?: number;
 }): void => {
   const now = Date.now();
   const triggerCooldown = COOLDOWN_BY_TRIGGER[params.trigger] ?? 30 * 60 * 1000;
@@ -50,6 +55,13 @@ const pushGenerated = (params: {
 
   const title = generated.title || params.titleFallback;
   const message = generated.message || params.messageFallback;
+  const action = createNotificationActionFromTrigger({
+    trigger: params.trigger,
+    categoryId: params.categoryId,
+    monthKey: params.monthKey,
+    transactionId: params.transactionId,
+    timestamp: params.timestamp,
+  });
   phase2Storage.set(triggerKey, now);
 
   state.pushInAppNotification({
@@ -65,10 +77,12 @@ const pushGenerated = (params: {
     trigger: params.trigger,
     severity: params.severity,
     categoryContext: generated.categoryContext,
-    monthKey: dayjs().format('YYYY-MM'),
+    monthKey: params.monthKey || dayjs().format('YYYY-MM'),
+    categoryId: params.categoryId,
+    action,
   });
 
-  showBudgetAlertNotification(title, message);
+  showBudgetAlertNotificationWithAction(title, message, action);
   if (params.trigger !== 'end_of_day_summary') {
     toast.info(message.length > 145 ? `${message.slice(0, 144).trim()}…` : message, 3500);
   }
@@ -94,6 +108,7 @@ export const handlePhase2TransactionSignals = (input: {
       titleFallback: 'Giao dịch trùng',
       messageFallback: 'App vừa chặn một giao dịch trùng.',
       context: {},
+      timestamp: Date.now(),
     });
     return;
   }
@@ -109,6 +124,7 @@ export const handlePhase2TransactionSignals = (input: {
       context: {
         amountText: missingAmount ? formatCurrency(missingAmount) : undefined,
       },
+      timestamp: Date.now(),
     });
     return;
   }
@@ -126,6 +142,9 @@ export const handlePhase2TransactionSignals = (input: {
           amountText: formatCurrency(transaction.amount),
           transactionName: transaction.description,
         },
+        transactionId: transaction.id,
+        timestamp: transaction.timestamp,
+        monthKey: dayjs(transaction.timestamp).format('YYYY-MM'),
       });
       return;
     }
@@ -139,6 +158,9 @@ export const handlePhase2TransactionSignals = (input: {
         amountText: formatCurrency(transaction.amount),
         transactionName: transaction.description,
       },
+      transactionId: transaction.id,
+      timestamp: transaction.timestamp,
+      monthKey: dayjs(transaction.timestamp).format('YYYY-MM'),
     });
     return;
   }
@@ -173,6 +195,7 @@ export const runPhase2PeriodicSweep = async (): Promise<void> => {
         titleFallback: 'Ngày không tiêu',
         messageFallback: 'Hôm nay bạn không có khoản chi nào. Rất tốt.',
         context: {},
+        monthKey: now.format('YYYY-MM'),
       });
 
       if (nextStreak >= 3) {
@@ -182,6 +205,7 @@ export const runPhase2PeriodicSweep = async (): Promise<void> => {
           titleFallback: 'Chuỗi tiết chế',
           messageFallback: `Bạn đang có chuỗi ${nextStreak} ngày kiểm soát tốt.`,
           context: {count: nextStreak},
+          monthKey: now.format('YYYY-MM'),
         });
       }
     }
@@ -201,6 +225,7 @@ export const runPhase2PeriodicSweep = async (): Promise<void> => {
         titleFallback: 'Tổng kết cuối ngày',
         messageFallback: `Hôm nay bạn đã chi ${formatCurrency(total)}.`,
         context: {amountText: formatCurrency(total)},
+        monthKey: now.format('YYYY-MM'),
       });
     }
   }
@@ -216,6 +241,7 @@ export const runPhase2PeriodicSweep = async (): Promise<void> => {
         titleFallback: 'Nhắc cuối tháng',
         messageFallback: 'Cuối tháng rồi, giữ chặt các khoản linh tinh nhé.',
         context: {},
+        monthKey,
       });
     }
   }

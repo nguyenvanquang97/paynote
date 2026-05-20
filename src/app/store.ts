@@ -19,6 +19,8 @@ import type {
   NotificationTrigger,
 } from '../services/notifications';
 import {loadNotificationMemory as loadNotificationMemoryFromService, normalizePersona} from '../services/notifications';
+import type {NotificationAction} from '../services/notifications/notificationAction';
+import {isNotificationAction} from '../services/notifications/notificationAction';
 
 const storage = createMMKV();
 
@@ -91,6 +93,7 @@ export interface InAppNotificationItem {
   categoryId?: string;
   monthKey?: string;
   threshold?: BudgetAlertThreshold;
+  action?: NotificationAction;
   createdAt: number;
   isRead: boolean;
 }
@@ -695,6 +698,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 ? 'template'
                 : undefined,
         toneTag: typeof item.toneTag === 'string' ? normalizePersona(item.toneTag) : undefined,
+        action: isNotificationAction(item.action) ? item.action : undefined,
       })) as InAppNotificationItem[];
       set({inAppNotifications: sanitized.slice(0, 100)});
       storage.set('in_app_notifications', JSON.stringify(sanitized.slice(0, 100)));
