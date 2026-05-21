@@ -47,14 +47,18 @@ jobs:
           PAYNOTE_AI_PROVIDER: gemini
           PAYNOTE_AI_LOCAL_ONLY: "false"
         run: |
-          node scripts/with-env.js node -v
+          node scripts/with-env.js --generate-only
           test -f src/config/runtimeEnv.local.ts
 
       - name: Build Android Release APK (with auto-versioning)
         working-directory: android
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PAYNOTE_AI_PROVIDER: gemini
+          PAYNOTE_AI_LOCAL_ONLY: "false"
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease -PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }}
+          ./gradlew clean assembleRelease -PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }}
 
       - name: Rename APK file
         run: |
