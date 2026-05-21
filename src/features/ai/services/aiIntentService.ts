@@ -23,6 +23,10 @@ export function detectAIIntent(input: string): AIIntent {
     return 'missed_transaction_check';
   }
 
+  if (hasAny(text, ['ngan sach', 'han muc', 'budget', 'dat ngan sach', 'set budget'])) {
+    return 'budget_setup';
+  }
+
   if (hasAny(text, ['so sanh', 'thang truoc', 'tuan truoc', 'hon hay kem'])) {
     return 'period_compare';
   }

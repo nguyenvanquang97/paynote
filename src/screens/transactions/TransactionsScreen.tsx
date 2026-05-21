@@ -49,7 +49,7 @@ const TransactionsScreen: React.FC = () => {
   }), [t]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const route = useRoute<any>();
-  const {transactions, isLoading, loadTransactions, customCategories} = useAppStore();
+  const {transactions, isLoading, loadTransactions, customCategories, duplicateReviewMap} = useAppStore();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [grouping, setGrouping] = useState<'day' | 'week' | 'month'>('day');
@@ -204,6 +204,9 @@ const TransactionsScreen: React.FC = () => {
     const emoji = CATEGORY_ICONS[tx.category || 'other']
       ? CATEGORY_EMOJI[tx.category || 'other']
       : customCategories?.[tx.category || 'other']?.icon || '📌';
+    const duplicateDecision = Object.values(duplicateReviewMap).find(decision =>
+      decision.transactionIds.includes(tx.id),
+    );
 
     const isNew = tx.id === newTransactionId;
     return (
@@ -265,6 +268,29 @@ const TransactionsScreen: React.FC = () => {
                     <AppIcon name="close" size={14} color="#8a5a0e" />
                   </TouchableOpacity>
                 </View>
+              </View>
+            )}
+
+            {duplicateDecision && (
+              <View
+                style={[
+                  styles.duplicateBadge,
+                  duplicateDecision.status === 'marked' ? styles.duplicateBadgeMarked : styles.duplicateBadgeIgnored,
+                ]}>
+                <AppIcon
+                  name={duplicateDecision.status === 'marked' ? 'check-circle' : 'x-circle'}
+                  size={13}
+                  color={duplicateDecision.status === 'marked' ? '#2f9e44' : '#8a5a0e'}
+                />
+                <Text
+                  style={[
+                    styles.duplicateText,
+                    duplicateDecision.status === 'marked' ? styles.duplicateTextMarked : styles.duplicateTextIgnored,
+                  ]}>
+                  {duplicateDecision.status === 'marked'
+                    ? `AI đã đánh dấu trùng (${duplicateDecision.transactionIds.length})`
+                    : 'AI đã bỏ qua nghi ngờ trùng'}
+                </Text>
               </View>
             )}
 
@@ -438,6 +464,35 @@ const createStyles = (COLORS: {
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  duplicateBadge: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  duplicateBadgeMarked: {
+    backgroundColor: '#eaf8df',
+    borderColor: '#b8e7c5',
+  },
+  duplicateBadgeIgnored: {
+    backgroundColor: '#fff3d6',
+    borderColor: '#f3d6a0',
+  },
+  duplicateText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  duplicateTextMarked: {
+    color: '#2f9e44',
+  },
+  duplicateTextIgnored: {
+    color: '#8a5a0e',
   },
   categoryBadge: {
     marginTop: 8,

@@ -32,6 +32,12 @@ const {width} = Dimensions.get('window');
 
 type ChartPhase = 'loading' | 'settling' | 'ready';
 
+const BAR_CHART_CARD_HEIGHT = 300;
+const PIE_CHART_CARD_HEIGHT = 390;
+const BUDGET_CARD_HEIGHT = 108;
+const DETAIL_ROW_HEIGHT = 78;
+const DETAIL_SKELETON_ROWS = 5;
+
 const CHART_COLORS = [
   '#e76452', '#f0ae3e', '#57a2e8', '#f08fb1', '#9b59b6',
   '#e67e22', '#34495e', '#e84393', '#fd79a8', '#6c5ce7',
@@ -58,12 +64,33 @@ const hashChartDataset = (
   return `${months}__${cats}__${totalIncome}__${totalExpense}`;
 };
 
-const ChartSkeletonCard: React.FC<{styles: any}> = ({styles}) => (
-  <View style={styles.chartCard}>
+const ChartSkeletonCard: React.FC<{styles: any; height?: number}> = ({styles, height}) => (
+  <View style={[styles.chartCard, height ? {height} : null]}>
     <View style={styles.skeletonLineLg} />
     <View style={styles.skeletonLineMd} />
     <View style={styles.skeletonBlock} />
   </View>
+);
+
+const SummarySkeletonCard: React.FC<{styles: any; borderLeftColor: string}> = ({styles, borderLeftColor}) => (
+  <View style={[styles.statCard, {borderLeftColor}]}>
+    <View style={styles.skeletonLineSm} />
+    <View style={styles.skeletonAmountLine} />
+  </View>
+);
+
+const DetailSkeletonRows: React.FC<{styles: any}> = ({styles}) => (
+  <>
+    {Array.from({length: DETAIL_SKELETON_ROWS}).map((_, idx) => (
+      <View key={`detail_skeleton_${idx}`} style={styles.statRow}>
+        <View style={styles.statRowHeader}>
+          <View style={styles.skeletonDetailLeft} />
+          <View style={styles.skeletonDetailRight} />
+        </View>
+        <View style={styles.skeletonProgressLine} />
+      </View>
+    ))}
+  </>
 );
 
 const ProgressBarAnimated: React.FC<{
@@ -188,16 +215,21 @@ const ChartsScreen: React.FC = () => {
     setMonthlyData(months);
   }, []);
 
+  const loadChartData = useCallback(async () => {
+    setChartPhase('loading');
+    await Promise.all([
+      loadStats(),
+      fetchMonthlyData(),
+    ]);
+  }, [fetchMonthlyData, loadStats]);
+
   useEffect(() => {
-    loadStats();
-    fetchMonthlyData();
-  }, [loadStats, fetchMonthlyData, selectedYear, selectedMonth]);
+    loadChartData();
+  }, [loadChartData, selectedYear, selectedMonth]);
 
   const onRefresh = useCallback(() => {
-    setChartPhase('loading');
-    loadStats();
-    fetchMonthlyData();
-  }, [loadStats, fetchMonthlyData]);
+    loadChartData();
+  }, [loadChartData]);
 
   useEffect(() => {
     if (isLoading) {
@@ -249,6 +281,7 @@ const ChartsScreen: React.FC = () => {
   };
 
   const isCurrentMonth = selectedYear === dayjs().year() && selectedMonth === dayjs().month() + 1;
+  const isChartLoading = chartPhase === 'loading';
 
   const currentMonthLabel = dayjs()
     .year(selectedYear)
@@ -349,42 +382,70 @@ const ChartsScreen: React.FC = () => {
       </View>
 
       <FadeSlideView style={styles.statsRow} delay={60}>
-        <View style={[styles.statCard, {borderLeftColor: COLORS.income}]}> 
-          <Text style={styles.statLabel}>Thu nhập</Text>
-          <AnimatedNumber
-            value={totalIncome}
-            format="currency"
-            prefix="+"
-            style={[styles.statAmount, {color: COLORS.income}]}
-          />
-        </View>
-        <View style={[styles.statCard, {borderLeftColor: COLORS.expense}]}> 
-          <Text style={styles.statLabel}>Chi tiêu</Text>
-          <AnimatedNumber
-            value={totalExpense}
-            format="currency"
-            prefix="-"
-            style={[styles.statAmount, {color: COLORS.expense}]}
-          />
-        </View>
+        {isChartLoading ? (
+          <>
+            <SummarySkeletonCard styles={styles} borderLeftColor={COLORS.income} />
+            <SummarySkeletonCard styles={styles} borderLeftColor={COLORS.expense} />
+          </>
+        ) : (
+          <>
+            <View style={[styles.statCard, {borderLeftColor: COLORS.income}]}> 
+              <Text style={styles.statLabel}>Thu nhập</Text>
+              <AnimatedNumber
+                value={totalIncome}
+                format="currency"
+                prefix="+"
+                style={[styles.statAmount, {color: COLORS.income}]}
+              />
+            </View>
+            <View style={[styles.statCard, {borderLeftColor: COLORS.expense}]}> 
+              <Text style={styles.statLabel}>Chi tiêu</Text>
+              <AnimatedNumber
+                value={totalExpense}
+                format="currency"
+                prefix="-"
+                style={[styles.statAmount, {color: COLORS.expense}]}
+              />
+            </View>
+          </>
+        )}
       </FadeSlideView>
 
-      {budgetsInMonth.length > 0 && (
-        <View style={[styles.chartCard, {marginBottom: 20}]}> 
-          <Text style={styles.sectionTitle}>Ngân sách tháng</Text>
-          <Text style={styles.legendLabel}>
-            {formatCurrency(budgetSummary.totalSpent)} / {formatCurrency(budgetSummary.totalLimit)}
-          </Text>
-          <Text style={styles.legendPercent}>Danh mục vượt: {budgetSummary.overCount}</Text>
+      <View style={styles.budgetSection}>
+        <View style={[styles.chartCard, styles.budgetCard]}> 
+          {isChartLoading ? (
+            <>
+              <View style={styles.skeletonLineLg} />
+              <View style={styles.skeletonLineMd} />
+              <View style={styles.skeletonLineSm} />
+            </>
+          ) : (
+            <>
+              <Text style={styles.sectionTitle}>Ngân sách tháng</Text>
+              {budgetsInMonth.length > 0 ? (
+                <>
+                  <Text style={styles.legendLabel}>
+                    {formatCurrency(budgetSummary.totalSpent)} / {formatCurrency(budgetSummary.totalLimit)}
+                  </Text>
+                  <Text style={styles.legendPercent}>Danh mục vượt: {budgetSummary.overCount}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.legendLabel}>Chưa đặt ngân sách tháng này</Text>
+                  <Text style={styles.legendPercent}>Bạn có thể đặt ngân sách trong Cài đặt hoặc hỏi aQuang.</Text>
+                </>
+              )}
+            </>
+          )}
         </View>
-      )}
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Thu nhập vs Chi tiêu (5 tháng)</Text>
-        {chartPhase === 'loading' || !showBarChart ? (
-          <ChartSkeletonCard styles={styles} />
+        {isChartLoading || !showBarChart ? (
+          <ChartSkeletonCard styles={styles} height={BAR_CHART_CARD_HEIGHT} />
         ) : (
-          <View style={styles.chartCard}>
+          <View style={[styles.chartCard, styles.barChartCard]}>
             <View style={styles.barLegendRow}>
               <View style={styles.barLegendItem}>
                 <View style={[styles.legendDot, {backgroundColor: COLORS.income}]} />
@@ -425,15 +486,14 @@ const ChartsScreen: React.FC = () => {
         )}
       </View>
 
-      {chartPhase === 'loading' ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chi tiêu theo danh mục</Text>
-          <ChartSkeletonCard styles={styles} />
-        </View>
-      ) : pieData.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chi tiêu theo danh mục</Text>
-          <View style={styles.chartCard}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Chi tiêu theo danh mục</Text>
+        {isChartLoading ? (
+          <ChartSkeletonCard styles={styles} height={PIE_CHART_CARD_HEIGHT} />
+        ) : (
+          <View style={[styles.chartCard, styles.pieChartCard]}>
+            {pieData.length > 0 ? (
+              <>
             <View style={styles.pieContainer}>
               <PieChart
                 data={pieData}
@@ -469,19 +529,25 @@ const ChartsScreen: React.FC = () => {
                 </FadeSlideView>
               ))}
             </View>
+              </>
+            ) : (
+              <View style={styles.emptyChartContent}>
+                <Text style={styles.emptyIcon}>🍩</Text>
+                <Text style={styles.emptyText}>Chưa có dữ liệu chi tiêu tháng này</Text>
+              </View>
+            )}
           </View>
-        </View>
-      ) : (
-        <View style={styles.emptySection}>
-          <Text style={styles.emptyIcon}>🍩</Text>
-          <Text style={styles.emptyText}>Chưa có dữ liệu chi tiêu tháng này</Text>
-        </View>
-      )}
+        )}
+      </View>
 
-      {categoryStats.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chi tiết theo danh mục</Text>
-          {categoryStats.map((stat, i) => {
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Chi tiết theo danh mục</Text>
+        {isChartLoading ? (
+          <View style={styles.detailListCard}>
+            <DetailSkeletonRows styles={styles} />
+          </View>
+        ) : categoryStats.length > 0 ? (
+          categoryStats.map((stat, i) => {
             const percentage = totalExpense > 0
               ? ((stat.total / totalExpense) * 100).toFixed(1)
               : '0';
@@ -524,9 +590,13 @@ const ChartsScreen: React.FC = () => {
                 </View>
               </FadeSlideView>
             );
-          })}
-        </View>
-      )}
+          })
+        ) : (
+          <View style={styles.emptyDetailCard}>
+            <Text style={styles.emptyText}>Chưa có danh mục chi tiêu trong tháng này</Text>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -560,6 +630,7 @@ const createStyles = (COLORS: {
   statsRow: {flexDirection: 'row', gap: 12, marginBottom: 20},
   statCard: {
     flex: 1,
+    height: 88,
     backgroundColor: COLORS.card,
     borderRadius: 20,
     padding: 16,
@@ -571,12 +642,22 @@ const createStyles = (COLORS: {
   statAmount: {fontSize: 15, fontWeight: '600'},
   section: {marginBottom: 20},
   sectionTitle: {color: COLORS.text, fontSize: 17, fontWeight: '700', marginBottom: 12},
+  budgetSection: {marginBottom: 20},
   chartCard: {
     backgroundColor: COLORS.card,
     borderRadius: 24,
     padding: 16,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+  },
+  budgetCard: {
+    height: BUDGET_CARD_HEIGHT,
+  },
+  barChartCard: {
+    height: BAR_CHART_CARD_HEIGHT,
+  },
+  pieChartCard: {
+    minHeight: PIE_CHART_CARD_HEIGHT,
   },
   pieContainer: {alignItems: 'center', marginBottom: 16},
   pieCenter: {alignItems: 'center'},
@@ -598,10 +679,22 @@ const createStyles = (COLORS: {
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  emptyBar: {alignItems: 'center', paddingVertical: 24},
+  emptyBar: {height: 220, alignItems: 'center', justifyContent: 'center'},
+  emptyChartContent: {height: PIE_CHART_CARD_HEIGHT - 34, alignItems: 'center', justifyContent: 'center'},
+  emptyDetailCard: {
+    minHeight: DETAIL_ROW_HEIGHT,
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+  },
   emptyIcon: {fontSize: 40, marginBottom: 8},
   emptyText: {color: COLORS.textSecondary, fontSize: 14, textAlign: 'center'},
+  detailListCard: {gap: 0},
   statRow: {
+    height: DETAIL_ROW_HEIGHT,
     backgroundColor: COLORS.surfaceMuted,
     borderRadius: 12,
     padding: 12,
@@ -620,7 +713,12 @@ const createStyles = (COLORS: {
   statRowPercent: {color: COLORS.textSecondary, fontSize: 12},
   skeletonLineLg: {height: 14, width: '46%', borderRadius: 8, backgroundColor: COLORS.surfaceMuted, marginBottom: 10},
   skeletonLineMd: {height: 12, width: '34%', borderRadius: 8, backgroundColor: COLORS.surfaceMuted, marginBottom: 14},
-  skeletonBlock: {height: 180, borderRadius: 16, backgroundColor: COLORS.surfaceMuted},
+  skeletonLineSm: {height: 12, width: '58%', borderRadius: 8, backgroundColor: COLORS.surfaceMuted},
+  skeletonAmountLine: {height: 18, width: '78%', borderRadius: 9, backgroundColor: COLORS.surfaceMuted, marginTop: 10},
+  skeletonBlock: {flex: 1, minHeight: 180, borderRadius: 16, backgroundColor: COLORS.surfaceMuted},
+  skeletonDetailLeft: {height: 16, width: '48%', borderRadius: 8, backgroundColor: COLORS.card},
+  skeletonDetailRight: {height: 16, width: '26%', borderRadius: 8, backgroundColor: COLORS.card},
+  skeletonProgressLine: {height: 4, borderRadius: 2, backgroundColor: COLORS.card, marginTop: 8},
 });
 
 const stylesGlobal = StyleSheet.create({

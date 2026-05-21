@@ -1,6 +1,9 @@
 import {AI_QUICK_PROMPTS} from '../constants/aiQuickPrompts';
 import type {FinancialContext} from './financialContextService';
 import type {AIAnswerCard, AIIntent} from '../types/aiChat.types';
+import {parseBudgetSetupAction} from './aiBudgetActionParser';
+import type {CustomCategory} from '../../../app/store';
+import {CATEGORY_LABELS} from '../../../shared/constants/categories';
 
 const formatVnd = (value: number): string => `${new Intl.NumberFormat('vi-VN').format(Math.round(value))}đ`;
 
@@ -9,7 +12,11 @@ export type LocalAIAnswerPayload = {
   cards: AIAnswerCard[];
 };
 
-const buildCards = (intent: AIIntent, context: FinancialContext): AIAnswerCard[] => {
+type LocalAIAnswerOptions = {
+  customCategories?: Record<string, CustomCategory>;
+};
+
+const buildCards = (intent: AIIntent, context: FinancialContext, input: string, options: LocalAIAnswerOptions): AIAnswerCard[] => {
   const cards: AIAnswerCard[] = [];
   const {totals, categoryBreakdown, topTransactions, duplicateCandidates, missedTransactionWarnings, comparison} = context;
 
@@ -119,6 +126,29 @@ const buildCards = (intent: AIIntent, context: FinancialContext): AIAnswerCard[]
     });
   }
 
+  if (intent === 'budget_setup') {
+    const parsed = parseBudgetSetupAction(input, {customCategories: options.customCategories});
+    if (parsed.status === 'ready') {
+      cards.push({
+        type: 'warning',
+        title: 'Đặt ngân sách tháng này',
+        description: `Đặt ngân sách ${parsed.categoryLabel} tháng này là ${formatVnd(parsed.amount)}?`,
+        severity: 'low',
+        actions: [
+          {
+            label: 'Đặt ngân sách',
+            tone: 'primary',
+            action: {
+              type: 'set_budget',
+              categoryId: parsed.categoryId,
+              amount: parsed.amount,
+            },
+          },
+        ],
+      });
+    }
+  }
+
   return cards;
 };
 
@@ -126,6 +156,7 @@ export function generateLocalAnswer(
   input: string,
   intent: AIIntent,
   context: FinancialContext,
+  options: LocalAIAnswerOptions = {},
 ): string {
   const {totals, categoryBreakdown, duplicateCandidates, missedTransactionWarnings, comparison} = context;
 
@@ -202,6 +233,19 @@ export function generateLocalAnswer(
     return `Bạn có thể bắt đầu từ danh mục ${top.categoryName}. Nếu giảm khoảng 15% danh mục này, bạn tiết kiệm được gần ${formatVnd(targetCut)} trong kỳ.`;
   }
 
+  if (intent === 'budget_setup') {
+    const parsed = parseBudgetSetupAction(input, {customCategories: options.customCategories});
+    if (parsed.status === 'ready') {
+      return `aQuang hiểu là bạn muốn đặt ngân sách ${parsed.categoryLabel} tháng này là ${formatVnd(parsed.amount)}. Bấm nút bên dưới để xác nhận trước khi lưu nhé.`;
+    }
+    if (parsed.status === 'missing_amount') {
+      const categoryText = parsed.categoryLabel ? ` cho ${parsed.categoryLabel}` : '';
+      return `Bạn muốn đặt ngân sách${categoryText} bao nhiêu tiền? Ví dụ: "Đặt ngân sách ăn uống 2 triệu".`;
+    }
+    const labels = Object.values(CATEGORY_LABELS).slice(0, 5).join(', ');
+    return `aQuang chưa nhận ra danh mục cần đặt ngân sách. Bạn thử ghi rõ danh mục như ${labels}.`;
+  }
+
   const promptHints = AI_QUICK_PROMPTS.slice(0, 3).map((item, idx) => `${idx + 1}. ${item}`).join('\n');
   return [
     `Mình chưa hiểu rõ câu hỏi: "${input}".`,
@@ -214,9 +258,10 @@ export function generateLocalAnswerPayload(
   input: string,
   intent: AIIntent,
   context: FinancialContext,
+  options: LocalAIAnswerOptions = {},
 ): LocalAIAnswerPayload {
   return {
-    text: generateLocalAnswer(input, intent, context),
-    cards: buildCards(intent, context),
+    text: generateLocalAnswer(input, intent, context, options),
+    cards: buildCards(intent, context, input, options),
   };
 }

@@ -17,6 +17,11 @@ describe('detectAIIntent', () => {
     expect(detectAIIntent('Tôi nên tiết kiệm kiểu gì?')).toBe('saving_advice');
   });
 
+  it('detects budget setup', () => {
+    expect(detectAIIntent('Đặt ngân sách ăn uống 2 triệu')).toBe('budget_setup');
+    expect(detectAIIntent('set budget cafe 500k')).toBe('budget_setup');
+  });
+
   it('returns unknown for unmatched text', () => {
     expect(detectAIIntent('Hôm nay trời đẹp ghê')).toBe('unknown');
   });

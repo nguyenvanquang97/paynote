@@ -5,6 +5,7 @@ export type AIIntent =
   | 'abnormal_spending'
   | 'duplicate_check'
   | 'missed_transaction_check'
+  | 'budget_setup'
   | 'saving_advice'
   | 'unknown';
 
@@ -38,6 +39,7 @@ export type AIAction =
 export type AIActionButton = {
   label: string;
   tone?: 'default' | 'primary' | 'danger';
+  disabled?: boolean;
   action: AIAction;
 };
 

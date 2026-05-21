@@ -23,15 +23,16 @@ type Props = {
   message: AIChatMessage;
   colors: Colors;
   onPressTransaction?: (transactionId: string) => void;
-  onPressAction?: (action: AIAction) => void;
+  onPressAction?: (action: AIAction, messageId: string) => void;
 };
 
 const renderCard = (
   card: AIAnswerCard,
   key: string,
+  messageId: string,
   colors: Colors,
   onPressTransaction?: (transactionId: string) => void,
-  onPressAction?: (action: AIAction) => void,
+  onPressAction?: (action: AIAction, messageId: string) => void,
 ) => {
   if (card.type === 'summary') {
     return (
@@ -84,7 +85,7 @@ const renderCard = (
       severity={card.severity}
       colorText={colors.assistantText}
       actions={card.actions}
-      onPressAction={onPressAction}
+      onPressAction={action => onPressAction?.(action, messageId)}
     />
   );
 };
@@ -112,6 +113,7 @@ export default function AIMessageBubble({message, colors, onPressTransaction, on
           {cards.map((card, idx) => renderCard(
             card,
             `${message.id}_${card.type}_${idx}`,
+            message.id,
             colors,
             onPressTransaction,
             onPressAction,

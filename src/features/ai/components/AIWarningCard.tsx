@@ -35,17 +35,24 @@ export default function AIWarningCard({
           {actions.map((item, idx) => (
             <Pressable
               key={`${item.label}_${idx}`}
-              onPress={() => onPressAction?.(item.action)}
+              disabled={item.disabled}
+              onPress={() => {
+                if (!item.disabled) {
+                  onPressAction?.(item.action);
+                }
+              }}
               style={[
                 styles.actionBtn,
                 item.tone === 'primary' && styles.actionBtnPrimary,
                 item.tone === 'danger' && styles.actionBtnDanger,
+                item.disabled && styles.actionBtnDone,
               ]}>
               <Text
                 style={[
                   styles.actionTxt,
                   item.tone === 'primary' && styles.actionTxtPrimary,
                   item.tone === 'danger' && styles.actionTxtDanger,
+                  item.disabled && styles.actionTxtDone,
                 ]}>
                 {item.label}
               </Text>
@@ -95,6 +102,10 @@ const styles = StyleSheet.create({
     borderColor: '#d96b6b',
     backgroundColor: '#ffecec',
   },
+  actionBtnDone: {
+    borderColor: '#43b047',
+    backgroundColor: '#eaf8df',
+  },
   actionTxt: {
     color: '#2d2d2d',
     fontSize: 11,
@@ -105,5 +116,8 @@ const styles = StyleSheet.create({
   },
   actionTxtDanger: {
     color: '#a12e2e',
+  },
+  actionTxtDone: {
+    color: '#2f9e44',
   },
 });

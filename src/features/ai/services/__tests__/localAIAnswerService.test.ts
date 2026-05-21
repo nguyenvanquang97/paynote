@@ -98,4 +98,26 @@ describe('localAIAnswerService', () => {
     }
     expect((warning.actions || []).length).toBeGreaterThan(0);
   });
+
+  it('adds set budget action when budget setup is complete', () => {
+    const payload = generateLocalAnswerPayload('Đặt ngân sách ăn uống 2 triệu', 'budget_setup', baseContext);
+    expect(payload.text).toContain('ngân sách Ăn uống');
+    const warning = payload.cards.find(card => card.type === 'warning');
+    expect(warning).toBeDefined();
+    if (!warning || warning.type !== 'warning') {
+      return;
+    }
+    expect(warning.title).toBe('Đặt ngân sách tháng này');
+    expect(warning.actions?.[0]?.action).toEqual({
+      type: 'set_budget',
+      categoryId: 'food',
+      amount: 2000000,
+    });
+  });
+
+  it('asks for missing budget amount without creating an action', () => {
+    const payload = generateLocalAnswerPayload('Đặt ngân sách ăn uống', 'budget_setup', baseContext);
+    expect(payload.text).toContain('bao nhiêu tiền');
+    expect(payload.cards).toEqual([]);
+  });
 });

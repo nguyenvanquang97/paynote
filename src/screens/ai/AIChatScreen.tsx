@@ -17,6 +17,7 @@ import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
+import dayjs from 'dayjs';
 import {useThemeColors} from '../../shared/theme';
 import {AI_QUICK_PROMPT_CHIPS} from '../../features/ai/constants/aiQuickPrompts';
 import {useAIChatStore} from '../../features/ai/store/useAIChatStore';
@@ -27,7 +28,8 @@ import AIQuickPromptList from '../../features/ai/components/AIQuickPromptList';
 import AIMessageBubble from '../../features/ai/components/AIMessageBubble';
 import {toast} from '../../shared/components/Toast';
 import {dialog} from '../../shared/components/Dialog';
-import {useAppStore} from '../../app/store';
+import {toMonthKey, useAppStore} from '../../app/store';
+import {CATEGORY_LABELS} from '../../shared/constants/categories';
 
 const PROVIDER_OPTIONS = [
   {id: 'auto', label: 'Auto'},
@@ -37,6 +39,19 @@ const PROVIDER_OPTIONS = [
 ] as const;
 
 const ANDROID_COMPOSER_BOTTOM_GAP = 12;
+const formatVnd = (value: number): string => `${new Intl.NumberFormat('vi-VN').format(Math.round(value))}đ`;
+const toActionKey = (action: AIAction): string => {
+  if (action.type === 'set_budget') {
+    return `${action.type}:${action.categoryId}:${action.amount}`;
+  }
+  if (action.type === 'mark_duplicate' || action.type === 'ignore_duplicate') {
+    return `${action.type}:${action.transactionIds.slice().sort().join('|')}`;
+  }
+  if (action.type === 'open_transaction') {
+    return `${action.type}:${action.transactionId}`;
+  }
+  return action.type;
+};
 
 const AIChatScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -75,6 +90,9 @@ const AIChatScreen: React.FC = () => {
   const updateMessage = useAIChatStore(state => state.updateMessage);
   const setLoading = useAIChatStore(state => state.setLoading);
   const markDuplicateReview = useAppStore(state => state.markDuplicateReview);
+  const setCategoryBudget = useAppStore(state => state.setCategoryBudget);
+  const getBudgetStatus = useAppStore(state => state.getBudgetStatus);
+  const customCategories = useAppStore(state => state.customCategories);
   const aiProviderPreference = useAppStore(state => state.aiProviderPreference);
   const setAIProviderPreference = useAppStore(state => state.setAIProviderPreference);
   const setAIUseOnline = useAppStore(state => state.setAIUseOnline);
@@ -109,7 +127,43 @@ const AIChatScreen: React.FC = () => {
     });
   };
 
-  const handleAIAction = (action: AIAction) => {
+  const markAIActionDone = (messageId: string | undefined, action: AIAction, label: string) => {
+    if (!messageId) {
+      return;
+    }
+
+    const message = useAIChatStore.getState().messages.find(item => item.id === messageId);
+    const cards = message?.metadata?.cards;
+    if (!message?.metadata || !cards) {
+      return;
+    }
+
+    updateMessage(messageId, {
+      metadata: {
+        ...message.metadata,
+        cards: cards.map(card => {
+          if (card.type !== 'warning' || !card.actions) {
+            return card;
+          }
+          return {
+            ...card,
+            actions: card.actions.map(item => {
+              if (toActionKey(item.action) === toActionKey(action)) {
+                return {
+                  ...item,
+                  label,
+                  disabled: true,
+                };
+              }
+              return item;
+            }),
+          };
+        }),
+      },
+    });
+  };
+
+  const handleAIAction = (action: AIAction, messageId?: string) => {
     if (action.type === 'open_transaction') {
       openTransactionFromAI(action.transactionId);
       return;
@@ -142,6 +196,7 @@ const AIChatScreen: React.FC = () => {
           cancelText: 'Hủy',
           onConfirm: () => {
             markDuplicateReview(action.transactionIds, 'marked');
+            markAIActionDone(messageId, action, 'Đã đánh dấu');
             if (action.transactionIds[0]) {
               openTransactionFromAI(action.transactionIds[0]);
             }
@@ -161,6 +216,7 @@ const AIChatScreen: React.FC = () => {
           cancelText: 'Hủy',
           onConfirm: () => {
             markDuplicateReview(action.transactionIds, 'ignored');
+            markAIActionDone(messageId, action, 'Đã bỏ qua');
             toast.success('Đã bỏ qua. AI sẽ không nhắc lại nhóm giao dịch này.');
           },
         },
@@ -169,7 +225,40 @@ const AIChatScreen: React.FC = () => {
     }
 
     if (action.type === 'set_budget') {
-      toast.info('Tính năng đặt ngân sách từ AI sẽ mở ở bước sau.');
+      const amount = Math.round(action.amount);
+      if (!action.categoryId || !Number.isFinite(amount) || amount <= 0) {
+        toast.error('Ngân sách AI đề xuất không hợp lệ.');
+        return;
+      }
+
+      const categoryLabel = CATEGORY_LABELS[action.categoryId] || customCategories[action.categoryId]?.name;
+      if (!categoryLabel) {
+        toast.error('aQuang chưa nhận ra danh mục ngân sách này.');
+        return;
+      }
+
+      const now = dayjs();
+      const year = now.year();
+      const month = now.month() + 1;
+      const monthKey = toMonthKey(year, month);
+      const currentStatus = getBudgetStatus(action.categoryId, year, month);
+      const overwriteText = currentStatus.exists
+        ? `\n\nNgân sách hiện tại là ${formatVnd(currentStatus.limit)} và sẽ đổi thành ${formatVnd(amount)}.`
+        : '';
+
+      dialog.confirm(
+        'Đặt ngân sách tháng này',
+        `Đặt ngân sách ${categoryLabel} tháng này là ${formatVnd(amount)}?${overwriteText}`,
+        {
+          confirmText: 'Đặt ngân sách',
+          cancelText: 'Hủy',
+          onConfirm: () => {
+            setCategoryBudget(action.categoryId, monthKey, amount);
+            markAIActionDone(messageId, action, 'Đã đặt');
+            toast.success(`Đã đặt ngân sách ${categoryLabel} tháng này là ${formatVnd(amount)}.`);
+          },
+        },
+      );
     }
   };
 

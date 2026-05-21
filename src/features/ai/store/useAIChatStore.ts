@@ -15,6 +15,7 @@ const VALID_INTENTS = new Set<AIIntent>([
   'abnormal_spending',
   'duplicate_check',
   'missed_transaction_check',
+  'budget_setup',
   'saving_advice',
   'unknown',
 ]);
@@ -103,6 +104,7 @@ const sanitizeActionButtons = (value: unknown): AIActionButton[] | undefined => 
       return {
         label: raw.label,
         tone,
+        disabled: raw.disabled === true,
         action,
       };
     })

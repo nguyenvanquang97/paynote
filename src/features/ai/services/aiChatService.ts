@@ -53,7 +53,9 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
   }
 
   const context = await buildFinancialContextForIntent(intent, content);
-  const localPayload = generateLocalAnswerPayload(content, intent, context);
+  const localPayload = generateLocalAnswerPayload(content, intent, context, {
+    customCategories: appState.customCategories,
+  });
   const localAnswer = ensureAquangVoice(localPayload.text);
   const localCards = localPayload.cards;
 
