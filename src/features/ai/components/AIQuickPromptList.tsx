@@ -1,5 +1,5 @@
-import React, {useMemo, useState} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {Animated, Pressable, StyleSheet, View} from 'react-native';
 
 type PromptChip = {
   label: string;
@@ -9,83 +9,113 @@ type PromptChip = {
 type Props = {
   prompts: readonly PromptChip[];
   onPressPrompt: (prompt: string) => void;
+  expanded?: boolean;
+  onPressLauncher?: () => void;
   disabled?: boolean;
   colorBorder: string;
   colorBg: string;
   colorText: string;
+  fabColor?: string;
+  fabIconColor?: string;
+  fabShadowColor?: string;
   maxVisibleChips?: number;
   showExpand?: boolean;
 };
 
-const DEFAULT_VISIBLE_CHIPS = 4;
+const FAB_SIZE = 60;
+const CONTAINER_HEIGHT = 196;
+const CONTAINER_PADDING = 10;
 
 export default function AIQuickPromptList({
-  prompts,
-  onPressPrompt,
+  expanded = false,
+  onPressLauncher,
   disabled,
-  colorBorder,
   colorBg,
   colorText,
-  maxVisibleChips = DEFAULT_VISIBLE_CHIPS,
-  showExpand = true,
+  fabColor,
+  fabIconColor,
+  fabShadowColor,
 }: Props) {
-  const [expanded, setExpanded] = useState(false);
-  const visiblePrompts = useMemo(
-    () => (expanded && showExpand ? prompts : prompts.slice(0, maxVisibleChips)),
-    [expanded, maxVisibleChips, prompts, showExpand],
-  );
-  const canExpand = showExpand && prompts.length > maxVisibleChips;
+  const expandAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(expandAnim, {
+      toValue: expanded ? 1 : 0,
+      friction: 8,
+      tension: 110,
+      useNativeDriver: true,
+    }).start();
+  }, [expandAnim, expanded]);
 
   return (
-    <View style={styles.content}>
-      {visiblePrompts.map(item => (
-        <TouchableOpacity
-          key={item.prompt}
-          style={[styles.chip, {borderColor: colorBorder, backgroundColor: colorBg}]}
-          onPress={() => onPressPrompt(item.prompt)}
+    <View style={styles.container}>
+      <View style={styles.fabWrap}>
+        <Pressable
+          style={[
+            styles.fab,
+            {
+              backgroundColor: fabColor || colorBg,
+              shadowColor: fabShadowColor || '#000',
+            },
+            disabled && styles.fabDisabled,
+            expanded && styles.fabActive,
+          ]}
+          onPress={() => !disabled && onPressLauncher?.()}
           disabled={disabled}>
-          <Text style={[styles.text, {color: colorText}]}>{item.label}</Text>
-        </TouchableOpacity>
-      ))}
-      {canExpand && (
-        <TouchableOpacity
-          style={[styles.expandChip, {borderColor: colorBorder, backgroundColor: colorBg}]}
-          onPress={() => setExpanded(prev => !prev)}
-          disabled={disabled}>
-          <Text style={[styles.expandTxt, {color: colorText}]}>
-            {expanded ? 'Thu gọn' : 'Xem thêm'}
-          </Text>
-        </TouchableOpacity>
-      )}
+          <Animated.Text
+            style={[
+              styles.fabIcon,
+              {
+                color: fabIconColor || colorText,
+                transform: [{
+                  rotate: expandAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '45deg'],
+                  }),
+                }],
+              },
+            ]}>
+            +
+          </Animated.Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingVertical: 2,
+  container: {
+    width: FAB_SIZE + CONTAINER_PADDING * 2,
+    height: CONTAINER_HEIGHT,
+    position: 'relative',
   },
-  chip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  fabWrap: {
+    position: 'absolute',
+    right: CONTAINER_PADDING,
+    top: (CONTAINER_HEIGHT - FAB_SIZE) / 2,
+    zIndex: 40,
   },
-  text: {
-    fontSize: 12,
-    fontWeight: '700',
+  fab: {
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
   },
-  expandChip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  fabActive: {
+    opacity: 0.92,
   },
-  expandTxt: {
-    fontSize: 12,
-    fontWeight: '800',
+  fabDisabled: {
+    opacity: 0.5,
+  },
+  fabIcon: {
+    fontSize: 28,
+    lineHeight: 28,
+    fontWeight: '500',
+    marginTop: -2,
   },
 });

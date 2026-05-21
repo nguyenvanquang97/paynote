@@ -12,6 +12,11 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetScrollView,
+} from '@gorhom/bottom-sheet';
 import {useThemeColors} from '../../shared/theme';
 import {AI_QUICK_PROMPT_CHIPS} from '../../features/ai/constants/aiQuickPrompts';
 import {useAIChatStore} from '../../features/ai/store/useAIChatStore';
@@ -42,6 +47,7 @@ const AIChatScreen: React.FC = () => {
     bg: t.appBg,
     card: t.surface,
     border: t.border,
+    primary: t.primary,
     txt: t.textPrimary,
     sub: t.textSecondary,
     acc: t.primaryDeep,
@@ -53,12 +59,15 @@ const AIChatScreen: React.FC = () => {
     assistantText: t.textPrimary,
     inputBg: t.surface,
     onAccent: t.textOnDark,
+    shadow: t.shadow,
     danger: t.expense,
   }), [t]);
   const s = useMemo(() => createStyles(C), [C]);
 
   const scrollRef = useRef<ScrollView | null>(null);
   const streamTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const quickPromptSheetRef = useRef<BottomSheetModal | null>(null);
+  const quickPromptSnapPoints = useMemo(() => ['52%'], []);
 
   const messages = useAIChatStore(state => state.messages);
   const isLoading = useAIChatStore(state => state.isLoading);
@@ -73,6 +82,7 @@ const AIChatScreen: React.FC = () => {
   const [input, setInput] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [keyboardFrameY, setKeyboardFrameY] = useState<number | null>(null);
+  const [quickMenuExpanded, setQuickMenuExpanded] = useState(false);
   type AssistantMetadata = NonNullable<AIChatMessage['metadata']>;
   const androidKeyboardOverlap = Platform.OS === 'android' && keyboardFrameY !== null
     ? Math.max(0, windowHeight - keyboardFrameY)
@@ -214,6 +224,18 @@ const AIChatScreen: React.FC = () => {
       clearTimeout(streamTimerRef.current);
     }
   }, []);
+
+  const handleQuickLauncherPress = () => {
+    if (quickMenuExpanded) {
+      quickPromptSheetRef.current?.dismiss();
+      return;
+    }
+    quickPromptSheetRef.current?.present();
+  };
+
+  const renderSheetBackdrop = (props: any) => (
+    <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.22} />
+  );
 
   const streamAssistantMessage = (
     assistantId: string,
@@ -376,14 +398,51 @@ const AIChatScreen: React.FC = () => {
         <AIQuickPromptList
           prompts={AI_QUICK_PROMPT_CHIPS}
           onPressPrompt={handleQuickPrompt}
+          expanded={quickMenuExpanded}
+          onPressLauncher={handleQuickLauncherPress}
           disabled={isLoading}
           colorBorder={C.border}
           colorBg={C.muted}
           colorText={C.acc}
+          fabColor={C.primary}
+          fabIconColor={C.onAccent}
+          fabShadowColor={C.shadow}
           maxVisibleChips={isKeyboardVisible ? 2 : undefined}
           showExpand={!isKeyboardVisible}
         />
       </View>
+
+      <BottomSheetModal
+        ref={quickPromptSheetRef}
+        index={0}
+        snapPoints={quickPromptSnapPoints}
+        backdropComponent={renderSheetBackdrop}
+        onChange={index => {
+          setQuickMenuExpanded(index >= 0);
+        }}
+        onDismiss={() => {
+          setQuickMenuExpanded(false);
+        }}
+        enablePanDownToClose
+        handleIndicatorStyle={s.quickPromptHandleIndicator}
+        backgroundStyle={s.quickPromptSheetBg}>
+        <BottomSheetScrollView contentContainerStyle={s.quickPromptSheetContent}>
+          <Text style={s.quickPromptSheetTitle}>Câu hỏi nhanh</Text>
+          <View style={s.quickPromptSheetList}>
+            {AI_QUICK_PROMPT_CHIPS.map(item => (
+              <TouchableOpacity
+                key={item.prompt}
+                style={s.quickPromptSheetItem}
+                onPress={() => {
+                  handleQuickPrompt(item.prompt);
+                  quickPromptSheetRef.current?.dismiss();
+                }}>
+                <Text style={s.quickPromptSheetItemText}>{item.prompt}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </BottomSheetScrollView>
+      </BottomSheetModal>
 
       <View style={[s.inputRow, inputRowBottomStyle]}>
         <TextInput
@@ -413,6 +472,7 @@ const createStyles = (C: {
   border: string;
   txt: string;
   sub: string;
+  primary: string;
   acc: string;
   accSoft: string;
   muted: string;
@@ -422,6 +482,7 @@ const createStyles = (C: {
   assistantText: string;
   inputBg: string;
   onAccent: string;
+  shadow: string;
   danger: string;
 }) => StyleSheet.create({
   container: {
@@ -501,11 +562,55 @@ const createStyles = (C: {
     marginTop: 4,
   },
   quickPromptWrap: {
-    marginTop: 8,
-    marginBottom: 8,
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    marginTop: -98,
+    zIndex: 40,
+    elevation: 40,
   },
   quickPromptWrapKeyboard: {
-    marginBottom: 4,
+    marginTop: -98,
+  },
+  quickPromptSheetBg: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.card,
+  },
+  quickPromptHandleIndicator: {
+    backgroundColor: C.border,
+    width: 40,
+    height: 4,
+  },
+  quickPromptSheetContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  quickPromptSheetTitle: {
+    color: C.txt,
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 10,
+  },
+  quickPromptSheetList: {
+    gap: 8,
+  },
+  quickPromptSheetItem: {
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.muted,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  quickPromptSheetItemText: {
+    color: C.acc,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   inputRow: {
     flexDirection: 'row',
