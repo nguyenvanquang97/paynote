@@ -34,6 +34,9 @@ class NotificationBridge(
         const val PERIODIC_PREFS = "periodic_roast_prefs"
         const val PERIODIC_PREF_AI_ENABLED = "ai_enabled"
         const val PERIODIC_PREF_API_KEY = "api_key"
+        const val PERIODIC_PREF_PROXY_URL = "proxy_url"
+        const val PERIODIC_PREF_PROXY_TOKEN = "proxy_token"
+        const val PERIODIC_PREF_MODEL = "model"
         const val PERIODIC_PREF_TONE_MODE = "tone_mode"
         const val PERIODIC_PREF_ALLOW_STRONG = "allow_strong_language"
         const val PERIODIC_PREF_INTENSITY = "intensity"
@@ -287,6 +290,9 @@ class NotificationBridge(
     fun configurePeriodicRoast(
         aiEnabled: Boolean,
         apiKey: String,
+        proxyUrl: String,
+        proxyToken: String,
+        model: String,
         toneMode: String,
         allowStrongLanguage: Boolean,
         intensity: String,
@@ -296,6 +302,9 @@ class NotificationBridge(
             prefs.edit()
                 .putBoolean(PERIODIC_PREF_AI_ENABLED, aiEnabled)
                 .putString(PERIODIC_PREF_API_KEY, apiKey.trim())
+                .putString(PERIODIC_PREF_PROXY_URL, proxyUrl.trim())
+                .putString(PERIODIC_PREF_PROXY_TOKEN, proxyToken.trim())
+                .putString(PERIODIC_PREF_MODEL, model.trim())
                 .putString(PERIODIC_PREF_TONE_MODE, toneMode)
                 .putBoolean(PERIODIC_PREF_ALLOW_STRONG, allowStrongLanguage)
                 .putString(PERIODIC_PREF_INTENSITY, intensity)

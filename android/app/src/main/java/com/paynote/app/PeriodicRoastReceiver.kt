@@ -21,7 +21,7 @@ import kotlin.concurrent.thread
 class PeriodicRoastReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "PeriodicRoastReceiver"
-        private const val MODEL = "gemini-2.5-flash-lite"
+        private const val DEFAULT_MODEL = "gemini-2.5-flash-lite"
         private const val PREF_LAST_NATIVE_PERIODIC_AT = "last_native_periodic_at"
         private const val PREF_NATIVE_PERIODIC_COUNT = "native_periodic_count"
         private const val PREF_NATIVE_PERIODIC_DATE = "native_periodic_date"
@@ -55,6 +55,11 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
                 val prefs = context.getSharedPreferences(NotificationBridge.PERIODIC_PREFS, Context.MODE_PRIVATE)
                 val aiEnabled = prefs.getBoolean(NotificationBridge.PERIODIC_PREF_AI_ENABLED, true)
                 val apiKey = prefs.getString(NotificationBridge.PERIODIC_PREF_API_KEY, "")?.trim().orEmpty()
+                val proxyUrl = prefs.getString(NotificationBridge.PERIODIC_PREF_PROXY_URL, "")?.trim().orEmpty()
+                val proxyToken = prefs.getString(NotificationBridge.PERIODIC_PREF_PROXY_TOKEN, "")?.trim().orEmpty()
+                val model = prefs.getString(NotificationBridge.PERIODIC_PREF_MODEL, DEFAULT_MODEL)?.trim().orEmpty().ifBlank {
+                    DEFAULT_MODEL
+                }
                 val allowStrongLanguage = prefs.getBoolean(NotificationBridge.PERIODIC_PREF_ALLOW_STRONG, false)
                 val intensity = prefs.getString(NotificationBridge.PERIODIC_PREF_INTENSITY, "normal").orEmpty()
                 val toneModeRaw = prefs.getString(NotificationBridge.PERIODIC_PREF_TONE_MODE, "advisor").orEmpty()
@@ -86,7 +91,19 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
                 }
 
                 val fallbackMessage = PeriodicPlanFallbackTemplates.pick(toneMode, allowStrongLanguage, adjustedTier)
-                val aiMessage = if (aiEnabled && apiKey.isNotBlank()) requestGeminiRoast(apiKey, toneMode, allowStrongLanguage, intensity) else null
+                val aiMessage = if (aiEnabled) {
+                    requestPeriodicRoast(
+                        apiKey = apiKey,
+                        proxyUrl = proxyUrl,
+                        proxyToken = proxyToken,
+                        model = model,
+                        toneMode = toneMode,
+                        allowStrongLanguage = allowStrongLanguage,
+                        intensity = intensity,
+                    )
+                } else {
+                    null
+                }
                 val message = aiMessage ?: fallbackMessage
                 val actionJson = """{"target":"dashboard","monthKey":"${java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())}","ts":${System.currentTimeMillis()}}"""
 
@@ -123,9 +140,94 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun requestGeminiRoast(apiKey: String, toneMode: String, allowStrongLanguage: Boolean, intensity: String): String? {
+    private fun requestPeriodicRoast(
+        apiKey: String,
+        proxyUrl: String,
+        proxyToken: String,
+        model: String,
+        toneMode: String,
+        allowStrongLanguage: Boolean,
+        intensity: String,
+    ): String? {
+        val prompt = buildPrompt(toneMode, allowStrongLanguage, intensity)
+        if (proxyUrl.isNotBlank()) {
+            val viaProxy = requestProxyRoast(proxyUrl, proxyToken, model, prompt)
+            if (!viaProxy.isNullOrBlank()) {
+                return viaProxy
+            }
+        }
+        if (apiKey.isNotBlank()) {
+            return requestGeminiRoast(apiKey, model, prompt)
+        }
+        return null
+    }
+
+    private fun buildPrompt(toneMode: String, allowStrongLanguage: Boolean, intensity: String): String {
+        val toneInstruction = when (toneMode) {
+            "gentle" -> "Giọng nhẹ nhàng, đồng cảm, khích lệ."
+            "cute" -> "Giọng dễ thương, dí dỏm."
+            "angry", "strict" -> if (allowStrongLanguage)
+                "Giọng cáu gắt rất mạnh, có thể xưng mày, mắng thẳng như người thật nhưng tuyệt đối không chửi bậy."
+            else
+                "Giọng phụ huynh nghiêm khắc, gắt vừa, tuyệt đối không chửi bậy hay xưng hô nặng."
+            else -> "Giọng xéo xắc mạnh, châm biếm thâm nhưng văn minh."
+        }
+        return """
+            Bạn là trợ lý tài chính nói tiếng Việt.
+            Tone: $toneInstruction
+            Intensity: ${if (intensity == "sharp") "gắt rõ hơn" else if (intensity == "soft") "nhẹ hơn" else "cân bằng"}.
+            Viết đúng 1 câu ngắn nhắc người dùng tiết chế chi tiêu, nêu hậu quả tài chính rõ hơn.
+            Không chửi thề, không xúc phạm cá nhân.
+            Trả về JSON: {"message":"..."}.
+        """.trimIndent()
+    }
+
+    private fun requestProxyRoast(proxyUrl: String, proxyToken: String, model: String, prompt: String): String? {
         return try {
-            val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent?key=${apiKey}")
+            val conn = (URL(proxyUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 8000
+                readTimeout = 8000
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+                if (proxyToken.isNotBlank()) {
+                    setRequestProperty("Authorization", "Bearer $proxyToken")
+                }
+            }
+            val body = JSONObject()
+                .put("model", model)
+                .put("messages", JSONArray().put(
+                    JSONObject()
+                        .put("role", "user")
+                        .put("content", prompt)
+                ))
+                .toString()
+            conn.outputStream.use { os ->
+                os.write(body.toByteArray(Charsets.UTF_8))
+            }
+
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val text = stream?.use { s ->
+                BufferedReader(InputStreamReader(s)).readText()
+            }.orEmpty()
+            if (code !in 200..299) {
+                Log.w(TAG, "Proxy non-OK for periodic: $code")
+                return null
+            }
+
+            val payload = JSONObject(text)
+            val content = payload.optString("content", "").trim()
+            parseMessage(content)
+        } catch (e: Exception) {
+            Log.w(TAG, "Proxy periodic request failed", e)
+            null
+        }
+    }
+
+    private fun requestGeminiRoast(apiKey: String, model: String, prompt: String): String? {
+        return try {
+            val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey")
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 8000
@@ -133,23 +235,6 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
             }
-            val toneInstruction = when (toneMode) {
-                "gentle" -> "Giọng nhẹ nhàng, đồng cảm, khích lệ."
-                "cute" -> "Giọng dễ thương, dí dỏm."
-                "angry", "strict" -> if (allowStrongLanguage)
-                    "Giọng cáu gắt rất mạnh, có thể xưng mày, mắng thẳng như người thật nhưng tuyệt đối không chửi bậy."
-                else
-                    "Giọng phụ huynh nghiêm khắc, gắt vừa, tuyệt đối không chửi bậy hay xưng hô nặng."
-                else -> "Giọng xéo xắc mạnh, châm biếm thâm nhưng văn minh."
-            }
-            val prompt = """
-                Bạn là trợ lý tài chính nói tiếng Việt.
-                Tone: $toneInstruction
-                Intensity: ${if (intensity == "sharp") "gắt rõ hơn" else if (intensity == "soft") "nhẹ hơn" else "cân bằng"}.
-                Viết đúng 1 câu ngắn nhắc người dùng tiết chế chi tiêu, nêu hậu quả tài chính rõ hơn.
-                Không chửi thề, không xúc phạm cá nhân.
-                Trả về JSON: {"message":"..."}.
-            """.trimIndent()
             val body = JSONObject()
                 .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", prompt)))))
                 .put("generationConfig", JSONObject().put("temperature", 0.85).put("maxOutputTokens", 120))
@@ -176,15 +261,27 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
                 ?.optJSONObject(0)
                 ?.optString("text")
                 .orEmpty()
+            parseMessage(raw)
+        } catch (e: Exception) {
+            Log.w(TAG, "Gemini periodic request failed", e)
+            null
+        }
+    }
 
+    private fun parseMessage(rawText: String): String? {
+        val raw = rawText.trim()
+        if (raw.isBlank()) {
+            return null
+        }
+
+        return try {
             val jsonStart = raw.indexOf('{')
             val jsonEnd = raw.lastIndexOf('}')
             val candidate = if (jsonStart >= 0 && jsonEnd > jsonStart) raw.substring(jsonStart, jsonEnd + 1) else raw
             val msg = JSONObject(candidate).optString("message", "").trim()
             if (msg.isBlank()) null else msg.take(170)
-        } catch (e: Exception) {
-            Log.w(TAG, "Gemini periodic request failed", e)
-            null
+        } catch (_: Exception) {
+            raw.take(170)
         }
     }
 }

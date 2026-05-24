@@ -4,7 +4,7 @@ import {toMonthKey, useAppStore, type BudgetAlertThreshold} from '../app/store';
 import {showBudgetAlertNotificationWithAction} from '../native';
 import {generateBudgetRoast} from './geminiRoastService';
 import {getAIProxyTokenFromEnv, getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv} from '../config/env';
-import {detectCategoryContext, generateNotificationMessage} from './notifications';
+import {detectCategoryContext, generateNotificationMessage, isAiEnabledTrigger} from './notifications';
 import {runPhase2PeriodicSweep} from './notificationPhase2';
 import {createNotificationActionFromTrigger} from './notifications/notificationAction';
 
@@ -130,6 +130,7 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
   const winnerData = winner;
 
   const threshold = pickThreshold(toPercent(winnerData.spent, winnerData.limit));
+  const trigger = 'bank_transaction_detected' as const;
   const defaultTitle = 'Nhắc nhở chi tiêu định kỳ';
   const defaultMessage = `Danh mục ${winnerData.label} đang ở ${Math.round(winnerData.progress * 100)}% ngân sách (${new Intl.NumberFormat('vi-VN').format(winnerData.spent)} ₫ / ${new Intl.NumberFormat('vi-VN').format(winnerData.limit)} ₫).`;
 
@@ -137,9 +138,38 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
   let message = defaultMessage;
   let source: 'template' | 'ai_fallback' | 'native_periodic' = 'native_periodic';
   let templateId: string | undefined;
+  let templateOrigin: 'plan' | 'generated' | 'native' | undefined;
+  let escalationTier: 1 | 2 | 3 | 4 | undefined;
+  let scoreMeta: string | undefined;
+
+  const shouldTryAi = refreshed.aiBudgetAlertsEnabled && isAiEnabledTrigger(trigger);
+  let aiFallback: Awaited<ReturnType<typeof generateBudgetRoast>> | null = null;
+  if (shouldTryAi) {
+    const roast = await generateBudgetRoast({
+      apiKey: getResolvedGeminiKey(),
+      proxyUrl: getAIProxyUrlFromEnv(),
+      proxyToken: getAIProxyTokenFromEnv(),
+      categoryId: winnerData.categoryId,
+      categoryLabel: winnerData.label,
+      spent: winnerData.spent,
+      limit: winnerData.limit,
+      progress: winnerData.progress,
+      threshold,
+      monthKey,
+      persona: refreshed.notificationPersona,
+      allowStrongLanguage: refreshed.allowStrongLanguage,
+    });
+    if (!roast.fallbackUsed && roast.message) {
+      title = roast.title || defaultTitle;
+      message = roast.message || defaultMessage;
+      source = 'ai_fallback';
+    } else {
+      aiFallback = roast;
+    }
+  }
 
   const generated = generateNotificationMessage({
-    trigger: 'bank_transaction_detected',
+    trigger,
     persona: refreshed.notificationPersona,
     categoryLabel: winnerData.label,
     severity: winnerData.progress >= 1.2 ? 'high' : 'medium',
@@ -158,28 +188,17 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
     message = generated.message;
     source = 'native_periodic';
     templateId = generated.templateId;
-  } else if (refreshed.aiBudgetAlertsEnabled) {
-    const roast = await generateBudgetRoast({
-      apiKey: getResolvedGeminiKey(),
-      proxyUrl: getAIProxyUrlFromEnv(),
-      proxyToken: getAIProxyTokenFromEnv(),
-      categoryId: winnerData.categoryId,
-      categoryLabel: winnerData.label,
-      spent: winnerData.spent,
-      limit: winnerData.limit,
-      progress: winnerData.progress,
-      threshold,
-      monthKey,
-      persona: refreshed.notificationPersona,
-      allowStrongLanguage: refreshed.allowStrongLanguage,
-    });
-    title = roast.title || defaultTitle;
-    message = roast.message || defaultMessage;
+    templateOrigin = generated.templateOrigin;
+    escalationTier = generated.escalationTier;
+    scoreMeta = generated.scoreMeta;
+  } else if (aiFallback?.message) {
+    title = aiFallback.title || defaultTitle;
+    message = aiFallback.message || defaultMessage;
     source = 'ai_fallback';
   }
 
   const action = createNotificationActionFromTrigger({
-    trigger: 'bank_transaction_detected',
+    trigger,
     monthKey,
     categoryId: winnerData.categoryId,
   });
@@ -191,10 +210,10 @@ export const triggerPeriodicRoastReminder = async (force = false): Promise<void>
     source,
     toneTag: refreshed.notificationPersona,
     templateId,
-    templateOrigin: generated?.templateOrigin,
-    escalationTier: generated?.escalationTier,
-    scoreMeta: generated?.scoreMeta,
-    trigger: 'bank_transaction_detected',
+    templateOrigin,
+    escalationTier,
+    scoreMeta,
+    trigger,
     severity: winnerData.progress >= 1.2 ? 'high' : 'medium',
     categoryContext: detectCategoryContext(winnerData.label),
     categoryId: winnerData.categoryId,

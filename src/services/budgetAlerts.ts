@@ -1,6 +1,5 @@
 import dayjs from 'dayjs';
 import {CATEGORY_ICONS, getCategoryLabel} from '../shared/constants';
-import {toast} from '../shared/components/Toast';
 import {useAppStore, toMonthKey, type BudgetAlertThreshold} from '../app/store';
 import {showBudgetAlertNotificationWithAction} from '../native';
 import type {Transaction} from '../shared/types';
@@ -12,6 +11,7 @@ import {
   budgetTriggerFromThreshold,
   detectCategoryContext,
   generateNotificationMessage,
+  isAiEnabledTrigger,
   type NotificationTrigger,
 } from './notifications';
 import {createNotificationActionFromTrigger, type NotificationAction} from './notifications/notificationAction';
@@ -45,9 +45,6 @@ const ALERT_COOLDOWN_MS = 45_000;
 const REPEAT_MILESTONES = [3, 5, 7, 10] as const;
 const WEEK_REPEAT_MILESTONES = [8, 12, 16, 20] as const;
 
-const trimForToast = (text: string): string =>
-  text.length > 155 ? `${text.slice(0, 154).trim()}…` : text;
-
 const pickReachedMilestone = (count: number, milestones: readonly number[]): number | null => {
   for (let i = milestones.length - 1; i >= 0; i -= 1) {
     if (count >= milestones[i]) {return milestones[i];}
@@ -71,6 +68,13 @@ const toLateNightSeverity = (timestamp: number): 'medium' | 'high' | 'critical' 
   if (hour >= 3 && hour < 5) {return 'critical';}
   if (hour >= 0 && hour < 3) {return 'high';}
   return 'medium';
+};
+
+const toRoastThreshold = (progress: number): BudgetAlertThreshold => {
+  if (progress >= 1.2) {return 120;}
+  if (progress >= 1) {return 100;}
+  if (progress >= 0.8) {return 80;}
+  return 50;
 };
 
 const emitNotification = async (payload: {
@@ -101,6 +105,9 @@ const emitNotification = async (payload: {
   let source: 'template' | 'ai_fallback' | 'native_periodic' = 'template';
   let toneTag = state.notificationPersona;
   let templateId: string | undefined;
+  let templateOrigin: 'plan' | 'generated' | 'native' | undefined;
+  let escalationTier: 1 | 2 | 3 | 4 | undefined;
+  let scoreMeta: string | undefined;
   const action: NotificationAction = createNotificationActionFromTrigger({
     trigger: payload.trigger,
     monthKey: payload.monthKey,
@@ -108,47 +115,64 @@ const emitNotification = async (payload: {
     transactionId: payload.transactionId,
   });
 
-  const generated = generateNotificationMessage({
-    trigger: payload.trigger,
-    persona: state.notificationPersona,
-    categoryLabel: payload.context.categoryLabel,
-    context: payload.context,
-    severity: payload.severity,
-    intensity: state.notificationIntensity,
-    allowStrongLanguage: state.allowStrongLanguage,
-  });
-
-  if (generated?.message) {
-    title = generated.title;
-    message = generated.message;
-    toneTag = generated.persona;
-    templateId = generated.templateId;
-  } else if (
-    state.aiBudgetAlertsEnabled &&
-    typeof payload.threshold === 'number' &&
+  const hasRoastInput =
     typeof payload.spent === 'number' &&
     typeof payload.limit === 'number' &&
     typeof payload.progress === 'number' &&
-    payload.limit > 0
-  ) {
+    payload.limit > 0;
+  const shouldTryAi = state.aiBudgetAlertsEnabled && isAiEnabledTrigger(payload.trigger) && hasRoastInput;
+
+  let aiFallback: Awaited<ReturnType<typeof generateBudgetRoast>> | null = null;
+  if (shouldTryAi) {
     const roast = await generateBudgetRoast({
       apiKey: getGeminiApiKey(state.geminiApiKey),
       proxyUrl: getAIProxyUrlFromEnv(),
       proxyToken: getAIProxyTokenFromEnv(),
       categoryId: payload.categoryId,
       categoryLabel: payload.context.categoryLabel,
-      spent: payload.spent,
-      limit: payload.limit,
-      progress: payload.progress,
-      threshold: payload.threshold,
+      spent: payload.spent!,
+      limit: payload.limit!,
+      progress: payload.progress!,
+      threshold: payload.threshold ?? toRoastThreshold(payload.progress!),
       monthKey: payload.monthKey,
       persona: state.notificationPersona,
       allowStrongLanguage: state.allowStrongLanguage,
     });
-    title = roast.title || title;
-    message = roast.message || message;
-    source = 'ai_fallback';
-    toneTag = roast.toneTag;
+    if (!roast.fallbackUsed && roast.message) {
+      title = roast.title || title;
+      message = roast.message || message;
+      source = 'ai_fallback';
+      toneTag = roast.toneTag;
+    } else {
+      aiFallback = roast;
+    }
+  }
+
+  if (source !== 'ai_fallback') {
+    const generated = generateNotificationMessage({
+      trigger: payload.trigger,
+      persona: state.notificationPersona,
+      categoryLabel: payload.context.categoryLabel,
+      context: payload.context,
+      severity: payload.severity,
+      intensity: state.notificationIntensity,
+      allowStrongLanguage: state.allowStrongLanguage,
+    });
+    if (generated?.message) {
+      title = generated.title;
+      message = generated.message;
+      toneTag = generated.persona;
+      templateId = generated.templateId;
+      templateOrigin = generated.templateOrigin;
+      escalationTier = generated.escalationTier;
+      scoreMeta = generated.scoreMeta;
+      source = 'template';
+    } else if (aiFallback?.message) {
+      title = aiFallback.title || title;
+      message = aiFallback.message || message;
+      source = 'ai_fallback';
+      toneTag = aiFallback.toneTag;
+    }
   }
 
   state.pushInAppNotification({
@@ -158,9 +182,9 @@ const emitNotification = async (payload: {
     source,
     toneTag,
     templateId,
-    templateOrigin: generated?.templateOrigin,
-    escalationTier: generated?.escalationTier,
-    scoreMeta: generated?.scoreMeta,
+    templateOrigin,
+    escalationTier,
+    scoreMeta,
     trigger: payload.trigger,
     severity: payload.severity,
     categoryContext: detectCategoryContext(payload.context.categoryLabel),
@@ -169,7 +193,6 @@ const emitNotification = async (payload: {
     threshold: payload.threshold,
     action,
   });
-  toast.warning(trimForToast(message), 4500);
   showBudgetAlertNotificationWithAction(title, message, action);
 };
 
@@ -213,6 +236,7 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
 
   const percent = toPercent(spent, limit);
   const progress = limit > 0 ? spent / limit : 0;
+  const roastThreshold = toRoastThreshold(progress);
   const threshold = pickBudgetAlertThreshold(
     percent,
     t => refreshedState.hasBudgetAlertTriggered(alertPeriodKey, categoryId, t),
@@ -273,6 +297,10 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
         monthKey,
         trigger: 'repeat_category_today',
         severity: dayExpensesSameCategory.length >= 5 ? 'high' : 'medium',
+        threshold: roastThreshold,
+        spent,
+        limit,
+        progress,
         titleFallback: 'Chi tiêu lặp lại',
         messageFallback: `Hôm nay bạn đã chi ${label} ${dayExpensesSameCategory.length} lần (mốc ${reached}).`,
         context: {
@@ -304,6 +332,10 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
         monthKey,
         trigger: 'repeat_category_week',
         severity: weekExpensesSameCategory.length >= 14 ? 'high' : 'medium',
+        threshold: roastThreshold,
+        spent,
+        limit,
+        progress,
         titleFallback: 'Chi tiêu lặp trong tuần',
         messageFallback: `Tuần này bạn đã chi ${label} ${weekExpensesSameCategory.length} lần (mốc ${reachedWeekly}).`,
         context: {
@@ -338,6 +370,10 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
         monthKey,
         trigger: 'large_transaction',
         severity,
+        threshold: roastThreshold,
+        spent,
+        limit,
+        progress,
         titleFallback: 'Giao dịch lớn',
         messageFallback: `Bạn vừa chi ${formatCurrency(transaction.amount)} cho ${label}.`,
         context: {
@@ -359,6 +395,10 @@ export const triggerBudgetAlertsForTransaction = async (transaction: Transaction
         monthKey,
         trigger: 'late_night_spending',
         severity: toLateNightSeverity(transaction.timestamp),
+        threshold: roastThreshold,
+        spent,
+        limit,
+        progress,
         titleFallback: 'Chi tiêu khuya',
         messageFallback: 'Khuya rồi, cân nhắc kỹ trước khi chi thêm nhé.',
         context: {

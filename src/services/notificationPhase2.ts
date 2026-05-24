@@ -1,7 +1,6 @@
 import dayjs from 'dayjs';
 import {createMMKV} from 'react-native-mmkv';
 import {showBudgetAlertNotificationWithAction} from '../native';
-import {toast} from '../shared/components/Toast';
 import {useAppStore} from '../app/store';
 import type {Transaction} from '../shared/types';
 import {COOLDOWN_BY_TRIGGER} from './notifications/notificationRules';
@@ -83,9 +82,6 @@ const pushGenerated = (params: {
   });
 
   showBudgetAlertNotificationWithAction(title, message, action);
-  if (params.trigger !== 'end_of_day_summary') {
-    toast.info(message.length > 145 ? `${message.slice(0, 144).trim()}…` : message, 3500);
-  }
 };
 
 const isSalaryDescription = (description?: string): boolean => {

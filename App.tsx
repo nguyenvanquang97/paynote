@@ -42,7 +42,7 @@ import {triggerBudgetAlertsForTransaction} from './src/services/budgetAlerts';
 import {handlePhase2TransactionSignals} from './src/services/notificationPhase2';
 import {useThemeTransition} from './src/animations';
 import Animated from 'react-native-reanimated';
-import {getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv} from './src/config/env';
+import {getAIEnvSettings, getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv} from './src/config/env';
 import {resolveNotificationAction} from './src/services/notifications/notificationNavigation';
 
 const storage = createMMKV();
@@ -235,7 +235,17 @@ export default function App() {
 
   useEffect(() => {
     const resolvedKey = getAIProxyUrlFromEnv() ? '' : geminiApiKey.trim() || getGeminiApiKeyFromEnv();
-    configurePeriodicRoast(aiBudgetAlertsEnabled, resolvedKey, notificationPersona, allowStrongLanguage, notificationIntensity);
+    const envSettings = getAIEnvSettings();
+    configurePeriodicRoast(
+      aiBudgetAlertsEnabled,
+      resolvedKey,
+      envSettings.proxyUrl,
+      envSettings.proxyToken,
+      envSettings.model,
+      notificationPersona,
+      allowStrongLanguage,
+      notificationIntensity,
+    );
   }, [aiBudgetAlertsEnabled, geminiApiKey, notificationPersona, allowStrongLanguage, notificationIntensity]);
 
   useEffect(() => {

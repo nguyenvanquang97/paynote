@@ -16,7 +16,7 @@ import NumericInput from '../../shared/components/NumericInput';
 import { CATEGORY_EMOJI, CATEGORY_ICONS, CATEGORY_LABELS } from '../../shared/constants';
 import { toast } from '../../shared/components/Toast';
 import { generateBudgetRoast } from '../../services/geminiRoastService';
-import { getAIProxyTokenFromEnv, getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv } from '../../config/env';
+import { getAIEnvSettings, getAIProxyTokenFromEnv, getAIProxyUrlFromEnv, getGeminiApiKeyFromEnv } from '../../config/env';
 import { PERSONA_OPTIONS } from '../../services/notifications';
 import {createNotificationActionFromTrigger} from '../../services/notifications/notificationAction';
 import {
@@ -335,6 +335,9 @@ const BudgetSettingsScreen: React.FC = () => {
                 configurePeriodicRoast(
                   aiBudgetAlertsEnabled,
                   resolveApiKey(),
+                  getAIEnvSettings().proxyUrl,
+                  getAIEnvSettings().proxyToken,
+                  getAIEnvSettings().model,
                   notificationPersona,
                   allowStrongLanguage,
                   notificationIntensity,
