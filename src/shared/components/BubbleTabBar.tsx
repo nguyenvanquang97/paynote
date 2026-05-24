@@ -239,7 +239,7 @@ export default function BubbleTabBar({ state, descriptors, navigation }: BottomT
             canPreventDefault: true,
           });
           if (!isActive && !event.defaultPrevented) {
-            navigation.navigate(route.name);
+            navigation.jumpTo(route.name);
           }
         };
 

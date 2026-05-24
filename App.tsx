@@ -67,8 +67,12 @@ function MainTabs() {
   return (
     <View style={styles.bg}>
       <Tab.Navigator
+        detachInactiveScreens
         tabBar={props => <BubbleTabBar {...props} />}
         screenOptions={{
+          lazy: true,
+          freezeOnBlur: true,
+          animation: 'none',
           sceneStyle: {backgroundColor: 'transparent', paddingTop: insets.top + 8},
           headerShown: false,
           headerTransparent: true,
