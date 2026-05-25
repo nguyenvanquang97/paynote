@@ -269,19 +269,62 @@ class PeriodicRoastReceiver : BroadcastReceiver() {
     }
 
     private fun parseMessage(rawText: String): String? {
-        val raw = rawText.trim()
-        if (raw.isBlank()) {
+        val normalized = stripMarkdownFence(rawText).trim()
+        if (normalized.isBlank()) {
             return null
         }
 
+        parseMessageFromJson(normalized)?.let { parsed ->
+            return parsed.take(170)
+        }
+
+        val plain = normalized
+            .replace("`", " ")
+            .replace(Regex("(?im)^\\s*json\\s*$"), " ")
+            .replace(Regex("(?m)^\\s*[{}]\\s*$"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        if (plain.isBlank()) {
+            return null
+        }
+        val looksLikeJson = plain.contains("{") || plain.contains("}") || plain.contains("\"message\"")
+        return if (looksLikeJson) null else plain.take(170)
+    }
+
+    private fun stripMarkdownFence(text: String): String {
+        val trimmed = text.trim()
+        val fenced = Regex("(?s)^```(?:json)?\\s*(.*?)\\s*```$").find(trimmed)
+        return fenced?.groupValues?.getOrNull(1)?.trim() ?: trimmed
+    }
+
+    private fun parseMessageFromJson(text: String): String? {
+        parseMessageField(text)?.let { return it }
+
+        val jsonStart = text.indexOf('{')
+        val jsonEnd = text.lastIndexOf('}')
+        if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            parseMessageField(text.substring(jsonStart, jsonEnd + 1))?.let { return it }
+        }
+
+        val regexHit = Regex("(?s)\"message\"\\s*:\\s*\"((?:\\\\.|[^\"])*)\"").find(text)
+        val escaped = regexHit?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        if (escaped.isBlank()) {
+            return null
+        }
         return try {
-            val jsonStart = raw.indexOf('{')
-            val jsonEnd = raw.lastIndexOf('}')
-            val candidate = if (jsonStart >= 0 && jsonEnd > jsonStart) raw.substring(jsonStart, jsonEnd + 1) else raw
-            val msg = JSONObject(candidate).optString("message", "").trim()
-            if (msg.isBlank()) null else msg.take(170)
+            val json = JSONObject("{\"message\":\"$escaped\"}")
+            json.optString("message", "").trim().ifBlank { null }
         } catch (_: Exception) {
-            raw.take(170)
+            null
+        }
+    }
+
+    private fun parseMessageField(jsonText: String): String? {
+        return try {
+            val msg = JSONObject(jsonText).optString("message", "").trim()
+            if (msg.isBlank()) null else msg
+        } catch (_: Exception) {
+            null
         }
     }
 }
