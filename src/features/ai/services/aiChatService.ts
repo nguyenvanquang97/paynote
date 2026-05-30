@@ -133,8 +133,8 @@ export async function sendAIChatMessage(input: string): Promise<AIChatMessage> {
         cards: localCards,
       },
     };
-  } catch {
-    console.warn('[AI_CHAT] provider=%s failed -> fallback', resolvedProvider);
+  } catch (error) {
+    console.warn('[AI_CHAT] provider=%s failed -> fallback. Error:', resolvedProvider, error);
     console.info('[AI_CHAT] fallback source=local');
     return toLocalMessage(localAnswer, 'fallback');
   }
