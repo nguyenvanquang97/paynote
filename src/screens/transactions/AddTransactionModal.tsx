@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Keyboard,
 } from 'react-native';
 import {ScrollView} from 'react-native-gesture-handler';
 import {
@@ -34,7 +35,7 @@ interface Props {
   editTransaction?: Transaction | null;
 }
 
-const SNAP_POINTS = ['80%'];
+const SNAP_POINTS = ['80%', '100%'];
 const INCOME_CATEGORY_IDS = new Set(['salary', 'transfer', 'other']);
 const toDigits = (raw: string): string => raw.replace(/[^\d]/g, '');
 const formatAmountInput = (digits: string): string => {
@@ -68,6 +69,14 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
   const [category, setCategory] = useState<string>('other');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [keyboardBottomInset, setKeyboardBottomInset] = useState(0);
+  const formFieldsStyle = useMemo(
+    () => [
+      styles.formFields,
+      keyboardBottomInset > 0 ? {paddingBottom: keyboardBottomInset + 40} : null,
+    ],
+    [keyboardBottomInset, styles.formFields],
+  );
 
   const {loadTransactions, loadStats, customCategories} = useAppStore();
   const [showSuccess, setShowSuccess] = useState(false);
@@ -112,6 +121,28 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
       setCategory(type === 'income' ? 'salary' : 'other');
     }
   }, [type, categories, category]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, event => {
+      setKeyboardBottomInset(event.endCoordinates?.height || 0);
+      if (Platform.OS === 'android') {
+        bottomSheetRef.current?.snapToIndex(1);
+      }
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardBottomInset(0);
+      if (Platform.OS === 'android') {
+        bottomSheetRef.current?.snapToIndex(0);
+      }
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [bottomSheetRef]);
 
   const handleClose = () => {
     setShowDatePicker(false);
@@ -222,9 +253,10 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
       snapPoints={SNAP_POINTS}
       enableDynamicSizing={false}
       enablePanDownToClose
-      keyboardBehavior="interactive"
+      keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'fillParent'}
       keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
+      enableBlurKeyboardOnGesture
+      android_keyboardInputMode="adjustPan"
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBg}
       handleIndicatorStyle={styles.handle}
@@ -238,7 +270,7 @@ const AddTransactionModal: React.FC<Props> = ({bottomSheetRef, onClose, editTran
 
       <BottomSheetScrollView
         style={styles.form}
-        contentContainerStyle={styles.formFields}
+        contentContainerStyle={formFieldsStyle}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive">
         <View style={styles.typeSwitcher}>
