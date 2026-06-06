@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: paynote-api
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: yarn install --immutable && yarn workspace @paynote/shared build && yarn workspace @paynote/api build
+    startCommand: yarn workspace @paynote/api start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.11.0
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_JWKS_URL
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGIN
+        value: "*"

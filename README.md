@@ -23,9 +23,13 @@
 
 ## Công nghệ sử dụng
 
+- Yarn workspaces monorepo
 - React Native `0.85.3` (CLI)
 - React `19.2.3`
 - TypeScript
+- NestJS API
+- Supabase Auth + Postgres
+- Render deployment
 - Zustand (state management)
 - MMKV (local key-value storage)
 - SQLite (`react-native-sqlite-storage`)
@@ -63,13 +67,13 @@ Ghi chú:
 ### 1) Khởi động Metro
 
 ```bash
-yarn start
+yarn mobile:start
 ```
 
 ### 2) Chạy Android
 
 ```bash
-yarn android
+yarn mobile:android
 ```
 
 ### 3) Chạy iOS
@@ -84,32 +88,35 @@ bundle exec pod install
 Sau đó chạy:
 
 ```bash
-yarn ios
+yarn mobile:ios
+```
+
+### 4) Chạy API
+
+```bash
+yarn api:dev
 ```
 
 ## Scripts hữu ích
 
-- `yarn start`: chạy Metro bundler.
-- `yarn android`: build + chạy app Android.
-- `yarn ios`: build + chạy app iOS.
+- `yarn mobile:start`: chạy Metro bundler.
+- `yarn mobile:android`: build + chạy app Android.
+- `yarn mobile:ios`: build + chạy app iOS.
+- `yarn api:dev`: chạy NestJS API.
+- `yarn api:build`: build NestJS API.
 - `yarn lint`: chạy ESLint.
 - `yarn test`: chạy Jest tests.
 
 ## Cấu trúc thư mục
 
 ```text
-src/
-  animations/        # hiệu ứng và transition
-  app/               # Zustand store và app state
-  assets/            # images, static assets
-  config/            # env/runtime config
-  database/          # truy cập và xử lý SQLite
-  modules/           # domain modules (banking, analytics, export, ...)
-  native/            # bridge native notification/bank notification
-  screens/           # màn hình UI
-  services/          # logic nghiệp vụ (budget alert, notifications, updater, ...)
-  shared/            # component dùng chung, constants, theme, types
-  utils/             # utility helpers
+apps/
+  mobile/            # React Native app, bắt đăng nhập Supabase Email OTP
+  api/               # NestJS API deploy Render
+packages/
+  shared/            # DTO/types/helper dùng chung FE/BE
+supabase/
+  migrations/        # schema Postgres
 ```
 
 ## Kiến trúc ngắn gọn
