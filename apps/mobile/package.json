@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "start": "node scripts/with-env.js react-native start",
     "test": "jest",
-    "postinstall": "patch-package --patch-dir patches"
+    "postinstall": "cd ../.. && patch-package --patch-dir apps/mobile/patches"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.14",
