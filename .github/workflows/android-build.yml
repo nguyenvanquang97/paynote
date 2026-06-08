@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: '22.11.0'
           cache: 'yarn'
 
       - name: Setup Java
@@ -46,16 +46,22 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PAYNOTE_AI_PROVIDER: gemini
           PAYNOTE_AI_LOCAL_ONLY: "false"
+          PAYNOTE_API_URL: https://paynote-api.onrender.com
+          SUPABASE_URL: https://icuixldcpchrkjyuvnqp.supabase.co
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          node scripts/with-env.js --generate-only
-          test -f src/config/runtimeEnv.local.ts
+          node apps/mobile/scripts/with-env.js --generate-only
+          test -f apps/mobile/src/config/runtimeEnv.local.ts
 
       - name: Build Android Release APK (with auto-versioning)
-        working-directory: android
+        working-directory: apps/mobile/android
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PAYNOTE_AI_PROVIDER: gemini
           PAYNOTE_AI_LOCAL_ONLY: "false"
+          PAYNOTE_API_URL: https://paynote-api.onrender.com
+          SUPABASE_URL: https://icuixldcpchrkjyuvnqp.supabase.co
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           chmod +x ./gradlew
           ./gradlew clean assembleRelease -PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }}
@@ -63,7 +69,7 @@ jobs:
       - name: Rename APK file
         run: |
           # Find the generated Release APK and move it to a unique name
-          find android/app/build/outputs/apk/release -name "*.apk" -exec mv {} app-v1.0.${{ github.run_number }}.apk \;
+          find apps/mobile/android/app/build/outputs/apk/release -name "*.apk" -exec mv {} app-v1.0.${{ github.run_number }}.apk \;
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
