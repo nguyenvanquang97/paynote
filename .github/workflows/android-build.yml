@@ -34,10 +34,17 @@ jobs:
       - name: Install Dependencies
         run: yarn install --immutable
 
-      - name: Validate AI Secrets
+      - name: Validate Build Secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+          if [ -z "$GEMINI_API_KEY" ]; then
             echo "::error::Missing required secret GEMINI_API_KEY"
+            exit 1
+          fi
+          if [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Missing required secret SUPABASE_ANON_KEY"
             exit 1
           fi
 
@@ -52,6 +59,8 @@ jobs:
         run: |
           node apps/mobile/scripts/with-env.js --generate-only
           test -f apps/mobile/src/config/runtimeEnv.local.ts
+          grep -Eq 'SUPABASE_URL: "[^"]+"' apps/mobile/src/config/runtimeEnv.local.ts
+          grep -Eq 'SUPABASE_ANON_KEY: "[^"]+"' apps/mobile/src/config/runtimeEnv.local.ts
 
       - name: Build Android Release APK (with auto-versioning)
         working-directory: apps/mobile/android
