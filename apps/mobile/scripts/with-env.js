@@ -60,6 +60,7 @@ const writeGeneratedEnvModule = (env) => {
     PAYNOTE_AI_LOCAL_ONLY: typeof env.PAYNOTE_AI_LOCAL_ONLY === 'string' ? env.PAYNOTE_AI_LOCAL_ONLY : '',
     PAYNOTE_AI_TIMEOUT_MS: typeof env.PAYNOTE_AI_TIMEOUT_MS === 'string' ? env.PAYNOTE_AI_TIMEOUT_MS : '',
     PAYNOTE_API_URL: typeof env.PAYNOTE_API_URL === 'string' ? env.PAYNOTE_API_URL : '',
+    PAYNOTE_AUTH_REDIRECT_URL: typeof env.PAYNOTE_AUTH_REDIRECT_URL === 'string' ? env.PAYNOTE_AUTH_REDIRECT_URL : '',
     SUPABASE_URL: typeof env.SUPABASE_URL === 'string' ? env.SUPABASE_URL : '',
     SUPABASE_ANON_KEY: typeof env.SUPABASE_ANON_KEY === 'string' ? env.SUPABASE_ANON_KEY : '',
   };
@@ -77,6 +78,7 @@ const writeGeneratedEnvModule = (env) => {
     `  PAYNOTE_AI_LOCAL_ONLY: ${JSON.stringify(safe.PAYNOTE_AI_LOCAL_ONLY)},`,
     `  PAYNOTE_AI_TIMEOUT_MS: ${JSON.stringify(safe.PAYNOTE_AI_TIMEOUT_MS)},`,
     `  PAYNOTE_API_URL: ${JSON.stringify(safe.PAYNOTE_API_URL)},`,
+    `  PAYNOTE_AUTH_REDIRECT_URL: ${JSON.stringify(safe.PAYNOTE_AUTH_REDIRECT_URL)},`,
     `  SUPABASE_URL: ${JSON.stringify(safe.SUPABASE_URL)},`,
     `  SUPABASE_ANON_KEY: ${JSON.stringify(safe.SUPABASE_ANON_KEY)},`,
     '} as const;',

@@ -77,4 +77,28 @@ describe('env AI provider resolution', () => {
       useLLM: true,
     }));
   });
+
+  it('uses app deep link as the default auth redirect URL', () => {
+    const env = loadEnvModule({
+      GEMINI_API_KEY: '',
+      GOOGLE_API_KEY: '',
+      OPENAI_API_KEY: '',
+      PAYNOTE_AI_PROVIDER: '',
+      PAYNOTE_AUTH_REDIRECT_URL: '',
+    });
+
+    expect(env.getAuthRedirectUrlFromEnv()).toBe('paynote://auth/callback');
+  });
+
+  it('allows overriding the auth redirect URL from env', () => {
+    const env = loadEnvModule({
+      GEMINI_API_KEY: '',
+      GOOGLE_API_KEY: '',
+      OPENAI_API_KEY: '',
+      PAYNOTE_AI_PROVIDER: '',
+      PAYNOTE_AUTH_REDIRECT_URL: 'paynote-staging://auth/callback',
+    });
+
+    expect(env.getAuthRedirectUrlFromEnv()).toBe('paynote-staging://auth/callback');
+  });
 });

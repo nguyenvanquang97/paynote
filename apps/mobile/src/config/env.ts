@@ -102,6 +102,9 @@ export const getSupabaseUrlFromEnv = (): string => readEnv('SUPABASE_URL');
 
 export const getSupabaseAnonKeyFromEnv = (): string => readEnv('SUPABASE_ANON_KEY');
 
+export const getAuthRedirectUrlFromEnv = (): string =>
+  readEnv('PAYNOTE_AUTH_REDIRECT_URL') || 'paynote://auth/callback';
+
 export const getAIEnvSettings = (): AIEnvSettings => {
   const localOnly = asBooleanFlag(readEnv('PAYNOTE_AI_LOCAL_ONLY'));
   const provider = getAIProviderFromEnv();
